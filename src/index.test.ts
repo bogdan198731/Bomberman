@@ -1,6 +1,25 @@
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { createMapGrid, TileType } from './index.js';
+import { createMapGrid, TileType, createPlayers, canMoveTo, movePlayer, type MapGrid } from './index.js';
+
+function createEmptyTestGrid(width: number = 13, height: number = 13): MapGrid {
+  const tiles: TileType[][] = Array(height)
+    .fill(null)
+    .map(() => Array(width).fill(TileType.EMPTY));
+
+  for (let row = 0; row < height; row++) {
+    for (let col = 0; col < width; col++) {
+      const isEdge = row === 0 || row === height - 1 || col === 0 || col === width - 1;
+      const isPillar = row % 2 === 0 && col % 2 === 0 && row > 0 && row < height - 1;
+
+      if (isEdge || isPillar) {
+        tiles[row][col] = TileType.WALL_INDESTRUCTIBLE;
+      }
+    }
+  }
+
+  return { width, height, tiles };
+}
 
 test('createMapGrid - grid dimensions', () => {
   const grid = createMapGrid();
@@ -90,4 +109,109 @@ test('createMapGrid - adjacent to spawn areas have walkable tiles', () => {
   const belowSpawn = grid.tiles[2][1];
   assert.ok(rightOfSpawn !== TileType.WALL_INDESTRUCTIBLE, 'right of spawn (1, 2) is walkable');
   assert.ok(belowSpawn !== TileType.WALL_INDESTRUCTIBLE, 'below spawn (2, 1) is walkable');
+});
+
+test('createPlayers - creates two players at spawn locations', () => {
+  const [player1, player2] = createPlayers();
+  assert.strictEqual(player1.id, 1);
+  assert.strictEqual(player1.x, 1);
+  assert.strictEqual(player1.y, 1);
+  assert.strictEqual(player2.id, 2);
+  assert.strictEqual(player2.x, 11);
+  assert.strictEqual(player2.y, 11);
+});
+
+test('canMoveTo - returns true for empty tiles', () => {
+  const grid = createEmptyTestGrid();
+  assert.ok(canMoveTo(grid, 1, 1), 'player spawn is empty');
+  assert.ok(canMoveTo(grid, 2, 1), 'adjacent to spawn is empty');
+  assert.ok(canMoveTo(grid, 1, 2), 'adjacent to spawn is empty');
+});
+
+test('canMoveTo - returns false for indestructible walls', () => {
+  const grid = createMapGrid();
+  assert.ok(!canMoveTo(grid, 0, 0), 'border wall blocks movement');
+  assert.ok(!canMoveTo(grid, 0, 5), 'border wall blocks movement');
+  assert.ok(!canMoveTo(grid, 12, 12), 'border wall blocks movement');
+  assert.ok(!canMoveTo(grid, 2, 2), 'pillar wall blocks movement');
+});
+
+test('canMoveTo - returns false for destructible walls', () => {
+  const grid = createMapGrid();
+  let destructibleFound = false;
+  for (let row = 1; row < grid.height - 1; row++) {
+    for (let col = 1; col < grid.width - 1; col++) {
+      if (grid.tiles[row][col] === TileType.WALL_DESTRUCTIBLE) {
+        assert.ok(!canMoveTo(grid, col, row), `destructible wall at (${col}, ${row}) blocks movement`);
+        destructibleFound = true;
+        break;
+      }
+    }
+    if (destructibleFound) break;
+  }
+  assert.ok(destructibleFound, 'grid contains destructible walls for testing');
+});
+
+test('canMoveTo - returns false for out of bounds', () => {
+  const grid = createMapGrid();
+  assert.ok(!canMoveTo(grid, -1, 5), 'negative x is out of bounds');
+  assert.ok(!canMoveTo(grid, 5, -1), 'negative y is out of bounds');
+  assert.ok(!canMoveTo(grid, 13, 5), 'x >= width is out of bounds');
+  assert.ok(!canMoveTo(grid, 5, 13), 'y >= height is out of bounds');
+});
+
+test('movePlayer - moves to empty tile', () => {
+  const grid = createEmptyTestGrid();
+  const player: { id: 1 | 2; x: number; y: number } = { id: 1, x: 1, y: 1 };
+  movePlayer(player, 1, 0, grid);
+  assert.strictEqual(player.x, 2);
+  assert.strictEqual(player.y, 1);
+});
+
+test('movePlayer - moves in all four directions', () => {
+  const grid = createEmptyTestGrid();
+  const player: { id: 1 | 2; x: number; y: number } = { id: 1, x: 5, y: 5 };
+
+  movePlayer(player, 0, -1, grid);
+  assert.strictEqual(player.y, 4, 'moves up');
+
+  movePlayer(player, 0, 1, grid);
+  assert.strictEqual(player.y, 5, 'moves down');
+
+  movePlayer(player, -1, 0, grid);
+  assert.strictEqual(player.x, 4, 'moves left');
+
+  movePlayer(player, 1, 0, grid);
+  assert.strictEqual(player.x, 5, 'moves right');
+});
+
+test('movePlayer - does not move into walls', () => {
+  const grid = createMapGrid();
+  const player: { id: 1 | 2; x: number; y: number } = { id: 1, x: 1, y: 1 };
+
+  movePlayer(player, -1, 0, grid);
+  assert.strictEqual(player.x, 1, 'does not move into border wall');
+  assert.strictEqual(player.y, 1);
+});
+
+test('movePlayer - does not move out of bounds', () => {
+  const grid = createEmptyTestGrid();
+  const player: { id: 1 | 2; x: number; y: number } = { id: 2, x: 11, y: 11 };
+
+  movePlayer(player, 1, 0, grid);
+  assert.strictEqual(player.x, 11, 'does not move out of bounds right');
+
+  movePlayer(player, 0, 1, grid);
+  assert.strictEqual(player.y, 11, 'does not move out of bounds down');
+});
+
+test('movePlayer - player 2 can move on default grid', () => {
+  const grid = createEmptyTestGrid();
+  const player: { id: 1 | 2; x: number; y: number } = { id: 2, x: 11, y: 11 };
+
+  movePlayer(player, 0, -1, grid);
+  assert.strictEqual(player.y, 10, 'player 2 can move up');
+
+  movePlayer(player, 1, 0, grid);
+  assert.strictEqual(player.x, 11, 'player 2 stays in bounds when moving right from edge');
 });
