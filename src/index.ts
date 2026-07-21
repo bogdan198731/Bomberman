@@ -229,6 +229,58 @@ export function movePlayer(player: Player, dx: number, dy: number, grid: MapGrid
   }
 }
 
+export interface RenderState {
+  grid: MapGrid;
+  players: Player[];
+  bombs?: Array<{ x: number; y: number }>;
+  explosions?: Explosion[];
+}
+
+/** Draws a supplied plain game-state object without depending on live game internals. */
+export function render(
+  ctx: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  state: RenderState
+): void {
+  const { grid, players, bombs = [], explosions = [] } = state;
+  const tileSize = canvas.width / grid.width;
+
+  ctx.fillStyle = '#222';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (let y = 0; y < grid.height; y++) {
+    for (let x = 0; x < grid.width; x++) {
+      const tile = grid.tiles[y][x];
+      if (tile === TileType.WALL_INDESTRUCTIBLE) {
+        ctx.fillStyle = '#666';
+        ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+      } else if (tile === TileType.WALL_DESTRUCTIBLE) {
+        ctx.fillStyle = '#b8860b';
+        ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+      }
+    }
+  }
+
+  for (const bomb of bombs) {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(bomb.x * tileSize, bomb.y * tileSize, tileSize, tileSize);
+    ctx.fillStyle = '#f00';
+    ctx.beginPath();
+    ctx.arc(bomb.x * tileSize + tileSize / 2, bomb.y * tileSize + tileSize / 2, tileSize / 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  for (const explosion of explosions) {
+    ctx.fillStyle = 'rgba(255, 165, 0, 0.7)';
+    ctx.fillRect(explosion.x * tileSize, explosion.y * tileSize, tileSize, tileSize);
+  }
+
+  for (const player of players) {
+    ctx.fillStyle = player.id === 1 ? '#00ff00' : '#ff0000';
+    ctx.fillRect(player.x * tileSize, player.y * tileSize, tileSize, tileSize);
+  }
+}
+
 export function initGame() {
   if (typeof document === 'undefined') {
     return;
@@ -290,10 +342,10 @@ export function initGame() {
       explosions.push({ x, y });
     }
 
-    const bombs: Bomb[] = gameState.bombs.map((b) => ({
+    const bombs: NonNullable<RenderState['bombs']> = gameState.bombs.map((b) => ({
       x: b.position.x,
       y: b.position.y,
-    })) as any;
+    }));
 
     const state = {
       grid: mapGrid,
@@ -302,73 +354,8 @@ export function initGame() {
       explosions,
     };
 
-    renderGame(ctx as CanvasRenderingContext2D, canvas, state);
+    render(ctx as CanvasRenderingContext2D, canvas, state);
     requestAnimationFrame(gameLoop);
-  }
-
-  function renderGame(
-    context: CanvasRenderingContext2D,
-    canvasElem: HTMLCanvasElement,
-    state: any
-  ): void {
-    context.fillStyle = '#222';
-    context.fillRect(0, 0, canvasElem.width, canvasElem.height);
-
-    for (let y = 0; y < gameState.height; y++) {
-      for (let x = 0; x < gameState.width; x++) {
-        const cell = gameState.grid[y][x];
-
-        if (cell === TileType.WALL_INDESTRUCTIBLE) {
-          context.fillStyle = '#666';
-          context.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-        } else if (cell === TileType.WALL_DESTRUCTIBLE) {
-          context.fillStyle = '#b8860b';
-          context.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-        }
-
-        if (gameState.isExplosion(x, y)) {
-          context.fillStyle = 'rgba(255, 165, 0, 0.7)';
-          context.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-        }
-      }
-    }
-
-    for (const bomb of gameState.bombs) {
-      const bx = bomb.position.x;
-      const by = bomb.position.y;
-      context.fillStyle = '#000';
-      context.fillRect(bx * CELL_SIZE, by * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-      context.fillStyle = '#f00';
-      context.beginPath();
-      context.arc(
-        bx * CELL_SIZE + CELL_SIZE / 2,
-        by * CELL_SIZE + CELL_SIZE / 2,
-        CELL_SIZE / 3,
-        0,
-        Math.PI * 2
-      );
-      context.fill();
-    }
-
-    for (const player of players) {
-      context.fillStyle = player.id === 1 ? '#00ff00' : '#ff0000';
-      context.fillRect(player.x * CELL_SIZE, player.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-    }
-
-    context.strokeStyle = '#444';
-    context.lineWidth = 0.5;
-    for (let i = 0; i <= gameState.width; i++) {
-      context.beginPath();
-      context.moveTo(i * CELL_SIZE, 0);
-      context.lineTo(i * CELL_SIZE, canvasElem.height);
-      context.stroke();
-    }
-    for (let i = 0; i <= gameState.height; i++) {
-      context.beginPath();
-      context.moveTo(0, i * CELL_SIZE);
-      context.lineTo(canvasElem.width, i * CELL_SIZE);
-      context.stroke();
-    }
   }
 
   gameLoop();
