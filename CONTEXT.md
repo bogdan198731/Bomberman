@@ -27,6 +27,9 @@ _Maintained by the agent fleet — regenerated after planning, merges and escala
 - `src/index.ts` — A renderer draws the map, players, bombs, and explosions onto an HTML canvas each animation frame via a requestAnimationFrame-driven loop, given plain data objects as input. (EPIC-1-6)
 - `tsconfig.json` — npm install, npm run build, and npm run test all succeed against a minimal TypeScript + Canvas static-site scaffold with an empty playable-page shell. (EPIC-1-1)
 
+## Known issues (open — check these when fixing bugs)
+- **EPIC-1-4 Implement bomb placement and explosion mechanics** [escalated] Placing a bomb detonates it after a timer, producing a cross-shaped explosion that destroys destructible walls and is blocked by indestructible walls, verifiable by unit tests. — recovery cycle limit reached
+
 ## Gotchas the fleet has learned
 - **kb://epic-1-1** Scaffold Bomberman project: EPIC-1-1 shipped. Goal: npm install, npm run build, and npm run test all succeed against a minimal TypeScript + Canvas static-site scaffold with an empty playable-page shell. Files: index.html, package-lock.json, package.json, src/index.js, src/index.test.ts, src/index.ts, tsconfig.json. Attempts: 2.
 - **kb://epic-1-1-gotcha** EPIC-1-1 gotcha (2 attempts): A failure preceded success here:
@@ -48,7 +51,7 @@ src/index.test.ts(2,34): error TS2307: Cannot find module 'node:assert' or its c
 - EPIC-1-1 Scaffold Bomberman project — done (2 attempts)
 - EPIC-1-2 Build fixed map and tile grid — done
 - EPIC-1-3 Implement player entities and two-player input handling — done
-- EPIC-1-4 Implement bomb placement and explosion mechanics — in_progress (3 attempts)
+- EPIC-1-4 Implement bomb placement and explosion mechanics — escalated (3 attempts)
 - EPIC-1-5 Implement game state and win/lose detection — done
 - EPIC-1-6 Build canvas renderer and game loop — done
 - EPIC-1-7 Integrate game modules into playable browser entry point — ready
