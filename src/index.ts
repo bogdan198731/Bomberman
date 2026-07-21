@@ -14,6 +14,7 @@ export interface Player {
   id: 1 | 2;
   x: number;
   y: number;
+  alive: boolean;
 }
 
 export interface Bomb {
@@ -66,8 +67,8 @@ export function createMapGrid(width: number = 13, height: number = 13): MapGrid 
 
 export function createPlayers(): [Player, Player] {
   return [
-    { id: 1, x: 1, y: 1 },
-    { id: 2, x: 11, y: 11 },
+    { id: 1, x: 1, y: 1, alive: true },
+    { id: 2, x: 11, y: 11, alive: true },
   ];
 }
 
@@ -85,6 +86,24 @@ export function movePlayer(player: Player, dx: number, dy: number, grid: MapGrid
     player.x = newX;
     player.y = newY;
   }
+}
+
+export function killPlayer(player: Player): void {
+  player.alive = false;
+}
+
+export type GameStatus = 'playing' | 'player1-wins' | 'player2-wins' | 'draw';
+
+export function getGameStatus(players: Player[]): GameStatus {
+  const aliveCount = players.filter(p => p.alive).length;
+
+  if (aliveCount === 2) {
+    return 'playing';
+  }
+  if (aliveCount === 1) {
+    return players[0].alive ? 'player1-wins' : 'player2-wins';
+  }
+  return 'draw';
 }
 
 export function render(
@@ -130,9 +149,48 @@ export function render(
   }
 
   for (const player of players) {
-    ctx.fillStyle = player.id === 1 ? '#00ff00' : '#ff0000';
-    ctx.fillRect(player.x * tileSize, player.y * tileSize, tileSize, tileSize);
+    if (player.alive) {
+      ctx.fillStyle = player.id === 1 ? '#00ff00' : '#ff0000';
+      ctx.fillRect(player.x * tileSize, player.y * tileSize, tileSize, tileSize);
+    }
   }
+}
+
+export function renderWinScreen(
+  ctx: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  winnerId: 1 | 2
+): void {
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = winnerId === 1 ? '#00ff00' : '#ff0000';
+  ctx.font = 'bold 48px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`Player ${winnerId} Wins!`, canvas.width / 2, canvas.height / 2 - 40);
+
+  ctx.font = '24px Arial';
+  ctx.fillStyle = '#fff';
+  ctx.fillText('Press R to restart', canvas.width / 2, canvas.height / 2 + 40);
+}
+
+export function renderDrawScreen(
+  ctx: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement
+): void {
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = '#ffff00';
+  ctx.font = 'bold 48px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('It\'s a Draw!', canvas.width / 2, canvas.height / 2 - 40);
+
+  ctx.font = '24px Arial';
+  ctx.fillStyle = '#fff';
+  ctx.fillText('Press R to restart', canvas.width / 2, canvas.height / 2 + 40);
 }
 
 export function initGame() {
@@ -151,10 +209,11 @@ export function initGame() {
   canvas.width = 512;
   canvas.height = 512;
 
-  const grid = createMapGrid();
-  const players = createPlayers();
-  const bombs: Bomb[] = [];
-  const explosions: Explosion[] = [];
+  let grid = createMapGrid();
+  let players = createPlayers();
+  let bombs: Bomb[] = [];
+  let explosions: Explosion[] = [];
+  let gameStatus: GameStatus = 'playing';
 
   const keysPressed: Record<string, boolean> = {};
 
@@ -166,7 +225,22 @@ export function initGame() {
     keysPressed[e.key.toLowerCase()] = false;
   });
 
+  function reset() {
+    grid = createMapGrid();
+    players = createPlayers();
+    bombs = [];
+    explosions = [];
+    gameStatus = 'playing';
+  }
+
   function update() {
+    if (gameStatus !== 'playing') {
+      if (keysPressed['r']) {
+        reset();
+      }
+      return;
+    }
+
     if (keysPressed['w']) movePlayer(players[0], 0, -1, grid);
     if (keysPressed['s']) movePlayer(players[0], 0, 1, grid);
     if (keysPressed['a']) movePlayer(players[0], -1, 0, grid);
@@ -176,17 +250,29 @@ export function initGame() {
     if (keysPressed['arrowdown']) movePlayer(players[1], 0, 1, grid);
     if (keysPressed['arrowleft']) movePlayer(players[1], -1, 0, grid);
     if (keysPressed['arrowright']) movePlayer(players[1], 1, 0, grid);
+
+    gameStatus = getGameStatus(players);
   }
 
   function gameLoop() {
     update();
-    const gameState: GameState = {
-      grid,
-      players,
-      bombs,
-      explosions,
-    };
-    render(ctx as CanvasRenderingContext2D, canvas, gameState);
+
+    if (gameStatus === 'playing') {
+      const gameState: GameState = {
+        grid,
+        players,
+        bombs,
+        explosions,
+      };
+      render(ctx as CanvasRenderingContext2D, canvas, gameState);
+    } else if (gameStatus === 'draw') {
+      renderDrawScreen(ctx as CanvasRenderingContext2D, canvas);
+    } else if (gameStatus === 'player1-wins') {
+      renderWinScreen(ctx as CanvasRenderingContext2D, canvas, 1);
+    } else if (gameStatus === 'player2-wins') {
+      renderWinScreen(ctx as CanvasRenderingContext2D, canvas, 2);
+    }
+
     requestAnimationFrame(gameLoop);
   }
 
