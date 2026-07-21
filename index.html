@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bomberman</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background-color: #222;
+      font-family: Arial, sans-serif;
+    }
+    #gameCanvas {
+      border: 2px solid #fff;
+      background-color: #000;
+      image-rendering: pixelated;
+    }
+    .container {
+      text-align: center;
+    }
+    h1 {
+      color: #fff;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Bomberman</h1>
+    <canvas id="gameCanvas" width="512" height="512"></canvas>
+  </div>
+  <script type="module" src="dist/index.js"></script>
+</body>
+</html>

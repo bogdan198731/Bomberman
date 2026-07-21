@@ -1,0 +1,19 @@
+{
+  "name": "bomberman",
+  "version": "0.1.0",
+  "description": "A simple 2-player Bomberman game in HTML5 Canvas",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test dist/**/*.test.js",
+    "dev": "tsc --watch"
+  },
+  "keywords": ["game", "bomberman", "canvas"],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5.3.3"
+  }
+}
