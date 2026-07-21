@@ -1,13 +1,18 @@
-export const GRID_SIZE = 8;
 export const CELL_SIZE = 64;
 export const BOMB_TIMER = 3000;
 export const EXPLOSION_DURATION = 500;
 
-export enum CellType {
-  Empty = 0,
-  IndestructibleWall = 1,
-  DestructibleWall = 2,
-  Bomb = 3,
+export enum TileType {
+  EMPTY = 0,
+  WALL_DESTRUCTIBLE = 1,
+  WALL_INDESTRUCTIBLE = 2,
+  BOMB = 3,
+}
+
+export interface MapGrid {
+  width: number;
+  height: number;
+  tiles: TileType[][];
 }
 
 export interface Position {
@@ -21,50 +26,69 @@ export interface Bomb {
   explodedAt?: number;
 }
 
-export class GameState {
-  grid: CellType[][];
-  bombs: Bomb[];
-  explosions: Map<string, number>;
+export function createMapGrid(width: number = 13, height: number = 13): MapGrid {
+  const tiles: TileType[][] = Array(height)
+    .fill(null)
+    .map(() => Array(width).fill(TileType.EMPTY));
 
-  constructor() {
-    this.grid = this.initializeGrid();
-    this.bombs = [];
-    this.explosions = new Map();
+  for (let row = 0; row < height; row++) {
+    for (let col = 0; col < width; col++) {
+      const isEdge = row === 0 || row === height - 1 || col === 0 || col === width - 1;
+      const isPillar = row % 2 === 0 && col % 2 === 0 && row > 0 && row < height - 1;
+
+      if (isEdge || isPillar) {
+        tiles[row][col] = TileType.WALL_INDESTRUCTIBLE;
+      }
+    }
   }
 
-  private initializeGrid(): CellType[][] {
-    const grid: CellType[][] = Array(GRID_SIZE)
-      .fill(null)
-      .map(() => Array(GRID_SIZE).fill(CellType.Empty));
-
-    for (let x = 0; x < GRID_SIZE; x++) {
-      for (let y = 0; y < GRID_SIZE; y++) {
-        if (x % 2 === 1 && y % 2 === 1) {
-          grid[x][y] = CellType.IndestructibleWall;
-        } else if (
-          (x > 1 || y > 1) &&
-          (x < GRID_SIZE - 2 || y < GRID_SIZE - 2) &&
-          Math.random() < 0.3
-        ) {
-          grid[x][y] = CellType.DestructibleWall;
+  for (let row = 1; row < height - 1; row++) {
+    for (let col = 1; col < width - 1; col++) {
+      if (tiles[row][col] === TileType.EMPTY) {
+        const isPlayerSpawn = (row === 1 && col === 1) || (row === height - 2 && col === width - 2);
+        if (!isPlayerSpawn && Math.random() < 0.6) {
+          tiles[row][col] = TileType.WALL_DESTRUCTIBLE;
         }
       }
     }
+  }
 
-    return grid;
+  return { width, height, tiles };
+}
+
+export class GameState {
+  grid: TileType[][];
+  width: number;
+  height: number;
+  bombs: Bomb[];
+  explosions: Map<string, number>;
+
+  constructor(mapGrid?: MapGrid) {
+    if (mapGrid) {
+      this.grid = mapGrid.tiles;
+      this.width = mapGrid.width;
+      this.height = mapGrid.height;
+    } else {
+      const defaultMap = createMapGrid();
+      this.grid = defaultMap.tiles;
+      this.width = defaultMap.width;
+      this.height = defaultMap.height;
+    }
+    this.bombs = [];
+    this.explosions = new Map();
   }
 
   placeBomb(pos: Position): boolean {
     if (
       pos.x < 0 ||
-      pos.x >= GRID_SIZE ||
+      pos.x >= this.width ||
       pos.y < 0 ||
-      pos.y >= GRID_SIZE
+      pos.y >= this.height
     ) {
       return false;
     }
 
-    if (this.grid[pos.x][pos.y] !== CellType.Empty) {
+    if (this.grid[pos.y][pos.x] !== TileType.EMPTY) {
       return false;
     }
 
@@ -74,7 +98,7 @@ export class GameState {
 
     const bomb: any = { position: pos, timer: BOMB_TIMER, __createdAt: Date.now() };
     this.bombs.push(bomb);
-    this.grid[pos.x][pos.y] = CellType.Bomb;
+    this.grid[pos.y][pos.x] = TileType.BOMB;
     return true;
   }
 
@@ -82,7 +106,7 @@ export class GameState {
     const { x, y } = bomb.position;
     bomb.explodedAt = Date.now();
 
-    this.grid[x][y] = CellType.Empty;
+    this.grid[y][x] = TileType.EMPTY;
     this.addExplosion(x, y);
 
     const directions = [
@@ -93,22 +117,22 @@ export class GameState {
     ];
 
     for (const dir of directions) {
-      for (let i = 1; i < GRID_SIZE; i++) {
+      for (let i = 1; i < Math.max(this.width, this.height); i++) {
         const nx = x + dir.dx * i;
         const ny = y + dir.dy * i;
 
-        if (nx < 0 || nx >= GRID_SIZE || ny < 0 || ny >= GRID_SIZE) break;
+        if (nx < 0 || nx >= this.width || ny < 0 || ny >= this.height) break;
 
-        if (this.grid[nx][ny] === CellType.IndestructibleWall) break;
+        if (this.grid[ny][nx] === TileType.WALL_INDESTRUCTIBLE) break;
 
         this.addExplosion(nx, ny);
 
-        if (this.grid[nx][ny] === CellType.DestructibleWall) {
-          this.grid[nx][ny] = CellType.Empty;
+        if (this.grid[ny][nx] === TileType.WALL_DESTRUCTIBLE) {
+          this.grid[ny][nx] = TileType.EMPTY;
           break;
         }
 
-        if (this.grid[nx][ny] === CellType.Bomb) {
+        if (this.grid[ny][nx] === TileType.BOMB) {
           const targetBomb = this.bombs.find(
             (b) => b.position.x === nx && b.position.y === ny
           );
@@ -159,11 +183,11 @@ export class GameState {
     });
   }
 
-  getCellAt(pos: Position): CellType {
-    if (pos.x < 0 || pos.x >= GRID_SIZE || pos.y < 0 || pos.y >= GRID_SIZE) {
-      return CellType.IndestructibleWall;
+  getCellAt(pos: Position): TileType {
+    if (pos.x < 0 || pos.x >= this.width || pos.y < 0 || pos.y >= this.height) {
+      return TileType.WALL_INDESTRUCTIBLE;
     }
-    return this.grid[pos.x][pos.y];
+    return this.grid[pos.y][pos.x];
   }
 
   isExplosion(x: number, y: number): boolean {
@@ -174,7 +198,7 @@ export class GameState {
 let gameState: GameState;
 
 export function initGame() {
-  if (typeof window === 'undefined' || typeof document === 'undefined') {
+  if (typeof document === 'undefined') {
     return;
   }
 
@@ -187,8 +211,8 @@ export function initGame() {
   }
 
   gameState = new GameState();
-  canvas.width = GRID_SIZE * CELL_SIZE;
-  canvas.height = GRID_SIZE * CELL_SIZE;
+  canvas.width = gameState.width * CELL_SIZE;
+  canvas.height = gameState.height * CELL_SIZE;
 
   canvas.addEventListener('click', (e) => {
     const rect = canvas.getBoundingClientRect();
@@ -210,17 +234,17 @@ export function initGame() {
     ctx.fillStyle = '#222';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    for (let x = 0; x < GRID_SIZE; x++) {
-      for (let y = 0; y < GRID_SIZE; y++) {
-        const cell = gameState.grid[x][y];
+    for (let y = 0; y < gameState.height; y++) {
+      for (let x = 0; x < gameState.width; x++) {
+        const cell = gameState.grid[y][x];
 
-        if (cell === CellType.IndestructibleWall) {
+        if (cell === TileType.WALL_INDESTRUCTIBLE) {
           ctx.fillStyle = '#666';
           ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-        } else if (cell === CellType.DestructibleWall) {
+        } else if (cell === TileType.WALL_DESTRUCTIBLE) {
           ctx.fillStyle = '#999';
           ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-        } else if (cell === CellType.Bomb) {
+        } else if (cell === TileType.BOMB) {
           ctx.fillStyle = '#000';
           ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
           ctx.fillStyle = '#f00';
@@ -244,12 +268,13 @@ export function initGame() {
 
     ctx.strokeStyle = '#444';
     ctx.lineWidth = 0.5;
-    for (let i = 0; i <= GRID_SIZE; i++) {
+    for (let i = 0; i <= gameState.width; i++) {
       ctx.beginPath();
       ctx.moveTo(i * CELL_SIZE, 0);
       ctx.lineTo(i * CELL_SIZE, canvas.height);
       ctx.stroke();
-
+    }
+    for (let i = 0; i <= gameState.height; i++) {
       ctx.beginPath();
       ctx.moveTo(0, i * CELL_SIZE);
       ctx.lineTo(canvas.width, i * CELL_SIZE);
