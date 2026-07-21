@@ -317,8 +317,10 @@ test('update does not detonate a queued bomb twice after a chain reaction', () =
   game.grid[2][5] = TileType.WALL_DESTRUCTIBLE;
   game.grid[2][6] = TileType.EMPTY;
 
-  game.placeBomb({ x: 2, y: 2 }, 0);
-  game.placeBomb({ x: 4, y: 2 }, 0);
+  game.placeBomb({ x: 2, y: 2 });
+  game.placeBomb({ x: 4, y: 2 });
+  game.bombs[0].timer = 0;
+  game.bombs[1].timer = 0;
   game.update(Date.now());
 
   assert.strictEqual(game.grid[2][5], TileType.EMPTY);
