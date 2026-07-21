@@ -327,6 +327,26 @@ test('update does not detonate a queued bomb twice after a chain reaction', () =
   assert.strictEqual(game.isExplosion(6, 2), false);
 });
 
+test('update keeps a newly detonated explosion active on the supplied clock', () => {
+  const testGrid = createTestGrid(8, 8);
+  const game = new GameState(testGrid);
+  const placedAt = 1_000;
+  const detonationTime = placedAt + BOMB_TIMER;
+
+  game.placeBomb({ x: 3, y: 3 }, placedAt);
+  game.update(detonationTime);
+
+  assert.strictEqual(game.bombs[0].explodedAt, detonationTime);
+  assert.strictEqual(game.isExplosion(3, 3), true);
+
+  game.update(detonationTime + EXPLOSION_DURATION - 1);
+  assert.strictEqual(game.isExplosion(3, 3), true);
+
+  game.update(detonationTime + EXPLOSION_DURATION);
+  assert.strictEqual(game.isExplosion(3, 3), false);
+  assert.strictEqual(game.bombs.length, 0);
+});
+
 test('getCellAt returns correct cell type', () => {
   const testGrid = createTestGrid(8, 8);
   const game = new GameState(testGrid);

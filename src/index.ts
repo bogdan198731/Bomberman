@@ -29,6 +29,7 @@ export interface Player {
 export interface Bomb {
   position: Position;
   timer: number;
+  placedAt?: number;
   explodedAt?: number;
 }
 
@@ -89,7 +90,7 @@ export class GameState {
     this.explosions = new Map();
   }
 
-  placeBomb(pos: Position): boolean {
+  placeBomb(pos: Position, now: number = Date.now()): boolean {
     if (
       pos.x < 0 ||
       pos.x >= this.width ||
@@ -107,18 +108,22 @@ export class GameState {
       return false;
     }
 
-    const bomb: any = { position: pos, timer: BOMB_TIMER, __createdAt: Date.now() };
+    const bomb: Bomb = { position: pos, timer: BOMB_TIMER, placedAt: now };
     this.bombs.push(bomb);
     this.grid[pos.y][pos.x] = TileType.BOMB;
     return true;
   }
 
-  explodeBomb(bomb: Bomb): void {
+  explodeBomb(bomb: Bomb, now: number = Date.now()): void {
+    if (bomb.explodedAt !== undefined) {
+      return;
+    }
+
     const { x, y } = bomb.position;
-    bomb.explodedAt = Date.now();
+    bomb.explodedAt = now;
 
     this.grid[y][x] = TileType.EMPTY;
-    this.addExplosion(x, y);
+    this.addExplosion(x, y, now);
 
     const directions = [
       { dx: 1, dy: 0 },
@@ -136,7 +141,7 @@ export class GameState {
 
         if (this.grid[ny][nx] === TileType.WALL_INDESTRUCTIBLE) break;
 
-        this.addExplosion(nx, ny);
+        this.addExplosion(nx, ny, now);
 
         if (this.grid[ny][nx] === TileType.WALL_DESTRUCTIBLE) {
           this.grid[ny][nx] = TileType.EMPTY;
@@ -147,8 +152,8 @@ export class GameState {
           const targetBomb = this.bombs.find(
             (b) => b.position.x === nx && b.position.y === ny
           );
-          if (targetBomb && !targetBomb.explodedAt) {
-            this.explodeBomb(targetBomb);
+          if (targetBomb && targetBomb.explodedAt === undefined) {
+            this.explodeBomb(targetBomb, now);
           }
           break;
         }
@@ -156,18 +161,18 @@ export class GameState {
     }
   }
 
-  private addExplosion(x: number, y: number): void {
+  private addExplosion(x: number, y: number, now: number): void {
     const key = `${x},${y}`;
-    this.explosions.set(key, Date.now());
+    this.explosions.set(key, now);
   }
 
   update(now: number): void {
     const toExplode: Bomb[] = [];
 
     for (const bomb of this.bombs) {
-      if (!bomb.explodedAt) {
-        const createdAt = (bomb as any).__createdAt || now;
-        if (now - createdAt >= bomb.timer) {
+      if (bomb.explodedAt === undefined) {
+        const placedAt = bomb.placedAt ?? now;
+        if (now - placedAt >= bomb.timer) {
           toExplode.push(bomb);
         }
       }
@@ -175,13 +180,13 @@ export class GameState {
 
     for (const bomb of toExplode) {
       if (bomb.explodedAt === undefined) {
-        this.explodeBomb(bomb);
+        this.explodeBomb(bomb, now);
       }
     }
 
     const expiredExplosions: string[] = [];
     for (const [key, startTime] of this.explosions.entries()) {
-      if (now - startTime > EXPLOSION_DURATION) {
+      if (now - startTime >= EXPLOSION_DURATION) {
         expiredExplosions.push(key);
       }
     }
@@ -191,8 +196,7 @@ export class GameState {
     }
 
     this.bombs = this.bombs.filter((b) => {
-      const timeSinceExplode = b.explodedAt ? now - b.explodedAt : 0;
-      return !b.explodedAt || timeSinceExplode < EXPLOSION_DURATION;
+      return b.explodedAt === undefined || now - b.explodedAt < EXPLOSION_DURATION;
     });
   }
 
