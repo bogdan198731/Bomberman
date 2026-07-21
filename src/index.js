@@ -1,21 +1,3 @@
-export function initGame() {
-  const canvas = document.getElementById('gameCanvas');
-  const ctx = canvas?.getContext('2d');
-
-  if (!canvas || !ctx) {
-    console.error('Canvas not found');
-    return;
-  }
-
-  canvas.width = 512;
-  canvas.height = 512;
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = '#fff';
-  ctx.font = '20px Arial';
-  ctx.fillText('Bomberman - Coming Soon', 150, 250);
-}
-
-if (typeof window !== 'undefined') {
-  window.addEventListener('DOMContentLoaded', initGame);
-}
+// The browser entry point is generated from index.ts by `npm run build`.
+// This forwarding module keeps direct imports of the original scaffold path working.
+export * from '../dist/index.js';

@@ -1,6 +1,7 @@
 export const CELL_SIZE = 64;
 export const BOMB_TIMER = 3000;
 export const EXPLOSION_DURATION = 500;
+export const EXPLOSION_RADIUS = 2;
 
 export enum TileType {
   EMPTY = 0,
@@ -58,8 +59,13 @@ export function createMapGrid(width: number = 13, height: number = 13): MapGrid 
   for (let row = 1; row < height - 1; row++) {
     for (let col = 1; col < width - 1; col++) {
       if (tiles[row][col] === TileType.EMPTY) {
-        const isPlayerSpawn = (row === 1 && col === 1) || (row === height - 2 && col === width - 2);
-        if (!isPlayerSpawn && Math.random() < 0.6) {
+        const distanceFromPlayerOne = row - 1 + (col - 1);
+        const distanceFromPlayerTwo = height - 2 - row + (width - 2 - col);
+        const isPlayerOneSpawnArea = distanceFromPlayerOne <= EXPLOSION_RADIUS + 1;
+        const isPlayerTwoSpawnArea = distanceFromPlayerTwo <= EXPLOSION_RADIUS + 1;
+        const hasDestructibleWall = (row * 17 + col * 31) % 10 < 6;
+
+        if (!isPlayerOneSpawnArea && !isPlayerTwoSpawnArea && hasDestructibleWall) {
           tiles[row][col] = TileType.WALL_DESTRUCTIBLE;
         }
       }
@@ -134,7 +140,7 @@ export class GameState {
     ];
 
     for (const dir of directions) {
-      for (let i = 1; i < Math.max(this.width, this.height); i++) {
+      for (let i = 1; i <= EXPLOSION_RADIUS; i++) {
         const nx = x + dir.dx * i;
         const ny = y + dir.dy * i;
 
@@ -366,23 +372,6 @@ export function initGame() {
   canvas.width = gameState.width * CELL_SIZE;
   canvas.height = gameState.height * CELL_SIZE;
 
-  const keysPressed: Record<string, boolean> = {};
-
-  canvas.addEventListener('click', (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
-    const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
-    gameState.placeBomb({ x, y });
-  });
-
-  window.addEventListener('keydown', (e) => {
-    keysPressed[e.key.toLowerCase()] = true;
-  });
-
-  window.addEventListener('keyup', (e) => {
-    keysPressed[e.key.toLowerCase()] = false;
-  });
-
   function reset() {
     mapGrid = createMapGrid();
     gameState = new GameState(mapGrid);
@@ -390,23 +379,90 @@ export function initGame() {
     gameStatus = 'playing';
   }
 
-  function update() {
+  const handledKeys = new Set([
+    'KeyW',
+    'KeyA',
+    'KeyS',
+    'KeyD',
+    'Space',
+    'ArrowUp',
+    'ArrowDown',
+    'ArrowLeft',
+    'ArrowRight',
+    'Enter',
+    'KeyR',
+  ]);
+  const keyFallbacks: Record<string, string> = {
+    w: 'KeyW',
+    a: 'KeyA',
+    s: 'KeyS',
+    d: 'KeyD',
+    ' ': 'Space',
+    spacebar: 'Space',
+    arrowup: 'ArrowUp',
+    arrowdown: 'ArrowDown',
+    arrowleft: 'ArrowLeft',
+    arrowright: 'ArrowRight',
+    enter: 'Enter',
+    r: 'KeyR',
+  };
+
+  window.addEventListener('keydown', (event) => {
+    const code = keyFallbacks[event.key.toLowerCase()] ?? event.code;
+
+    if (handledKeys.has(code)) {
+      event.preventDefault();
+    }
+
     if (gameStatus !== 'playing') {
-      if (keysPressed['r']) {
+      if (code === 'KeyR' && !event.repeat) {
         reset();
       }
       return;
     }
 
-    if (keysPressed['w']) movePlayer(players[0], 0, -1, mapGrid);
-    if (keysPressed['s']) movePlayer(players[0], 0, 1, mapGrid);
-    if (keysPressed['a']) movePlayer(players[0], -1, 0, mapGrid);
-    if (keysPressed['d']) movePlayer(players[0], 1, 0, mapGrid);
+    switch (code) {
+      case 'KeyW':
+        movePlayer(players[0], 0, -1, mapGrid);
+        break;
+      case 'KeyS':
+        movePlayer(players[0], 0, 1, mapGrid);
+        break;
+      case 'KeyA':
+        movePlayer(players[0], -1, 0, mapGrid);
+        break;
+      case 'KeyD':
+        movePlayer(players[0], 1, 0, mapGrid);
+        break;
+      case 'ArrowUp':
+        movePlayer(players[1], 0, -1, mapGrid);
+        break;
+      case 'ArrowDown':
+        movePlayer(players[1], 0, 1, mapGrid);
+        break;
+      case 'ArrowLeft':
+        movePlayer(players[1], -1, 0, mapGrid);
+        break;
+      case 'ArrowRight':
+        movePlayer(players[1], 1, 0, mapGrid);
+        break;
+      case 'Space':
+        if (!event.repeat) {
+          gameState.placeBomb({ x: players[0].x, y: players[0].y });
+        }
+        break;
+      case 'Enter':
+        if (!event.repeat) {
+          gameState.placeBomb({ x: players[1].x, y: players[1].y });
+        }
+        break;
+    }
+  });
 
-    if (keysPressed['arrowup']) movePlayer(players[1], 0, -1, mapGrid);
-    if (keysPressed['arrowdown']) movePlayer(players[1], 0, 1, mapGrid);
-    if (keysPressed['arrowleft']) movePlayer(players[1], -1, 0, mapGrid);
-    if (keysPressed['arrowright']) movePlayer(players[1], 1, 0, mapGrid);
+  function update() {
+    if (gameStatus !== 'playing') {
+      return;
+    }
 
     const now = Date.now();
     gameState.update(now);
