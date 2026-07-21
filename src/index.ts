@@ -20,10 +20,21 @@ export interface Position {
   y: number;
 }
 
+export interface Player {
+  id: 1 | 2;
+  x: number;
+  y: number;
+}
+
 export interface Bomb {
   position: Position;
   timer: number;
   explodedAt?: number;
+}
+
+export interface Explosion {
+  x: number;
+  y: number;
 }
 
 export function createMapGrid(width: number = 13, height: number = 13): MapGrid {
@@ -195,7 +206,28 @@ export class GameState {
   }
 }
 
-let gameState: GameState;
+export function createPlayers(): [Player, Player] {
+  return [
+    { id: 1, x: 1, y: 1 },
+    { id: 2, x: 11, y: 11 },
+  ];
+}
+
+export function canMoveTo(grid: MapGrid, x: number, y: number): boolean {
+  if (x < 0 || x >= grid.width || y < 0 || y >= grid.height) {
+    return false;
+  }
+  return grid.tiles[y][x] === TileType.EMPTY;
+}
+
+export function movePlayer(player: Player, dx: number, dy: number, grid: MapGrid): void {
+  const newX = player.x + dx;
+  const newY = player.y + dy;
+  if (canMoveTo(grid, newX, newY)) {
+    player.x = newX;
+    player.y = newY;
+  }
+}
 
 export function initGame() {
   if (typeof document === 'undefined') {
@@ -210,9 +242,14 @@ export function initGame() {
     return;
   }
 
-  gameState = new GameState();
+  const mapGrid = createMapGrid();
+  const gameState = new GameState(mapGrid);
+  const players = createPlayers();
+
   canvas.width = gameState.width * CELL_SIZE;
   canvas.height = gameState.height * CELL_SIZE;
+
+  const keysPressed: Record<string, boolean> = {};
 
   canvas.addEventListener('click', (e) => {
     const rect = canvas.getBoundingClientRect();
@@ -221,64 +258,116 @@ export function initGame() {
     gameState.placeBomb({ x, y });
   });
 
-  function gameLoop() {
+  window.addEventListener('keydown', (e) => {
+    keysPressed[e.key.toLowerCase()] = true;
+  });
+
+  window.addEventListener('keyup', (e) => {
+    keysPressed[e.key.toLowerCase()] = false;
+  });
+
+  function update() {
+    if (keysPressed['w']) movePlayer(players[0], 0, -1, mapGrid);
+    if (keysPressed['s']) movePlayer(players[0], 0, 1, mapGrid);
+    if (keysPressed['a']) movePlayer(players[0], -1, 0, mapGrid);
+    if (keysPressed['d']) movePlayer(players[0], 1, 0, mapGrid);
+
+    if (keysPressed['arrowup']) movePlayer(players[1], 0, -1, mapGrid);
+    if (keysPressed['arrowdown']) movePlayer(players[1], 0, 1, mapGrid);
+    if (keysPressed['arrowleft']) movePlayer(players[1], -1, 0, mapGrid);
+    if (keysPressed['arrowright']) movePlayer(players[1], 1, 0, mapGrid);
+
     const now = Date.now();
     gameState.update(now);
-    render();
+  }
+
+  function gameLoop() {
+    update();
+
+    const explosions: Explosion[] = [];
+    for (const [key] of gameState.explosions) {
+      const [x, y] = key.split(',').map(Number);
+      explosions.push({ x, y });
+    }
+
+    const bombs: Bomb[] = gameState.bombs.map((b) => ({
+      x: b.position.x,
+      y: b.position.y,
+    })) as any;
+
+    const state = {
+      grid: mapGrid,
+      players,
+      bombs,
+      explosions,
+    };
+
+    renderGame(ctx as CanvasRenderingContext2D, canvas, state);
     requestAnimationFrame(gameLoop);
   }
 
-  function render() {
-    if (!ctx || !canvas) return;
-
-    ctx.fillStyle = '#222';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  function renderGame(
+    context: CanvasRenderingContext2D,
+    canvasElem: HTMLCanvasElement,
+    state: any
+  ): void {
+    context.fillStyle = '#222';
+    context.fillRect(0, 0, canvasElem.width, canvasElem.height);
 
     for (let y = 0; y < gameState.height; y++) {
       for (let x = 0; x < gameState.width; x++) {
         const cell = gameState.grid[y][x];
 
         if (cell === TileType.WALL_INDESTRUCTIBLE) {
-          ctx.fillStyle = '#666';
-          ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+          context.fillStyle = '#666';
+          context.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
         } else if (cell === TileType.WALL_DESTRUCTIBLE) {
-          ctx.fillStyle = '#999';
-          ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-        } else if (cell === TileType.BOMB) {
-          ctx.fillStyle = '#000';
-          ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-          ctx.fillStyle = '#f00';
-          ctx.beginPath();
-          ctx.arc(
-            x * CELL_SIZE + CELL_SIZE / 2,
-            y * CELL_SIZE + CELL_SIZE / 2,
-            CELL_SIZE / 3,
-            0,
-            Math.PI * 2
-          );
-          ctx.fill();
+          context.fillStyle = '#b8860b';
+          context.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
         }
 
         if (gameState.isExplosion(x, y)) {
-          ctx.fillStyle = 'rgba(255, 165, 0, 0.7)';
-          ctx.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+          context.fillStyle = 'rgba(255, 165, 0, 0.7)';
+          context.fillRect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
         }
       }
     }
 
-    ctx.strokeStyle = '#444';
-    ctx.lineWidth = 0.5;
+    for (const bomb of gameState.bombs) {
+      const bx = bomb.position.x;
+      const by = bomb.position.y;
+      context.fillStyle = '#000';
+      context.fillRect(bx * CELL_SIZE, by * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+      context.fillStyle = '#f00';
+      context.beginPath();
+      context.arc(
+        bx * CELL_SIZE + CELL_SIZE / 2,
+        by * CELL_SIZE + CELL_SIZE / 2,
+        CELL_SIZE / 3,
+        0,
+        Math.PI * 2
+      );
+      context.fill();
+    }
+
+    for (const player of players) {
+      context.fillStyle = player.id === 1 ? '#00ff00' : '#ff0000';
+      context.fillRect(player.x * CELL_SIZE, player.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+    }
+
+    context.strokeStyle = '#444';
+    context.lineWidth = 0.5;
     for (let i = 0; i <= gameState.width; i++) {
-      ctx.beginPath();
-      ctx.moveTo(i * CELL_SIZE, 0);
-      ctx.lineTo(i * CELL_SIZE, canvas.height);
-      ctx.stroke();
+      context.beginPath();
+      context.moveTo(i * CELL_SIZE, 0);
+      context.lineTo(i * CELL_SIZE, canvasElem.height);
+      context.stroke();
     }
     for (let i = 0; i <= gameState.height; i++) {
-      ctx.beginPath();
-      ctx.moveTo(0, i * CELL_SIZE);
-      ctx.lineTo(canvas.width, i * CELL_SIZE);
-      ctx.stroke();
+      context.beginPath();
+      context.moveTo(0, i * CELL_SIZE);
+      context.lineTo(canvasElem.width, i * CELL_SIZE);
+      context.stroke();
     }
   }
 
