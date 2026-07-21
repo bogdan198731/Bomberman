@@ -19,12 +19,12 @@ _Maintained by the agent fleet — regenerated after planning, merges and escala
 - **How should the game be deployed/run (static site hosted anywhere, or served from a specific existing app/server in this repo)?** Standalone static site buildable and runnable locally, deployable to any static host.
 
 ## Module map
-- `index.html` — npm install, npm run build, and npm run test all succeed against a minimal TypeScript + Canvas static-site scaffold with an empty playable-page shell. (EPIC-1-1)
+- `index.html` — Opening index.html in a browser lets two players move, place bombs, destroy walls, and see a win/lose overlay at game end, with all modules wired together in the entry point. (EPIC-1-7)
 - `package-lock.json` — npm install, npm run build, and npm run test all succeed against a minimal TypeScript + Canvas static-site scaffold with an empty playable-page shell. (EPIC-1-1)
-- `package.json` — npm install, npm run build, and npm run test all succeed against a minimal TypeScript + Canvas static-site scaffold with an empty playable-page shell. (EPIC-1-1)
-- `src/index.js` — npm install, npm run build, and npm run test all succeed against a minimal TypeScript + Canvas static-site scaffold with an empty playable-page shell. (EPIC-1-1)
+- `package.json` — Opening index.html in a browser lets two players move, place bombs, destroy walls, and see a win/lose overlay at game end, with all modules wired together in the entry point. (EPIC-1-7)
+- `src/index.js` — Opening index.html in a browser lets two players move, place bombs, destroy walls, and see a win/lose overlay at game end, with all modules wired together in the entry point. (EPIC-1-7)
 - `src/index.test.ts` — A state module tracks each player's alive status and transitions the game to a win screen for the surviving player or a draw screen if both die, verifiable by unit tests. (EPIC-1-5)
-- `src/index.ts` — A renderer draws the map, players, bombs, and explosions onto an HTML canvas each animation frame via a requestAnimationFrame-driven loop, given plain data objects as input. (EPIC-1-6)
+- `src/index.ts` — Opening index.html in a browser lets two players move, place bombs, destroy walls, and see a win/lose overlay at game end, with all modules wired together in the entry point. (EPIC-1-7)
 - `tsconfig.json` — npm install, npm run build, and npm run test all succeed against a minimal TypeScript + Canvas static-site scaffold with an empty playable-page shell. (EPIC-1-1)
 
 ## Gotchas the fleet has learned
@@ -47,6 +47,7 @@ Recovery agent classified the problem as repaired; deterministic checks and inde
 RECOVERY: repaired
 - **kb://epic-1-5** Implement game state and win/lose detection: EPIC-1-5 shipped. Goal: A state module tracks each player's alive status and transitions the game to a win screen for the surviving player or a draw screen if both die, verifiable by unit tests. Files: src/index.test.ts, src/index.ts. Attempts: 1.
 - **kb://epic-1-6** Build canvas renderer and game loop: EPIC-1-6 shipped. Goal: A renderer draws the map, players, bombs, and explosions onto an HTML canvas each animation frame via a requestAnimationFrame-driven loop, given plain data objects as input. Files: src/index.ts. Attempts: 1.
+- **kb://epic-1-7** Integrate game modules into playable browser entry point: EPIC-1-7 shipped. Goal: Opening index.html in a browser lets two players move, place bombs, destroy walls, and see a win/lose overlay at game end, with all modules wired together in the entry point. Files: index.html, package.json, src/index.js, src/index.ts. Attempts: 1.
 
 ## Build history
 - EPIC-1-1 Scaffold Bomberman project — done (2 attempts)
@@ -55,4 +56,4 @@ RECOVERY: repaired
 - EPIC-1-4 Implement bomb placement and explosion mechanics — done (3 attempts)
 - EPIC-1-5 Implement game state and win/lose detection — done
 - EPIC-1-6 Build canvas renderer and game loop — done
-- EPIC-1-7 Integrate game modules into playable browser entry point — ready
+- EPIC-1-7 Integrate game modules into playable browser entry point — done
