@@ -9,7 +9,10 @@ import {
   createPlayers,
   canMoveTo,
   movePlayer,
+  killPlayer,
+  getGameStatus,
   type MapGrid,
+  type GameStatus,
 } from './index.js';
 
 function createEmptyTestGrid(width: number = 13, height: number = 13): MapGrid {
@@ -452,7 +455,7 @@ test('canMoveTo - returns false for out of bounds', () => {
 
 test('movePlayer - moves to empty tile', () => {
   const grid = createEmptyTestGrid();
-  const player: { id: 1 | 2; x: number; y: number } = { id: 1, x: 1, y: 1 };
+  const player = { id: 1 as const, x: 1, y: 1, alive: true };
   movePlayer(player, 1, 0, grid);
   assert.strictEqual(player.x, 2);
   assert.strictEqual(player.y, 1);
@@ -460,7 +463,7 @@ test('movePlayer - moves to empty tile', () => {
 
 test('movePlayer - moves in all four directions', () => {
   const grid = createEmptyTestGrid();
-  const player: { id: 1 | 2; x: number; y: number } = { id: 1, x: 5, y: 5 };
+  const player = { id: 1 as const, x: 5, y: 5, alive: true };
 
   movePlayer(player, 0, -1, grid);
   assert.strictEqual(player.y, 4, 'moves up');
@@ -477,7 +480,7 @@ test('movePlayer - moves in all four directions', () => {
 
 test('movePlayer - does not move into walls', () => {
   const grid = createMapGrid();
-  const player: { id: 1 | 2; x: number; y: number } = { id: 1, x: 1, y: 1 };
+  const player = { id: 1 as const, x: 1, y: 1, alive: true };
 
   movePlayer(player, -1, 0, grid);
   assert.strictEqual(player.x, 1, 'does not move into border wall');
@@ -486,7 +489,7 @@ test('movePlayer - does not move into walls', () => {
 
 test('movePlayer - does not move out of bounds', () => {
   const grid = createEmptyTestGrid();
-  const player: { id: 1 | 2; x: number; y: number } = { id: 2, x: 11, y: 11 };
+  const player = { id: 2 as const, x: 11, y: 11, alive: true };
 
   movePlayer(player, 1, 0, grid);
   assert.strictEqual(player.x, 11, 'does not move out of bounds right');
@@ -497,11 +500,55 @@ test('movePlayer - does not move out of bounds', () => {
 
 test('movePlayer - player 2 can move on default grid', () => {
   const grid = createEmptyTestGrid();
-  const player: { id: 1 | 2; x: number; y: number } = { id: 2, x: 11, y: 11 };
+  const player = { id: 2 as const, x: 11, y: 11, alive: true };
 
   movePlayer(player, 0, -1, grid);
   assert.strictEqual(player.y, 10, 'player 2 can move up');
 
   movePlayer(player, 1, 0, grid);
   assert.strictEqual(player.x, 11, 'player 2 stays in bounds when moving right from edge');
+});
+
+test('killPlayer - marks player as dead', () => {
+  const [player1, player2] = createPlayers();
+  assert.strictEqual(player1.alive, true, 'player 1 starts alive');
+  assert.strictEqual(player2.alive, true, 'player 2 starts alive');
+
+  killPlayer(player1);
+  assert.strictEqual(player1.alive, false, 'player 1 is dead after killPlayer');
+  assert.strictEqual(player2.alive, true, 'player 2 remains alive');
+});
+
+test('getGameStatus - returns "playing" when both players are alive', () => {
+  const players = createPlayers();
+  const status: GameStatus = getGameStatus(players);
+  assert.strictEqual(status, 'playing', 'game status is playing when both alive');
+});
+
+test('getGameStatus - returns "player1-wins" when player 2 dies', () => {
+  const [player1, player2] = createPlayers();
+  killPlayer(player2);
+  const status: GameStatus = getGameStatus([player1, player2]);
+  assert.strictEqual(status, 'player1-wins', 'player 1 wins when player 2 dies');
+});
+
+test('getGameStatus - returns "player2-wins" when player 1 dies', () => {
+  const [player1, player2] = createPlayers();
+  killPlayer(player1);
+  const status: GameStatus = getGameStatus([player1, player2]);
+  assert.strictEqual(status, 'player2-wins', 'player 2 wins when player 1 dies');
+});
+
+test('getGameStatus - returns "draw" when both players die', () => {
+  const [player1, player2] = createPlayers();
+  killPlayer(player1);
+  killPlayer(player2);
+  const status: GameStatus = getGameStatus([player1, player2]);
+  assert.strictEqual(status, 'draw', 'game ends in draw when both die');
+});
+
+test('createPlayers - players start alive', () => {
+  const [player1, player2] = createPlayers();
+  assert.strictEqual(player1.alive, true, 'player 1 starts alive');
+  assert.strictEqual(player2.alive, true, 'player 2 starts alive');
 });
