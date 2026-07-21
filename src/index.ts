@@ -16,6 +16,24 @@ export interface Player {
   y: number;
 }
 
+export interface Bomb {
+  x: number;
+  y: number;
+  playerId: 1 | 2;
+}
+
+export interface Explosion {
+  x: number;
+  y: number;
+}
+
+export interface GameState {
+  grid: MapGrid;
+  players: Player[];
+  bombs?: Bomb[];
+  explosions?: Explosion[];
+}
+
 export function createMapGrid(width: number = 13, height: number = 13): MapGrid {
   const tiles: TileType[][] = Array(height)
     .fill(null)
@@ -69,6 +87,54 @@ export function movePlayer(player: Player, dx: number, dy: number, grid: MapGrid
   }
 }
 
+export function render(
+  ctx: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  state: GameState
+): void {
+  const { grid, players, bombs = [], explosions = [] } = state;
+
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const tileSize = canvas.width / grid.width;
+
+  for (let row = 0; row < grid.height; row++) {
+    for (let col = 0; col < grid.width; col++) {
+      const tile = grid.tiles[row][col];
+      const x = col * tileSize;
+      const y = row * tileSize;
+
+      if (tile === TileType.WALL_INDESTRUCTIBLE) {
+        ctx.fillStyle = '#666';
+        ctx.fillRect(x, y, tileSize, tileSize);
+      } else if (tile === TileType.WALL_DESTRUCTIBLE) {
+        ctx.fillStyle = '#b8860b';
+        ctx.fillRect(x, y, tileSize, tileSize);
+      }
+    }
+  }
+
+  for (const bomb of bombs) {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(bomb.x * tileSize, bomb.y * tileSize, tileSize, tileSize);
+    ctx.fillStyle = '#999';
+    ctx.beginPath();
+    ctx.arc(bomb.x * tileSize + tileSize / 2, bomb.y * tileSize + tileSize / 2, tileSize / 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  for (const explosion of explosions) {
+    ctx.fillStyle = 'rgba(255, 165, 0, 0.7)';
+    ctx.fillRect(explosion.x * tileSize, explosion.y * tileSize, tileSize, tileSize);
+  }
+
+  for (const player of players) {
+    ctx.fillStyle = player.id === 1 ? '#00ff00' : '#ff0000';
+    ctx.fillRect(player.x * tileSize, player.y * tileSize, tileSize, tileSize);
+  }
+}
+
 export function initGame() {
   if (typeof document === 'undefined') {
     return;
@@ -86,7 +152,9 @@ export function initGame() {
   canvas.height = 512;
 
   const grid = createMapGrid();
-  const [player1, player2] = createPlayers();
+  const players = createPlayers();
+  const bombs: Bomb[] = [];
+  const explosions: Explosion[] = [];
 
   const keysPressed: Record<string, boolean> = {};
 
@@ -99,50 +167,26 @@ export function initGame() {
   });
 
   function update() {
-    if (keysPressed['w']) movePlayer(player1, 0, -1, grid);
-    if (keysPressed['s']) movePlayer(player1, 0, 1, grid);
-    if (keysPressed['a']) movePlayer(player1, -1, 0, grid);
-    if (keysPressed['d']) movePlayer(player1, 1, 0, grid);
+    if (keysPressed['w']) movePlayer(players[0], 0, -1, grid);
+    if (keysPressed['s']) movePlayer(players[0], 0, 1, grid);
+    if (keysPressed['a']) movePlayer(players[0], -1, 0, grid);
+    if (keysPressed['d']) movePlayer(players[0], 1, 0, grid);
 
-    if (keysPressed['arrowup']) movePlayer(player2, 0, -1, grid);
-    if (keysPressed['arrowdown']) movePlayer(player2, 0, 1, grid);
-    if (keysPressed['arrowleft']) movePlayer(player2, -1, 0, grid);
-    if (keysPressed['arrowright']) movePlayer(player2, 1, 0, grid);
-  }
-
-  function draw() {
-    const context = ctx as CanvasRenderingContext2D;
-    context.fillStyle = '#000';
-    context.fillRect(0, 0, canvas.width, canvas.height);
-
-    const tileSize = canvas.width / grid.width;
-
-    for (let row = 0; row < grid.height; row++) {
-      for (let col = 0; col < grid.width; col++) {
-        const tile = grid.tiles[row][col];
-        const x = col * tileSize;
-        const y = row * tileSize;
-
-        if (tile === TileType.WALL_INDESTRUCTIBLE) {
-          context.fillStyle = '#666';
-          context.fillRect(x, y, tileSize, tileSize);
-        } else if (tile === TileType.WALL_DESTRUCTIBLE) {
-          context.fillStyle = '#b8860b';
-          context.fillRect(x, y, tileSize, tileSize);
-        }
-      }
-    }
-
-    context.fillStyle = '#00ff00';
-    context.fillRect(player1.x * tileSize, player1.y * tileSize, tileSize, tileSize);
-
-    context.fillStyle = '#ff0000';
-    context.fillRect(player2.x * tileSize, player2.y * tileSize, tileSize, tileSize);
+    if (keysPressed['arrowup']) movePlayer(players[1], 0, -1, grid);
+    if (keysPressed['arrowdown']) movePlayer(players[1], 0, 1, grid);
+    if (keysPressed['arrowleft']) movePlayer(players[1], -1, 0, grid);
+    if (keysPressed['arrowright']) movePlayer(players[1], 1, 0, grid);
   }
 
   function gameLoop() {
     update();
-    draw();
+    const gameState: GameState = {
+      grid,
+      players,
+      bombs,
+      explosions,
+    };
+    render(ctx as CanvasRenderingContext2D, canvas, gameState);
     requestAnimationFrame(gameLoop);
   }
 
