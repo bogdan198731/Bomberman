@@ -308,6 +308,23 @@ test('explodeBomb chain reaction', () => {
   assert.ok(game.bombs[1].explodedAt !== undefined);
 });
 
+test('update does not detonate a queued bomb twice after a chain reaction', () => {
+  const testGrid = createTestGrid(8, 8);
+  const game = new GameState(testGrid);
+  game.grid[2][2] = TileType.EMPTY;
+  game.grid[2][3] = TileType.EMPTY;
+  game.grid[2][4] = TileType.EMPTY;
+  game.grid[2][5] = TileType.WALL_DESTRUCTIBLE;
+  game.grid[2][6] = TileType.EMPTY;
+
+  game.placeBomb({ x: 2, y: 2 }, 0);
+  game.placeBomb({ x: 4, y: 2 }, 0);
+  game.update(Date.now());
+
+  assert.strictEqual(game.grid[2][5], TileType.EMPTY);
+  assert.strictEqual(game.isExplosion(6, 2), false);
+});
+
 test('getCellAt returns correct cell type', () => {
   const testGrid = createTestGrid(8, 8);
   const game = new GameState(testGrid);

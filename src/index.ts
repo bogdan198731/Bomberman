@@ -174,7 +174,9 @@ export class GameState {
     }
 
     for (const bomb of toExplode) {
-      this.explodeBomb(bomb);
+      if (bomb.explodedAt === undefined) {
+        this.explodeBomb(bomb);
+      }
     }
 
     const expiredExplosions: string[] = [];
