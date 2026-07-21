@@ -9,7 +9,7 @@ _Maintained by the agent fleet — regenerated after planning, merges and escala
 ## Verified project facts
 - **Stack:** node
 - **Required checks:** npm run test, npm run build
-- **Shared integration files:** src/index.ts, src/index.js, package.json
+- **Shared integration files:** package.json, package-lock.json, src/index.ts, src/index.js
 
 ## Decisions (from the planning interview — binding)
 - **Should the 2 players play locally on one keyboard/screen, or remotely in separate browsers over the network?** Local same-keyboard play only, no networking needed.
@@ -18,11 +18,33 @@ _Maintained by the agent fleet — regenerated after planning, merges and escala
 - **Which classic Bomberman features are in scope for this 'simple' version (destructible walls, power-ups, multiple levels/maps, sound effects)?** Single fixed map, destructible walls, bombs with explosion radius, and a win/lose screen; no power-ups, levels, or sound in v1.
 - **How should the game be deployed/run (static site hosted anywhere, or served from a specific existing app/server in this repo)?** Standalone static site buildable and runnable locally, deployable to any static host.
 
+## Module map
+- `index.html` — npm install, npm run build, and npm run test all succeed against a minimal TypeScript + Canvas static-site scaffold with an empty playable-page shell. (EPIC-1-1)
+- `package-lock.json` — npm install, npm run build, and npm run test all succeed against a minimal TypeScript + Canvas static-site scaffold with an empty playable-page shell. (EPIC-1-1)
+- `package.json` — npm install, npm run build, and npm run test all succeed against a minimal TypeScript + Canvas static-site scaffold with an empty playable-page shell. (EPIC-1-1)
+- `src/index.js` — npm install, npm run build, and npm run test all succeed against a minimal TypeScript + Canvas static-site scaffold with an empty playable-page shell. (EPIC-1-1)
+- `src/index.test.ts` — npm install, npm run build, and npm run test all succeed against a minimal TypeScript + Canvas static-site scaffold with an empty playable-page shell. (EPIC-1-1)
+- `src/index.ts` — npm install, npm run build, and npm run test all succeed against a minimal TypeScript + Canvas static-site scaffold with an empty playable-page shell. (EPIC-1-1)
+- `tsconfig.json` — npm install, npm run build, and npm run test all succeed against a minimal TypeScript + Canvas static-site scaffold with an empty playable-page shell. (EPIC-1-1)
+
+## Gotchas the fleet has learned
+- **kb://epic-1-1** Scaffold Bomberman project: EPIC-1-1 shipped. Goal: npm install, npm run build, and npm run test all succeed against a minimal TypeScript + Canvas static-site scaffold with an empty playable-page shell. Files: index.html, package-lock.json, package.json, src/index.js, src/index.test.ts, src/index.ts, tsconfig.json. Attempts: 2.
+- **kb://epic-1-1-gotcha** EPIC-1-1 gotcha (2 attempts): A failure preceded success here:
+CI checks failed:
+$ npm run build
+
+> bomberman@0.1.0 build
+> tsc
+
+src/index.test.ts(1,22): error TS2307: Cannot find module 'node:test' or its corresponding type declarations.
+src/index.test.ts(2,34): error TS2307: Cannot find module 'node:assert' or its corresponding type declarations.
+
+
 ## Build history
-- EPIC-1-1 Scaffold Bomberman project — draft
-- EPIC-1-2 Build fixed map and tile grid — draft
-- EPIC-1-3 Implement player entities and two-player input handling — draft
-- EPIC-1-4 Implement bomb placement and explosion mechanics — draft
-- EPIC-1-5 Implement game state and win/lose detection — draft
-- EPIC-1-6 Build canvas renderer and game loop — draft
-- EPIC-1-7 Integrate game modules into playable browser entry point — draft
+- EPIC-1-1 Scaffold Bomberman project — done (2 attempts)
+- EPIC-1-2 Build fixed map and tile grid — ready
+- EPIC-1-3 Implement player entities and two-player input handling — ready
+- EPIC-1-4 Implement bomb placement and explosion mechanics — ready
+- EPIC-1-5 Implement game state and win/lose detection — ready
+- EPIC-1-6 Build canvas renderer and game loop — ready
+- EPIC-1-7 Integrate game modules into playable browser entry point — ready
