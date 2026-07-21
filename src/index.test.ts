@@ -1,6 +1,19 @@
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { createMapGrid, TileType, createPlayers, canMoveTo, movePlayer, killPlayer, getGameStatus, type MapGrid, type GameStatus } from './index.js';
+import {
+  GameState,
+  TileType,
+  BOMB_TIMER,
+  EXPLOSION_DURATION,
+  createMapGrid,
+  createPlayers,
+  canMoveTo,
+  movePlayer,
+  killPlayer,
+  getGameStatus,
+  type MapGrid,
+  type GameStatus,
+} from './index.js';
 
 function createEmptyTestGrid(width: number = 13, height: number = 13): MapGrid {
   const tiles: TileType[][] = Array(height)
@@ -109,6 +122,286 @@ test('createMapGrid - adjacent to spawn areas have walkable tiles', () => {
   const belowSpawn = grid.tiles[2][1];
   assert.ok(rightOfSpawn !== TileType.WALL_INDESTRUCTIBLE, 'right of spawn (1, 2) is walkable');
   assert.ok(belowSpawn !== TileType.WALL_INDESTRUCTIBLE, 'below spawn (2, 1) is walkable');
+});
+
+function createTestGrid(width: number, height: number) {
+  const tiles: TileType[][] = Array(height)
+    .fill(null)
+    .map(() => Array(width).fill(TileType.EMPTY));
+
+  for (let row = 0; row < height; row++) {
+    for (let col = 0; col < width; col++) {
+      if (row === 0 || row === height - 1 || col === 0 || col === width - 1) {
+        tiles[row][col] = TileType.WALL_INDESTRUCTIBLE;
+      }
+    }
+  }
+
+  return { width, height, tiles };
+}
+
+test('GameState initializes with grid', () => {
+  const game = new GameState();
+  assert.ok(game.grid.length > 0);
+  assert.ok(game.grid[0].length > 0);
+  assert.strictEqual(game.width, 13);
+  assert.strictEqual(game.height, 13);
+});
+
+test('GameState initializes with indestructible walls at even coordinates', () => {
+  const game = new GameState();
+  for (let row = 2; row < game.height - 1; row += 2) {
+    for (let col = 2; col < game.width - 1; col += 2) {
+      assert.strictEqual(
+        game.grid[row][col],
+        TileType.WALL_INDESTRUCTIBLE,
+        `Expected indestructible wall at (${row}, ${col})`
+      );
+    }
+  }
+});
+
+test('placeBomb adds bomb to grid and game state', () => {
+  const testGrid = createTestGrid(8, 8);
+  const game = new GameState(testGrid);
+  const pos = { x: 2, y: 2 };
+  const result = game.placeBomb(pos);
+
+  assert.strictEqual(result, true);
+  assert.strictEqual(game.grid[pos.y][pos.x], TileType.BOMB);
+  assert.strictEqual(game.bombs.length, 1);
+  assert.strictEqual(game.bombs[0].position.x, pos.x);
+  assert.strictEqual(game.bombs[0].position.y, pos.y);
+});
+
+test('placeBomb fails on occupied cell', () => {
+  const testGrid = createTestGrid(8, 8);
+  const game = new GameState(testGrid);
+  const pos = { x: 2, y: 2 };
+
+  game.placeBomb(pos);
+  const result = game.placeBomb(pos);
+
+  assert.strictEqual(result, false);
+  assert.strictEqual(game.bombs.length, 1);
+});
+
+test('placeBomb fails on wall', () => {
+  const testGrid = createTestGrid(8, 8);
+  const game = new GameState(testGrid);
+  const pos = { x: 0, y: 1 };
+
+  const result = game.placeBomb(pos);
+
+  assert.strictEqual(result, false);
+  assert.strictEqual(game.bombs.length, 0);
+});
+
+test('placeBomb fails on out of bounds', () => {
+  const testGrid = createTestGrid(8, 8);
+  const game = new GameState(testGrid);
+  const pos = { x: -1, y: 5 };
+
+  const result = game.placeBomb(pos);
+
+  assert.strictEqual(result, false);
+});
+
+test('placeBomb fails on second bomb in same cell', () => {
+  const testGrid = createTestGrid(8, 8);
+  const game = new GameState(testGrid);
+  const pos = { x: 3, y: 3 };
+
+  const result1 = game.placeBomb(pos);
+  const result2 = game.placeBomb(pos);
+
+  assert.strictEqual(result1, true);
+  assert.strictEqual(result2, false);
+  assert.strictEqual(game.bombs.length, 1);
+});
+
+test('explodeBomb creates explosion at center', () => {
+  const testGrid = createTestGrid(8, 8);
+  const game = new GameState(testGrid);
+  game.placeBomb({ x: 2, y: 2 });
+
+  const bomb = game.bombs[0];
+  game.explodeBomb(bomb);
+
+  assert.strictEqual(game.isExplosion(2, 2), true);
+  assert.strictEqual(game.grid[2][2], TileType.EMPTY);
+});
+
+test('explodeBomb creates cross-shaped explosion', () => {
+  const testGrid = createTestGrid(8, 8);
+  const game = new GameState(testGrid);
+  game.placeBomb({ x: 4, y: 4 });
+
+  const bomb = game.bombs[0];
+  game.explodeBomb(bomb);
+
+  assert.strictEqual(game.isExplosion(4, 4), true);
+  assert.strictEqual(game.isExplosion(5, 4), true);
+  assert.strictEqual(game.isExplosion(3, 4), true);
+  assert.strictEqual(game.isExplosion(4, 5), true);
+  assert.strictEqual(game.isExplosion(4, 3), true);
+});
+
+test('explodeBomb is blocked by indestructible walls', () => {
+  const testGrid = createTestGrid(8, 8);
+  const game = new GameState(testGrid);
+  game.placeBomb({ x: 2, y: 2 });
+
+  const bomb = game.bombs[0];
+  game.explodeBomb(bomb);
+
+  assert.strictEqual(game.isExplosion(2, 2), true);
+  assert.strictEqual(game.isExplosion(2, 3), true);
+  assert.strictEqual(game.isExplosion(2, 4), true);
+  assert.strictEqual(game.isExplosion(3, 2), true);
+  assert.strictEqual(game.isExplosion(1, 2), true);
+});
+
+test('explodeBomb destroys destructible walls', () => {
+  const testGrid = createTestGrid(8, 8);
+  const game = new GameState(testGrid);
+  game.grid[3][4] = TileType.WALL_DESTRUCTIBLE;
+  const pos = { x: 3, y: 3 };
+  game.placeBomb(pos);
+
+  const bomb = game.bombs[0];
+  game.explodeBomb(bomb);
+
+  assert.strictEqual(game.grid[3][4], TileType.EMPTY);
+  assert.strictEqual(game.isExplosion(3, 3), true);
+});
+
+test('explodeBomb stops at destructible wall', () => {
+  const testGrid = createTestGrid(8, 8);
+  const game = new GameState(testGrid);
+  game.grid[4][4] = TileType.WALL_DESTRUCTIBLE;
+  game.grid[4][5] = TileType.EMPTY;
+
+  game.placeBomb({ x: 3, y: 4 });
+
+  const bomb = game.bombs[0];
+  game.explodeBomb(bomb);
+
+  assert.strictEqual(game.isExplosion(4, 4), true);
+  assert.strictEqual(game.isExplosion(5, 4), false);
+});
+
+test('explodeBomb chain reaction', () => {
+  const testGrid = createTestGrid(8, 8);
+  const game = new GameState(testGrid);
+  game.grid[2][2] = TileType.EMPTY;
+  game.grid[2][3] = TileType.EMPTY;
+  game.grid[2][4] = TileType.EMPTY;
+
+  game.placeBomb({ x: 2, y: 2 });
+  game.placeBomb({ x: 4, y: 2 });
+
+  const bomb1 = game.bombs[0];
+  game.explodeBomb(bomb1);
+
+  assert.strictEqual(game.isExplosion(2, 2), true);
+  assert.strictEqual(game.isExplosion(3, 2), true);
+  assert.strictEqual(game.isExplosion(4, 2), true);
+  assert.strictEqual(game.bombs.length, 2);
+  assert.ok(game.bombs[1].explodedAt !== undefined);
+});
+
+test('update does not detonate a queued bomb twice after a chain reaction', () => {
+  const testGrid = createTestGrid(8, 8);
+  const game = new GameState(testGrid);
+  game.grid[2][2] = TileType.EMPTY;
+  game.grid[2][3] = TileType.EMPTY;
+  game.grid[2][4] = TileType.EMPTY;
+  game.grid[2][5] = TileType.WALL_DESTRUCTIBLE;
+  game.grid[2][6] = TileType.EMPTY;
+
+  game.placeBomb({ x: 2, y: 2 });
+  game.placeBomb({ x: 4, y: 2 });
+  game.bombs[0].timer = 0;
+  game.bombs[1].timer = 0;
+  game.update(Date.now());
+
+  assert.strictEqual(game.grid[2][5], TileType.EMPTY);
+  assert.strictEqual(game.isExplosion(6, 2), false);
+});
+
+test('update keeps a newly detonated explosion active on the supplied clock', () => {
+  const testGrid = createTestGrid(8, 8);
+  const game = new GameState(testGrid);
+  const placedAt = 1_000;
+  const detonationTime = placedAt + BOMB_TIMER;
+
+  game.placeBomb({ x: 3, y: 3 }, placedAt);
+  game.update(detonationTime);
+
+  assert.strictEqual(game.bombs[0].explodedAt, detonationTime);
+  assert.strictEqual(game.isExplosion(3, 3), true);
+
+  game.update(detonationTime + EXPLOSION_DURATION - 1);
+  assert.strictEqual(game.isExplosion(3, 3), true);
+
+  game.update(detonationTime + EXPLOSION_DURATION);
+  assert.strictEqual(game.isExplosion(3, 3), false);
+  assert.strictEqual(game.bombs.length, 0);
+});
+
+test('getCellAt returns correct cell type', () => {
+  const testGrid = createTestGrid(8, 8);
+  const game = new GameState(testGrid);
+  game.grid[2][2] = TileType.WALL_DESTRUCTIBLE;
+
+  assert.strictEqual(game.getCellAt({ x: 2, y: 2 }), TileType.WALL_DESTRUCTIBLE);
+  assert.strictEqual(game.getCellAt({ x: 3, y: 3 }), TileType.EMPTY);
+});
+
+test('getCellAt returns wall for out of bounds', () => {
+  const testGrid = createTestGrid(8, 8);
+  const game = new GameState(testGrid);
+
+  assert.strictEqual(
+    game.getCellAt({ x: -1, y: 0 }),
+    TileType.WALL_INDESTRUCTIBLE
+  );
+  assert.strictEqual(
+    game.getCellAt({ x: game.width, y: 0 }),
+    TileType.WALL_INDESTRUCTIBLE
+  );
+});
+
+test('update removes old explosions', () => {
+  const testGrid = createTestGrid(8, 8);
+  const game = new GameState(testGrid);
+  game.placeBomb({ x: 2, y: 2 });
+  const bomb = game.bombs[0];
+  game.explodeBomb(bomb);
+
+  const explosionCount = game.explosions.size;
+  assert.ok(explosionCount > 0);
+
+  const futureTime = Date.now() + EXPLOSION_DURATION + 100;
+  game.update(futureTime);
+
+  assert.strictEqual(game.explosions.size, 0);
+});
+
+test('update removes expired bombs', () => {
+  const testGrid = createTestGrid(8, 8);
+  const game = new GameState(testGrid);
+  game.placeBomb({ x: 2, y: 2 });
+  const bomb = game.bombs[0];
+
+  game.explodeBomb(bomb);
+  assert.strictEqual(game.bombs.length, 1);
+
+  const futureTime = Date.now() + EXPLOSION_DURATION + 100;
+  game.update(futureTime);
+
+  assert.strictEqual(game.bombs.length, 0);
 });
 
 test('createPlayers - creates two players at spawn locations', () => {

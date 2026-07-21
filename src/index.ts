@@ -1,13 +1,23 @@
+export const CELL_SIZE = 64;
+export const BOMB_TIMER = 3000;
+export const EXPLOSION_DURATION = 500;
+
 export enum TileType {
   EMPTY = 0,
   WALL_DESTRUCTIBLE = 1,
   WALL_INDESTRUCTIBLE = 2,
+  BOMB = 3,
 }
 
 export interface MapGrid {
   width: number;
   height: number;
   tiles: TileType[][];
+}
+
+export interface Position {
+  x: number;
+  y: number;
 }
 
 export interface Player {
@@ -18,21 +28,15 @@ export interface Player {
 }
 
 export interface Bomb {
-  x: number;
-  y: number;
-  playerId: 1 | 2;
+  position: Position;
+  timer: number;
+  placedAt?: number;
+  explodedAt?: number;
 }
 
 export interface Explosion {
   x: number;
   y: number;
-}
-
-export interface GameState {
-  grid: MapGrid;
-  players: Player[];
-  bombs?: Bomb[];
-  explosions?: Explosion[];
 }
 
 export function createMapGrid(width: number = 13, height: number = 13): MapGrid {
@@ -65,6 +69,150 @@ export function createMapGrid(width: number = 13, height: number = 13): MapGrid 
   return { width, height, tiles };
 }
 
+export class GameState {
+  grid: TileType[][];
+  width: number;
+  height: number;
+  bombs: Bomb[];
+  explosions: Map<string, number>;
+
+  constructor(mapGrid?: MapGrid) {
+    if (mapGrid) {
+      this.grid = mapGrid.tiles;
+      this.width = mapGrid.width;
+      this.height = mapGrid.height;
+    } else {
+      const defaultMap = createMapGrid();
+      this.grid = defaultMap.tiles;
+      this.width = defaultMap.width;
+      this.height = defaultMap.height;
+    }
+    this.bombs = [];
+    this.explosions = new Map();
+  }
+
+  placeBomb(pos: Position, now: number = Date.now()): boolean {
+    if (
+      pos.x < 0 ||
+      pos.x >= this.width ||
+      pos.y < 0 ||
+      pos.y >= this.height
+    ) {
+      return false;
+    }
+
+    if (this.grid[pos.y][pos.x] !== TileType.EMPTY) {
+      return false;
+    }
+
+    if (this.bombs.some((b) => b.position.x === pos.x && b.position.y === pos.y)) {
+      return false;
+    }
+
+    const bomb: Bomb = { position: pos, timer: BOMB_TIMER, placedAt: now };
+    this.bombs.push(bomb);
+    this.grid[pos.y][pos.x] = TileType.BOMB;
+    return true;
+  }
+
+  explodeBomb(bomb: Bomb, now: number = Date.now()): void {
+    if (bomb.explodedAt !== undefined) {
+      return;
+    }
+
+    const { x, y } = bomb.position;
+    bomb.explodedAt = now;
+
+    this.grid[y][x] = TileType.EMPTY;
+    this.addExplosion(x, y, now);
+
+    const directions = [
+      { dx: 1, dy: 0 },
+      { dx: -1, dy: 0 },
+      { dx: 0, dy: 1 },
+      { dx: 0, dy: -1 },
+    ];
+
+    for (const dir of directions) {
+      for (let i = 1; i < Math.max(this.width, this.height); i++) {
+        const nx = x + dir.dx * i;
+        const ny = y + dir.dy * i;
+
+        if (nx < 0 || nx >= this.width || ny < 0 || ny >= this.height) break;
+
+        if (this.grid[ny][nx] === TileType.WALL_INDESTRUCTIBLE) break;
+
+        this.addExplosion(nx, ny, now);
+
+        if (this.grid[ny][nx] === TileType.WALL_DESTRUCTIBLE) {
+          this.grid[ny][nx] = TileType.EMPTY;
+          break;
+        }
+
+        if (this.grid[ny][nx] === TileType.BOMB) {
+          const targetBomb = this.bombs.find(
+            (b) => b.position.x === nx && b.position.y === ny
+          );
+          if (targetBomb && targetBomb.explodedAt === undefined) {
+            this.explodeBomb(targetBomb, now);
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  private addExplosion(x: number, y: number, now: number): void {
+    const key = `${x},${y}`;
+    this.explosions.set(key, now);
+  }
+
+  update(now: number): void {
+    const toExplode: Bomb[] = [];
+
+    for (const bomb of this.bombs) {
+      if (bomb.explodedAt === undefined) {
+        const placedAt = bomb.placedAt ?? now;
+        if (now - placedAt >= bomb.timer) {
+          toExplode.push(bomb);
+        }
+      }
+    }
+
+    for (const bomb of toExplode) {
+      if (bomb.explodedAt === undefined) {
+        this.explodeBomb(bomb, now);
+      }
+    }
+
+    const expiredExplosions: string[] = [];
+    for (const [key, startTime] of this.explosions.entries()) {
+      if (now - startTime >= EXPLOSION_DURATION) {
+        expiredExplosions.push(key);
+      }
+    }
+
+    for (const key of expiredExplosions) {
+      this.explosions.delete(key);
+    }
+
+    this.bombs = this.bombs.filter((b) => {
+      return b.explodedAt === undefined || now - b.explodedAt < EXPLOSION_DURATION;
+    });
+  }
+
+  getCellAt(pos: Position): TileType {
+    if (pos.x < 0 || pos.x >= this.width || pos.y < 0 || pos.y >= this.height) {
+      return TileType.WALL_INDESTRUCTIBLE;
+    }
+    return this.grid[pos.y][pos.x];
+  }
+
+  isExplosion(x: number, y: number): boolean {
+    return this.explosions.has(`${x},${y}`);
+  }
+}
+
 export function createPlayers(): [Player, Player] {
   return [
     { id: 1, x: 1, y: 1, alive: true },
@@ -88,6 +236,14 @@ export function movePlayer(player: Player, dx: number, dy: number, grid: MapGrid
   }
 }
 
+export interface RenderState {
+  grid: MapGrid;
+  players: Player[];
+  bombs?: Array<{ x: number; y: number }>;
+  explosions?: Explosion[];
+}
+
+/** Draws a supplied plain game-state object without depending on live game internals. */
 export function killPlayer(player: Player): void {
   player.alive = false;
 }
@@ -109,27 +265,23 @@ export function getGameStatus(players: Player[]): GameStatus {
 export function render(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
-  state: GameState
+  state: RenderState
 ): void {
   const { grid, players, bombs = [], explosions = [] } = state;
-
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
   const tileSize = canvas.width / grid.width;
 
-  for (let row = 0; row < grid.height; row++) {
-    for (let col = 0; col < grid.width; col++) {
-      const tile = grid.tiles[row][col];
-      const x = col * tileSize;
-      const y = row * tileSize;
+  ctx.fillStyle = '#222';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+  for (let y = 0; y < grid.height; y++) {
+    for (let x = 0; x < grid.width; x++) {
+      const tile = grid.tiles[y][x];
       if (tile === TileType.WALL_INDESTRUCTIBLE) {
         ctx.fillStyle = '#666';
-        ctx.fillRect(x, y, tileSize, tileSize);
+        ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
       } else if (tile === TileType.WALL_DESTRUCTIBLE) {
         ctx.fillStyle = '#b8860b';
-        ctx.fillRect(x, y, tileSize, tileSize);
+        ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
       }
     }
   }
@@ -137,7 +289,7 @@ export function render(
   for (const bomb of bombs) {
     ctx.fillStyle = '#000';
     ctx.fillRect(bomb.x * tileSize, bomb.y * tileSize, tileSize, tileSize);
-    ctx.fillStyle = '#999';
+    ctx.fillStyle = '#f00';
     ctx.beginPath();
     ctx.arc(bomb.x * tileSize + tileSize / 2, bomb.y * tileSize + tileSize / 2, tileSize / 3, 0, Math.PI * 2);
     ctx.fill();
@@ -206,16 +358,22 @@ export function initGame() {
     return;
   }
 
-  canvas.width = 512;
-  canvas.height = 512;
-
-  let grid = createMapGrid();
+  let mapGrid = createMapGrid();
+  let gameState = new GameState(mapGrid);
   let players = createPlayers();
-  let bombs: Bomb[] = [];
-  let explosions: Explosion[] = [];
   let gameStatus: GameStatus = 'playing';
 
+  canvas.width = gameState.width * CELL_SIZE;
+  canvas.height = gameState.height * CELL_SIZE;
+
   const keysPressed: Record<string, boolean> = {};
+
+  canvas.addEventListener('click', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
+    const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+    gameState.placeBomb({ x, y });
+  });
 
   window.addEventListener('keydown', (e) => {
     keysPressed[e.key.toLowerCase()] = true;
@@ -226,10 +384,9 @@ export function initGame() {
   });
 
   function reset() {
-    grid = createMapGrid();
+    mapGrid = createMapGrid();
+    gameState = new GameState(mapGrid);
     players = createPlayers();
-    bombs = [];
-    explosions = [];
     gameStatus = 'playing';
   }
 
@@ -241,30 +398,50 @@ export function initGame() {
       return;
     }
 
-    if (keysPressed['w']) movePlayer(players[0], 0, -1, grid);
-    if (keysPressed['s']) movePlayer(players[0], 0, 1, grid);
-    if (keysPressed['a']) movePlayer(players[0], -1, 0, grid);
-    if (keysPressed['d']) movePlayer(players[0], 1, 0, grid);
+    if (keysPressed['w']) movePlayer(players[0], 0, -1, mapGrid);
+    if (keysPressed['s']) movePlayer(players[0], 0, 1, mapGrid);
+    if (keysPressed['a']) movePlayer(players[0], -1, 0, mapGrid);
+    if (keysPressed['d']) movePlayer(players[0], 1, 0, mapGrid);
 
-    if (keysPressed['arrowup']) movePlayer(players[1], 0, -1, grid);
-    if (keysPressed['arrowdown']) movePlayer(players[1], 0, 1, grid);
-    if (keysPressed['arrowleft']) movePlayer(players[1], -1, 0, grid);
-    if (keysPressed['arrowright']) movePlayer(players[1], 1, 0, grid);
+    if (keysPressed['arrowup']) movePlayer(players[1], 0, -1, mapGrid);
+    if (keysPressed['arrowdown']) movePlayer(players[1], 0, 1, mapGrid);
+    if (keysPressed['arrowleft']) movePlayer(players[1], -1, 0, mapGrid);
+    if (keysPressed['arrowright']) movePlayer(players[1], 1, 0, mapGrid);
 
+    const now = Date.now();
+    gameState.update(now);
+
+    for (const player of players) {
+      if (player.alive && gameState.isExplosion(player.x, player.y)) {
+        killPlayer(player);
+      }
+    }
     gameStatus = getGameStatus(players);
   }
 
   function gameLoop() {
     update();
 
+    const explosions: Explosion[] = [];
+    for (const [key] of gameState.explosions) {
+      const [x, y] = key.split(',').map(Number);
+      explosions.push({ x, y });
+    }
+
+    const bombs: NonNullable<RenderState['bombs']> = gameState.bombs.map((b) => ({
+      x: b.position.x,
+      y: b.position.y,
+    }));
+
+    const state = {
+      grid: mapGrid,
+      players,
+      bombs,
+      explosions,
+    };
+
     if (gameStatus === 'playing') {
-      const gameState: GameState = {
-        grid,
-        players,
-        bombs,
-        explosions,
-      };
-      render(ctx as CanvasRenderingContext2D, canvas, gameState);
+      render(ctx as CanvasRenderingContext2D, canvas, state);
     } else if (gameStatus === 'draw') {
       renderDrawScreen(ctx as CanvasRenderingContext2D, canvas);
     } else if (gameStatus === 'player1-wins') {
