@@ -5,6 +5,9 @@ import {
   TileType,
   BOMB_TIMER,
   EXPLOSION_DURATION,
+  EXPLOSION_RADIUS,
+  PLAYER_MOVE_DURATION,
+  PowerUpType,
   createMapGrid,
   createPlayers,
   canMoveTo,
@@ -309,6 +312,61 @@ test('explodeBomb chain reaction', () => {
   assert.strictEqual(game.isExplosion(4, 2), true);
   assert.strictEqual(game.bombs.length, 2);
   assert.ok(game.bombs[1].explodedAt !== undefined);
+});
+
+test('placeBomb keeps the owner and upgraded blast radius', () => {
+  const testGrid = createTestGrid(9, 9);
+  const game = new GameState(testGrid);
+
+  game.placeBomb({ x: 3, y: 3 }, 1_000, 1, 3);
+
+  assert.strictEqual(game.bombs[0].ownerId, 1);
+  assert.strictEqual(game.bombs[0].radius, 3);
+  game.explodeBomb(game.bombs[0], 4_000);
+  assert.strictEqual(game.isExplosion(6, 3), true, 'upgraded fire reaches three tiles');
+});
+
+test('destroyed crates can reveal a power-up', () => {
+  const testGrid = createTestGrid(8, 8);
+  const game = new GameState(testGrid);
+  game.grid[4][3] = TileType.WALL_DESTRUCTIBLE;
+  game.placeBomb({ x: 3, y: 3 });
+
+  game.explodeBomb(game.bombs[0]);
+
+  assert.strictEqual(game.grid[4][3], TileType.EMPTY);
+  assert.strictEqual(game.powerUps.get('3,4'), PowerUpType.SPEED_UP);
+});
+
+test('an exposed power-up is destroyed by an explosion', () => {
+  const testGrid = createTestGrid(8, 8);
+  const game = new GameState(testGrid);
+  game.powerUps.set('4,3', PowerUpType.BOMB_UP);
+  game.placeBomb({ x: 3, y: 3 });
+
+  game.explodeBomb(game.bombs[0]);
+
+  assert.strictEqual(game.powerUps.has('4,3'), false);
+});
+
+test('collectPowerUp applies each classic player upgrade', () => {
+  const game = new GameState(createTestGrid(8, 8));
+  const [player] = createPlayers();
+  player.x = 3;
+  player.y = 3;
+
+  game.powerUps.set('3,3', PowerUpType.BOMB_UP);
+  assert.strictEqual(game.collectPowerUp(player), PowerUpType.BOMB_UP);
+  assert.strictEqual(player.maxBombs, 2);
+
+  game.powerUps.set('3,3', PowerUpType.FIRE_UP);
+  assert.strictEqual(game.collectPowerUp(player), PowerUpType.FIRE_UP);
+  assert.strictEqual(player.blastRadius, EXPLOSION_RADIUS + 1);
+
+  game.powerUps.set('3,3', PowerUpType.SPEED_UP);
+  assert.strictEqual(game.collectPowerUp(player), PowerUpType.SPEED_UP);
+  assert.ok((player.moveDuration ?? PLAYER_MOVE_DURATION) < PLAYER_MOVE_DURATION);
+  assert.strictEqual(game.powerUps.has('3,3'), false);
 });
 
 test('update does not detonate a queued bomb twice after a chain reaction', () => {

@@ -2,89 +2,906 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bomberman</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#10151f">
+  <title>Blast Buddies — Local Bomber Battle</title>
   <style>
-    body {
-      margin: 0;
-      padding: 24px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
+    :root {
+      color-scheme: dark;
+      --ink: #f8fafc;
+      --muted: #9aa8bd;
+      --panel: rgba(23, 30, 43, 0.94);
+      --panel-border: rgba(255, 255, 255, 0.09);
+      --p1: #54e38e;
+      --p1-dark: #1f9d5a;
+      --p2: #ff6b78;
+      --p2-dark: #d83c51;
+      --gold: #ffc857;
+    }
+
+    * {
       box-sizing: border-box;
-      color: #fff;
-      background: #181818;
-      font-family: system-ui, sans-serif;
     }
-    #gameCanvas {
-      display: block;
-      width: min(832px, calc(100vw - 48px), calc(100vh - 150px));
-      height: auto;
-      border: 3px solid #eee;
-      border-radius: 4px;
-      background-color: #000;
-      image-rendering: pixelated;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 15% 10%, rgba(84, 227, 142, 0.12), transparent 28rem),
+        radial-gradient(circle at 85% 80%, rgba(255, 107, 120, 0.12), transparent 30rem),
+        #0c111a;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
-    .container {
-      text-align: center;
+
+    body::before {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      content: "";
+      opacity: 0.18;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+      background-size: 32px 32px;
+      mask-image: linear-gradient(to bottom, black, transparent 85%);
     }
-    h1 {
-      margin: 0 0 12px;
-      letter-spacing: 0.08em;
-    }
-    .controls {
-      display: flex;
-      justify-content: center;
-      gap: 28px;
-      margin: 0 0 16px;
-      color: #ddd;
-      font-size: 0.95rem;
-    }
-    .player-one strong {
-      color: #00ff00;
-    }
-    .player-two strong {
-      color: #ff5555;
-    }
+
+    button,
     kbd {
-      padding: 2px 6px;
-      border: 1px solid #777;
-      border-radius: 3px;
-      color: #fff;
-      background: #333;
-      box-shadow: 0 1px 0 #777;
       font: inherit;
     }
-    @media (max-width: 600px) {
+
+    .app {
+      position: relative;
+      width: min(1080px, 100%);
+      margin: 0 auto;
+      padding: 28px 24px 36px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-mark {
+      position: relative;
+      width: 42px;
+      height: 42px;
+      flex: 0 0 auto;
+      border: 3px solid #f5f7fb;
+      border-radius: 50%;
+      background: #111722;
+      box-shadow: 0 5px 0 rgba(0, 0, 0, 0.25);
+    }
+
+    .brand-mark::before {
+      position: absolute;
+      top: -8px;
+      right: 2px;
+      width: 14px;
+      height: 11px;
+      border-top: 4px solid var(--gold);
+      border-right: 4px solid var(--gold);
+      border-radius: 0 10px 0 0;
+      content: "";
+      transform: rotate(-12deg);
+    }
+
+    .brand-mark::after {
+      position: absolute;
+      top: 6px;
+      left: 8px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      content: "";
+      background: rgba(255, 255, 255, 0.75);
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(1.35rem, 3vw, 1.9rem);
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      line-height: 1;
+    }
+
+    .brand p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 13px;
+      border: 1px solid var(--panel-border);
+      border-radius: 999px;
+      color: #ccd5e3;
+      background: rgba(255, 255, 255, 0.045);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--p1);
+      box-shadow: 0 0 12px var(--p1);
+    }
+
+    .game-card {
+      overflow: hidden;
+      border: 1px solid var(--panel-border);
+      border-radius: 24px;
+      background: var(--panel);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.36);
+      backdrop-filter: blur(18px);
+    }
+
+    .scoreboard {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 18px;
+      padding: 17px 22px;
+      border-bottom: 1px solid var(--panel-border);
+      background: rgba(255, 255, 255, 0.018);
+    }
+
+    .player-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .player-card.player-two {
+      justify-content: flex-end;
+      text-align: right;
+    }
+
+    .player-token {
+      display: grid;
+      width: 42px;
+      height: 42px;
+      place-items: center;
+      flex: 0 0 auto;
+      border: 2px solid rgba(255, 255, 255, 0.22);
+      border-radius: 14px;
+      color: #07120c;
+      background: var(--p1);
+      box-shadow: inset 0 -5px 0 rgba(0, 0, 0, 0.14);
+      font-size: 0.85rem;
+      font-weight: 950;
+    }
+
+    .player-two .player-token {
+      color: #21070b;
+      background: var(--p2);
+    }
+
+    .player-copy strong {
+      display: block;
+      overflow: hidden;
+      font-size: 0.95rem;
+      font-weight: 900;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .player-copy span {
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 700;
+    }
+
+    .player-role {
+      display: inline-block;
+      margin-left: 5px;
+      padding: 2px 5px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      color: #e7edf6;
+      background: rgba(255, 255, 255, 0.08);
+      font-size: 0.58rem;
+      font-weight: 850;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      vertical-align: 2px;
+    }
+
+    .match-meta {
+      min-width: 112px;
+      text-align: center;
+    }
+
+    .match-meta span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.67rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .score {
+      margin-top: 2px;
+      font-size: 1.55rem;
+      font-weight: 950;
+      letter-spacing: 0.11em;
+    }
+
+    .arena-wrap {
+      position: relative;
+      width: min(832px, calc(100% - 40px));
+      margin: 20px auto;
+      overflow: hidden;
+      border: 6px solid #0a0e15;
+      border-radius: 18px;
+      background: #263d33;
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.1),
+        0 18px 35px rgba(0, 0, 0, 0.34),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+
+    #gameCanvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 1;
+      background: #294f3a;
+      image-rendering: pixelated;
+    }
+
+    .round-overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 120ms ease;
+    }
+
+    .round-overlay.visible {
+      opacity: 1;
+    }
+
+    .round-overlay span {
+      padding: 8px 18px 10px;
+      border: 2px solid rgba(255, 255, 255, 0.75);
+      border-radius: 14px;
+      color: #fff;
+      background: rgba(8, 12, 18, 0.78);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+      font-size: clamp(2rem, 8vw, 4.5rem);
+      font-weight: 950;
+      letter-spacing: -0.06em;
+      line-height: 1;
+      text-shadow: 0 4px 0 rgba(0, 0, 0, 0.35);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .lobby-overlay {
+      position: absolute;
+      z-index: 3;
+      inset: 0;
+      display: grid;
+      padding: 24px;
+      place-items: center;
+      background: rgba(7, 11, 17, 0.76);
+      backdrop-filter: blur(8px);
+    }
+
+    .lobby-panel {
+      width: min(410px, 100%);
+      padding: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      background: rgba(23, 30, 43, 0.97);
+      box-shadow: 0 22px 70px rgba(0, 0, 0, 0.48);
+      text-align: center;
+    }
+
+    .lobby-panel h2 {
+      margin: 0;
+      font-size: 1.65rem;
+      font-weight: 950;
+      letter-spacing: -0.04em;
+    }
+
+    .lobby-panel > p {
+      margin: 8px 0 20px;
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.5;
+    }
+
+    .lobby-button {
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 15px;
+      border: 0;
+      border-radius: 11px;
+      color: #07130d;
+      background: var(--p1);
+      cursor: pointer;
+      font-weight: 900;
+      transition: filter 150ms ease, transform 150ms ease;
+    }
+
+    .lobby-button:hover {
+      filter: brightness(1.08);
+      transform: translateY(-1px);
+    }
+
+    .lobby-button.secondary {
+      width: auto;
+      flex: 0 0 auto;
+      color: #fff;
+      background: #3a465a;
+    }
+
+    .join-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .room-input {
+      width: 100%;
+      min-width: 0;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 11px;
+      outline: none;
+      color: #fff;
+      background: #111824;
+      font-size: 1rem;
+      font-weight: 900;
+      letter-spacing: 0.18em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .room-input:focus {
+      border-color: var(--p1);
+      box-shadow: 0 0 0 3px rgba(84, 227, 142, 0.16);
+    }
+
+    .lobby-divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 14px 0;
+      color: #75839a;
+      font-size: 0.68rem;
+      font-weight: 850;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .lobby-divider::before,
+    .lobby-divider::after {
+      height: 1px;
+      flex: 1;
+      content: "";
+      background: rgba(255, 255, 255, 0.09);
+    }
+
+    .connection-message {
+      min-height: 20px;
+      margin: 15px 0 0 !important;
+      color: #b7c3d5 !important;
+    }
+
+    .connection-message.error {
+      color: #ff8b96 !important;
+    }
+
+    .room-code {
+      margin: 12px 0;
+      color: var(--gold);
+      font-size: clamp(2rem, 9vw, 3.3rem);
+      font-weight: 950;
+      letter-spacing: 0.18em;
+      line-height: 1;
+      text-indent: 0.18em;
+    }
+
+    .copy-button {
+      padding: 9px 13px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 9px;
+      color: #fff;
+      background: rgba(255, 255, 255, 0.08);
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-weight: 850;
+    }
+
+    .bonus-legend {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      padding: 2px 18px 14px;
+      color: var(--muted);
+      font-size: 0.7rem;
+      font-weight: 750;
+    }
+
+    .bonus-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 999px;
+      color: #dce5ef;
+      background: rgba(255, 255, 255, 0.045);
+      white-space: nowrap;
+    }
+
+    .bonus-chip i {
+      display: grid;
+      width: 17px;
+      height: 17px;
+      place-items: center;
+      border-radius: 50%;
+      color: #10151f;
+      font-size: 0.64rem;
+      font-style: normal;
+      font-weight: 950;
+    }
+
+    .bonus-chip.bomb i { background: #ffc857; }
+    .bonus-chip.fire i { background: #ff7448; }
+    .bonus-chip.speed i { background: #72e4ff; }
+
+    .game-footer {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 18px;
+      padding: 15px 22px 18px;
+      border-top: 1px solid var(--panel-border);
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 650;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .controls.player-two {
+      justify-content: flex-end;
+    }
+
+    kbd {
+      display: inline-grid;
+      min-width: 25px;
+      min-height: 24px;
+      padding: 2px 6px;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-bottom-width: 3px;
+      border-radius: 6px;
+      color: #edf2f8;
+      background: #293345;
+      font-size: 0.67rem;
+      font-weight: 850;
+      line-height: 1;
+    }
+
+    .restart-button {
+      padding: 9px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 10px;
+      color: #f8fafc;
+      background: rgba(255, 255, 255, 0.07);
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-weight: 850;
+      transition: background 150ms ease, transform 150ms ease;
+    }
+
+    .restart-button:hover {
+      background: rgba(255, 255, 255, 0.13);
+      transform: translateY(-1px);
+    }
+
+    .restart-button:focus-visible {
+      outline: 3px solid rgba(255, 200, 87, 0.5);
+      outline-offset: 2px;
+    }
+
+    .mobile-controls {
+      display: none;
+    }
+
+    @media (hover: none) and (pointer: coarse), (max-width: 700px) {
       body {
+        overscroll-behavior-y: contain;
+      }
+
+      .app {
+        padding-bottom: max(18px, env(safe-area-inset-bottom));
+      }
+
+      .game-footer {
+        display: none;
+      }
+
+      .mobile-controls:not(.hidden) {
+        position: sticky;
+        z-index: 4;
+        bottom: 0;
+        display: grid;
+        grid-template-columns: minmax(172px, 1fr) auto minmax(94px, 0.65fr);
+        align-items: center;
+        gap: 16px;
+        padding: 12px max(14px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+        border-top: 1px solid var(--panel-border);
+        background: rgba(17, 23, 34, 0.96);
+        box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.24);
+        backdrop-filter: blur(14px);
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+
+      .mobile-player-label {
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        color: var(--muted);
+        font-size: 0.62rem;
+        font-weight: 850;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        transform: translateX(-50%);
+        white-space: nowrap;
+      }
+
+      .touch-dpad {
+        display: grid;
+        grid-template-columns: repeat(3, 54px);
+        grid-template-rows: repeat(2, 54px);
+        gap: 5px;
+        justify-content: start;
+        margin-top: 8px;
+      }
+
+      .touch-button {
+        display: grid;
+        width: 54px;
+        height: 54px;
+        padding: 0;
+        place-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-bottom-width: 4px;
+        border-radius: 15px;
+        color: #f3f7fc;
+        background: linear-gradient(#3a475b, #263143);
+        box-shadow: 0 5px 12px rgba(0, 0, 0, 0.25);
+        touch-action: none;
+        -webkit-tap-highlight-color: transparent;
+        font-size: 1.35rem;
+        font-weight: 950;
+      }
+
+      .touch-button.pressed,
+      .touch-button:active {
+        border-bottom-width: 1px;
+        filter: brightness(1.18);
+        transform: translateY(3px);
+      }
+
+      .touch-up { grid-column: 2; grid-row: 1; }
+      .touch-left { grid-column: 1; grid-row: 2; }
+      .touch-down { grid-column: 2; grid-row: 2; }
+      .touch-right { grid-column: 3; grid-row: 2; }
+
+      .mobile-round-button {
+        align-self: end;
+        margin-bottom: 5px;
+        padding: 9px 10px;
+        border: 1px solid rgba(255, 255, 255, 0.13);
+        border-radius: 10px;
+        color: #cbd5e4;
+        background: rgba(255, 255, 255, 0.06);
+        touch-action: manipulation;
+        font-size: 0.68rem;
+        font-weight: 850;
+        white-space: nowrap;
+      }
+
+      .mobile-bomb-button {
+        display: grid;
+        width: 84px;
+        height: 84px;
+        place-items: center;
+        justify-self: end;
+        border: 3px solid rgba(255, 255, 255, 0.72);
+        border-bottom-width: 7px;
+        border-radius: 50%;
+        color: #250b0e;
+        background: linear-gradient(#ff8790, #ed4658);
+        box-shadow: 0 8px 24px rgba(237, 70, 88, 0.3);
+        touch-action: none;
+        -webkit-tap-highlight-color: transparent;
+        font-size: 0.72rem;
+        font-weight: 950;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .mobile-bomb-button.pressed,
+      .mobile-bomb-button:active {
+        border-bottom-width: 3px;
+        filter: brightness(1.1);
+        transform: translateY(4px) scale(0.97);
+      }
+    }
+
+    @media (max-width: 700px) {
+      .app {
+        padding: 18px 12px 26px;
+      }
+
+      .topbar {
+        margin-bottom: 14px;
+      }
+
+      .brand p,
+      .status-pill span,
+      .player-copy span {
+        display: none;
+      }
+
+      .status-pill {
+        padding: 10px;
+      }
+
+      .game-card {
+        border-radius: 18px;
+      }
+
+      .scoreboard {
+        gap: 8px;
+        padding: 13px 14px;
+      }
+
+      .player-card {
+        gap: 7px;
+      }
+
+      .player-token {
+        width: 34px;
+        height: 34px;
+        border-radius: 11px;
+      }
+
+      .match-meta {
+        min-width: 76px;
+      }
+
+      .score {
+        font-size: 1.15rem;
+      }
+
+      .arena-wrap {
+        width: calc(100% - 20px);
+        margin: 10px auto;
+        border-width: 4px;
+        border-radius: 12px;
+      }
+
+      .lobby-overlay {
         padding: 12px;
       }
-      #gameCanvas {
-        width: min(calc(100vw - 24px), calc(100vh - 190px));
+
+      .lobby-panel {
+        padding: 20px 16px;
       }
+
+      .game-footer {
+        display: none;
+      }
+
+      .bonus-legend {
+        flex-wrap: wrap;
+        gap: 5px;
+        padding: 2px 10px 10px;
+      }
+
+      .bonus-legend > span:first-child {
+        width: 100%;
+        text-align: center;
+      }
+
       .controls {
-        flex-direction: column;
-        gap: 6px;
+        gap: 3px;
+        font-size: 0;
+      }
+
+      kbd {
+        min-width: 21px;
+        min-height: 21px;
+        padding: 2px 4px;
+      }
+
+      .restart-button {
+        padding: 8px 9px;
+      }
+    }
+
+    @media (max-width: 430px) {
+      .mobile-controls:not(.hidden) {
+        grid-template-columns: 166px 1fr 82px;
+        gap: 8px;
+        padding-top: 11px;
+      }
+
+      .touch-dpad {
+        grid-template-columns: repeat(3, 50px);
+        grid-template-rows: repeat(2, 50px);
+      }
+
+      .touch-button {
+        width: 50px;
+        height: 50px;
+      }
+
+      .mobile-bomb-button {
+        width: 78px;
+        height: 78px;
       }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Bomberman</h1>
-    <div class="controls" aria-label="Game controls">
-      <span class="player-one"><strong>Player 1</strong>: <kbd>WASD</kbd> + <kbd>Space</kbd></span>
-      <span class="player-two"><strong>Player 2</strong>: <kbd>Arrows</kbd> + <kbd>Enter</kbd></span>
-    </div>
-    <canvas
-      id="gameCanvas"
-      width="832"
-      height="832"
-      aria-label="Two-player Bomberman game board"
-    ></canvas>
-  </div>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"></div>
+        <div>
+          <h1>Blast Buddies</h1>
+          <p>Online bomber battle</p>
+        </div>
+      </div>
+      <div class="status-pill" aria-live="polite">
+        <i class="status-dot" aria-hidden="true"></i>
+        <span id="gameStatusText">Choose a room</span>
+      </div>
+    </header>
+
+    <section class="game-card" aria-label="Bomberman match">
+      <div class="scoreboard">
+        <div class="player-card player-one">
+          <div class="player-token" aria-hidden="true">P1</div>
+          <div class="player-copy">
+            <strong>Mint <em id="playerOneRole" class="player-role">Online</em></strong>
+            <span id="playerOneStats">1 bomb · 2 tile blast · normal speed</span>
+          </div>
+        </div>
+
+        <div class="match-meta">
+          <span id="roundLabel">Round 1</span>
+          <div class="score"><b id="playerOneScore">0</b>—<b id="playerTwoScore">0</b></div>
+        </div>
+
+        <div class="player-card player-two">
+          <div class="player-copy">
+            <strong>Coral <em id="playerTwoRole" class="player-role">Online</em></strong>
+            <span id="playerTwoStats">1 bomb · 2 tile blast · normal speed</span>
+          </div>
+          <div class="player-token" aria-hidden="true">P2</div>
+        </div>
+      </div>
+
+      <div class="arena-wrap">
+        <canvas
+          id="gameCanvas"
+          width="832"
+          height="832"
+          aria-label="Two-player Bomberman arena"
+        ></canvas>
+        <div id="roundOverlay" class="round-overlay visible" aria-hidden="true">
+          <span id="roundOverlayText">ONLINE</span>
+        </div>
+        <div id="lobbyOverlay" class="lobby-overlay">
+          <div class="lobby-panel">
+            <h2>Play online</h2>
+            <p>Challenge a friend in another browser. One player creates a room and shares the code.</p>
+            <div id="lobbyActions">
+              <button id="createRoomButton" class="lobby-button" type="button">Create a room</button>
+              <div class="lobby-divider">or join a friend</div>
+              <div class="join-row">
+                <input
+                  id="roomCodeInput"
+                  class="room-input"
+                  type="text"
+                  maxlength="5"
+                  autocomplete="off"
+                  aria-label="Room code"
+                  placeholder="CODE"
+                >
+                <button id="joinRoomButton" class="lobby-button secondary" type="button">Join</button>
+              </div>
+            </div>
+            <div id="roomReady" class="hidden">
+              <div class="lobby-divider">room code</div>
+              <div id="roomCode" class="room-code">-----</div>
+              <button id="copyRoomButton" class="copy-button" type="button">Copy invite</button>
+            </div>
+            <p id="connectionMessage" class="connection-message">Create a room or enter an invitation code.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="bonus-legend" aria-label="Power-up guide">
+        <span>Break crates to reveal:</span>
+        <span class="bonus-chip bomb"><i>●</i> Bomb Up</span>
+        <span class="bonus-chip fire"><i>▲</i> Fire Up</span>
+        <span class="bonus-chip speed"><i>ϟ</i> Speed Up</span>
+      </div>
+
+      <footer class="game-footer">
+        <div class="controls" aria-label="Movement controls">
+          <span>Move</span>
+          <kbd>WASD</kbd>/<kbd>Arrows</kbd>
+        </div>
+        <button id="restartButton" class="restart-button" type="button" title="Start a fresh round">
+          New round <kbd>R</kbd>
+        </button>
+        <div class="controls player-two" aria-label="Bomb controls">
+          <span>Bomb</span>
+          <kbd>Space</kbd>/<kbd>Enter</kbd>
+        </div>
+      </footer>
+
+      <div id="mobileControls" class="mobile-controls hidden" aria-label="Touch game controls">
+        <span id="mobilePlayerLabel" class="mobile-player-label">Your controls</span>
+        <div class="touch-dpad" aria-label="Movement pad">
+          <button class="touch-button touch-up" type="button" data-move-x="0" data-move-y="-1" aria-label="Move up">▲</button>
+          <button class="touch-button touch-left" type="button" data-move-x="-1" data-move-y="0" aria-label="Move left">◀</button>
+          <button class="touch-button touch-down" type="button" data-move-x="0" data-move-y="1" aria-label="Move down">▼</button>
+          <button class="touch-button touch-right" type="button" data-move-x="1" data-move-y="0" aria-label="Move right">▶</button>
+        </div>
+        <button id="mobileRestartButton" class="mobile-round-button" type="button">New round</button>
+        <button id="mobileBombButton" class="mobile-bomb-button" type="button" aria-label="Place bomb">Bomb</button>
+      </div>
+    </section>
+  </main>
+
   <script type="module" src="./dist/index.js"></script>
 </body>
 </html>

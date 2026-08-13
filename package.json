@@ -1,19 +1,29 @@
 {
   "name": "bomberman",
   "version": "0.1.0",
-  "description": "A simple 2-player Bomberman game in HTML5 Canvas",
+  "description": "A two-player online Bomberman game in HTML5 Canvas",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "test": "npm run build --silent && node --test dist/index.test.js",
-    "dev": "tsc --watch"
+    "test": "npm run build --silent && node --test dist/*.test.js",
+    "start": "npm run build && node dist/server.js",
+    "serve": "node dist/server.js",
+    "dev": "npm run start"
   },
-  "keywords": ["game", "bomberman", "canvas"],
+  "keywords": [
+    "game",
+    "bomberman",
+    "canvas"
+  ],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^20",
+    "@types/ws": "^8.18.1",
     "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "ws": "^8.21.3"
   }
 }
