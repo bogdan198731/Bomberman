@@ -1123,12 +1123,18 @@ interface OnlineClientState extends RenderState {
   scores: Record<1 | 2, number>;
   gameStatus: GameStatus;
   connectedPlayers: Array<1 | 2>;
+  botDifficulty?: 'easy' | 'normal' | 'hard';
   overlayText: string;
   statusText: string;
 }
 
 type ClientMessage =
-  | { type: 'joined'; roomCode: string; playerId: 1 | 2 }
+  | {
+      type: 'joined';
+      roomCode: string;
+      playerId: 1 | 2;
+      botDifficulty?: 'easy' | 'normal' | 'hard';
+    }
   | { type: 'state'; state: OnlineClientState }
   | { type: 'error'; message: string };
 
@@ -1160,6 +1166,7 @@ export function initGame(): void {
     createRoomButton: document.getElementById('createRoomButton'),
     joinRoomButton: document.getElementById('joinRoomButton'),
     copyRoomButton: document.getElementById('copyRoomButton'),
+    botButtons: document.querySelectorAll<HTMLButtonElement>('[data-bot-difficulty]'),
     mobileControls: document.getElementById('mobileControls'),
     mobilePlayerLabel: document.getElementById('mobilePlayerLabel'),
     mobileBombButton: document.getElementById('mobileBombButton') as HTMLButtonElement | null,
@@ -1186,6 +1193,7 @@ export function initGame(): void {
   let socket: WebSocket | undefined;
   let localPlayerId: 1 | 2 | undefined;
   let activeRoomCode = '';
+  let activeBotDifficulty: 'easy' | 'normal' | 'hard' | undefined;
 
   canvas.width = initialMap.width * CELL_SIZE;
   canvas.height = initialMap.height * CELL_SIZE;
@@ -1207,7 +1215,13 @@ export function initGame(): void {
     if (elements.playerOneStats) elements.playerOneStats.textContent = playerStatsText(renderedPlayers[0]);
     if (elements.playerTwoStats) elements.playerTwoStats.textContent = playerStatsText(renderedPlayers[1]);
     if (elements.playerOneRole) elements.playerOneRole.textContent = localPlayerId === 1 ? 'You' : 'Online';
-    if (elements.playerTwoRole) elements.playerTwoRole.textContent = localPlayerId === 2 ? 'You' : 'Online';
+    if (elements.playerTwoRole) {
+      elements.playerTwoRole.textContent = localPlayerId === 2
+        ? 'You'
+        : activeBotDifficulty
+          ? `${activeBotDifficulty} bot`
+          : 'Online';
+    }
 
     const showRoundOverlay = onlineState.phase === 'waiting' || onlineState.phase === 'countdown';
     elements.roundOverlay?.classList.toggle('visible', showRoundOverlay);
@@ -1267,7 +1281,12 @@ export function initGame(): void {
     elements.connectionMessage.classList.toggle('error', isError);
   }
 
-  function connectAndSend(message: { type: 'create' } | { type: 'join'; roomCode: string }): void {
+  function connectAndSend(
+    message:
+      | { type: 'create' }
+      | { type: 'join'; roomCode: string }
+      | { type: 'createBot'; difficulty: 'easy' | 'normal' | 'hard' }
+  ): void {
     if (socket && socket.readyState <= WebSocket.OPEN) socket.close();
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     socket = new WebSocket(`${protocol}//${location.host}`);
@@ -1283,7 +1302,9 @@ export function initGame(): void {
       if (response.type === 'joined') {
         localPlayerId = response.playerId;
         activeRoomCode = response.roomCode;
-        history.replaceState(null, '', `?room=${activeRoomCode}`);
+        activeBotDifficulty = response.botDifficulty;
+        if (activeBotDifficulty) history.replaceState(null, '', location.pathname);
+        else history.replaceState(null, '', `?room=${activeRoomCode}`);
         syncUi();
         return;
       }
@@ -1296,6 +1317,7 @@ export function initGame(): void {
       if (!localPlayerId) return;
       localPlayerId = undefined;
       activeRoomCode = '';
+      activeBotDifficulty = undefined;
       elements.lobbyOverlay?.classList.remove('hidden');
       elements.lobbyActions?.classList.remove('hidden');
       elements.roomReady?.classList.add('hidden');
@@ -1312,6 +1334,14 @@ export function initGame(): void {
   }
 
   elements.createRoomButton?.addEventListener('click', () => connectAndSend({ type: 'create' }));
+  elements.botButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const difficulty = button.dataset.botDifficulty;
+      if (difficulty === 'easy' || difficulty === 'normal' || difficulty === 'hard') {
+        connectAndSend({ type: 'createBot', difficulty });
+      }
+    });
+  });
   elements.joinRoomButton?.addEventListener('click', () => {
     const roomCode = elements.roomCodeInput?.value.trim().toUpperCase() || '';
     if (!/^[A-Z2-9]{5}$/.test(roomCode)) {

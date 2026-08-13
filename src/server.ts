@@ -3,7 +3,12 @@ import { createServer } from 'node:http';
 import { networkInterfaces } from 'node:os';
 import { extname, join, normalize } from 'node:path';
 import { WebSocketServer, type WebSocket } from 'ws';
-import { OnlineRoom, isPlayerAction, type PlayerId } from './multiplayer.js';
+import {
+  OnlineRoom,
+  isPlayerAction,
+  type BotDifficulty,
+  type PlayerId,
+} from './multiplayer.js';
 
 const PORT = Number(process.env.PORT || 4173);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -107,6 +112,22 @@ webSocketServer.on('connection', socket => {
       joinRoom(socket, code, true);
       return;
     }
+    if (
+      data.type === 'createBot' &&
+      (data.difficulty === 'easy' || data.difficulty === 'normal' || data.difficulty === 'hard')
+    ) {
+      if (clients.has(socket)) return;
+      const difficulty = data.difficulty as BotDifficulty;
+      const code = createRoomCode();
+      const room = new OnlineRoom(code);
+      rooms.set(code, room);
+      clients.set(socket, { roomCode: code, playerId: 1 });
+      room.connectPlayer(1);
+      room.connectBot(difficulty);
+      send(socket, { type: 'joined', roomCode: code, playerId: 1, botDifficulty: difficulty });
+      broadcastRoom(code);
+      return;
+    }
     if (data.type === 'join' && typeof data.roomCode === 'string') {
       if (clients.has(socket)) return;
       joinRoom(socket, data.roomCode.trim(), false);
@@ -126,7 +147,8 @@ webSocketServer.on('connection', socket => {
     clients.delete(socket);
     const room = rooms.get(client.roomCode);
     room?.disconnectPlayer(client.playerId);
-    if (room?.connectedPlayers.size === 0) rooms.delete(client.roomCode);
+    const hasHumanClients = [...clients.values()].some(other => other.roomCode === client.roomCode);
+    if (!hasHumanClients) rooms.delete(client.roomCode);
     else broadcastRoom(client.roomCode);
   });
 });

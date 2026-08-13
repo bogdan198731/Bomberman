@@ -366,6 +366,44 @@
       background: #3a465a;
     }
 
+    .bot-heading {
+      margin: 0 0 9px;
+      color: #dce5ef;
+      font-size: 0.7rem;
+      font-weight: 900;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+    }
+
+    .bot-options {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7px;
+    }
+
+    .bot-button {
+      min-height: 43px;
+      padding: 8px 5px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      color: #eef3f9;
+      background: #293548;
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-weight: 900;
+      transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
+    }
+
+    .bot-button:hover {
+      border-color: rgba(114, 228, 255, 0.5);
+      background: #34445d;
+      transform: translateY(-1px);
+    }
+
+    .bot-button[data-bot-difficulty="easy"] { color: #76e6a5; }
+    .bot-button[data-bot-difficulty="normal"] { color: #ffc857; }
+    .bot-button[data-bot-difficulty="hard"] { color: #ff8790; }
+
     .join-row {
       display: flex;
       gap: 8px;
@@ -840,8 +878,15 @@
         <div id="lobbyOverlay" class="lobby-overlay">
           <div class="lobby-panel">
             <h2>Play online</h2>
-            <p>Challenge a friend in another browser. One player creates a room and shares the code.</p>
+            <p>Battle a smart computer rival or challenge a friend in another browser.</p>
             <div id="lobbyActions">
+              <div class="bot-heading">Single player vs bot</div>
+              <div class="bot-options" aria-label="Bot difficulty">
+                <button class="bot-button" type="button" data-bot-difficulty="easy">Easy</button>
+                <button class="bot-button" type="button" data-bot-difficulty="normal">Normal</button>
+                <button class="bot-button" type="button" data-bot-difficulty="hard">Hard</button>
+              </div>
+              <div class="lobby-divider">or play online</div>
               <button id="createRoomButton" class="lobby-button" type="button">Create a room</button>
               <div class="lobby-divider">or join a friend</div>
               <div class="join-row">
