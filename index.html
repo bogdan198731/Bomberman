@@ -134,6 +134,27 @@
       font-size: 1rem;
     }
 
+    .hub-leaderboard-button {
+      display: flex;
+      min-height: 40px;
+      padding: 0 12px;
+      align-items: center;
+      gap: 7px;
+      border: 1px solid rgba(255, 200, 87, 0.2);
+      border-radius: 12px;
+      color: var(--gold);
+      background: rgba(255, 200, 87, 0.055);
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.67rem;
+      font-weight: 900;
+    }
+
+    .hub-leaderboard-button i {
+      font-style: normal;
+      font-size: 0.9rem;
+    }
+
     .settings-nav-button {
       padding: 0 12px;
     }
@@ -1111,6 +1132,195 @@
       text-align: center;
     }
 
+    .leaderboard-panel {
+      margin-top: 18px;
+      padding: 22px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 200, 87, 0.18);
+      border-radius: 22px;
+      background:
+        radial-gradient(circle at 88% 0%, rgba(255, 200, 87, 0.1), transparent 34%),
+        rgba(23, 30, 43, 0.78);
+    }
+
+    .leaderboard-heading {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .leaderboard-heading h2 {
+      margin: 5px 0 0;
+      font-size: 1.2rem;
+      letter-spacing: -0.035em;
+    }
+
+    .leaderboard-heading p {
+      max-width: 480px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.68rem;
+      line-height: 1.5;
+      text-align: right;
+    }
+
+    .leaderboard-tabs {
+      display: flex;
+      gap: 7px;
+      margin: 18px -22px 14px;
+      padding: 0 22px 3px;
+      overflow-x: auto;
+      scrollbar-width: thin;
+    }
+
+    .leaderboard-tab {
+      display: flex;
+      min-height: 39px;
+      padding: 0 12px;
+      flex: 0 0 auto;
+      align-items: center;
+      gap: 7px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 11px;
+      color: #b9c5d4;
+      background: rgba(255, 255, 255, 0.035);
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.64rem;
+      font-weight: 850;
+    }
+
+    .leaderboard-tab.active {
+      border-color: rgba(255, 200, 87, 0.34);
+      color: #211403;
+      background: linear-gradient(135deg, #ffe08d, var(--gold));
+      box-shadow: 0 8px 22px rgba(255, 200, 87, 0.13);
+    }
+
+    .leaderboard-tab:focus-visible,
+    .hub-leaderboard-button:focus-visible {
+      outline: 3px solid rgba(73, 226, 255, 0.55);
+      outline-offset: 2px;
+    }
+
+    .leaderboard-board {
+      padding: 13px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      background: rgba(5, 9, 15, 0.22);
+    }
+
+    .leaderboard-board-heading {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 4px 9px;
+      color: var(--muted);
+      font-size: 0.58rem;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .leaderboard-list {
+      display: grid;
+      gap: 6px;
+    }
+
+    .leaderboard-row {
+      display: grid;
+      min-width: 0;
+      min-height: 58px;
+      padding: 8px 11px;
+      grid-template-columns: 34px 38px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .leaderboard-row.rank-1 {
+      border-color: rgba(255, 200, 87, 0.22);
+      background: linear-gradient(90deg, rgba(255, 200, 87, 0.09), rgba(255, 255, 255, 0.025));
+    }
+
+    .leaderboard-rank {
+      color: #8996a8;
+      font-size: 0.72rem;
+      text-align: center;
+    }
+
+    .rank-1 .leaderboard-rank { color: var(--gold); }
+    .rank-2 .leaderboard-rank { color: #d7e0e9; }
+    .rank-3 .leaderboard-rank { color: #d9925f; }
+
+    .leaderboard-avatar {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      border: 1px solid rgba(84, 227, 142, 0.2);
+      border-radius: 11px;
+      color: #08140d;
+      background: linear-gradient(135deg, #8cf5b3, var(--p1));
+      font-size: 0.66rem;
+      font-weight: 950;
+    }
+
+    .leaderboard-player,
+    .leaderboard-score {
+      min-width: 0;
+    }
+
+    .leaderboard-player strong,
+    .leaderboard-player span,
+    .leaderboard-score strong,
+    .leaderboard-score span {
+      display: block;
+    }
+
+    .leaderboard-player strong {
+      overflow: hidden;
+      font-size: 0.75rem;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .leaderboard-player span,
+    .leaderboard-score span {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 0.58rem;
+    }
+
+    .leaderboard-score {
+      text-align: right;
+    }
+
+    .leaderboard-score strong {
+      color: var(--gold);
+      font-size: 0.92rem;
+    }
+
+    .leaderboard-score span {
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .leaderboard-empty {
+      display: grid;
+      min-height: 96px;
+      place-items: center;
+      padding: 20px;
+      border: 1px dashed rgba(255, 200, 87, 0.15);
+      border-radius: 11px;
+      color: var(--muted);
+      font-size: 0.68rem;
+      text-align: center;
+    }
+
     .progression-toast {
       position: fixed;
       z-index: 50;
@@ -1683,6 +1893,7 @@
     html.high-contrast .quick-play-panel,
     html.high-contrast .profile-panel,
     html.high-contrast .activity-panel,
+    html.high-contrast .leaderboard-panel,
     html.high-contrast .daily-challenge-card,
     html.high-contrast .weekly-quest-card,
     html.high-contrast .achievement-cabinet,
@@ -2682,6 +2893,17 @@
         min-height: 38px;
       }
 
+      .hub-leaderboard-button {
+        width: 38px;
+        min-height: 38px;
+        padding: 0;
+        justify-content: center;
+      }
+
+      .hub-leaderboard-button span {
+        display: none;
+      }
+
       .hub-profile-chip {
         max-width: 118px;
         padding-inline: 10px;
@@ -2775,6 +2997,51 @@
 
       .activity-layout {
         grid-template-columns: 1fr;
+      }
+
+      .leaderboard-panel {
+        padding: 18px;
+      }
+
+      .leaderboard-heading {
+        display: block;
+      }
+
+      .leaderboard-heading p {
+        margin-top: 8px;
+        text-align: left;
+      }
+
+      .leaderboard-tabs {
+        margin-inline: -18px;
+        padding-inline: 18px;
+      }
+
+      .leaderboard-board {
+        padding: 8px;
+      }
+
+      .leaderboard-board-heading {
+        display: block;
+      }
+
+      .leaderboard-board-heading span:last-child {
+        display: block;
+        margin-top: 4px;
+        letter-spacing: 0;
+        line-height: 1.35;
+        text-transform: none;
+      }
+
+      .leaderboard-row {
+        padding-inline: 7px;
+        grid-template-columns: 28px 34px minmax(0, 1fr) auto;
+        gap: 7px;
+      }
+
+      .leaderboard-avatar {
+        width: 34px;
+        height: 34px;
       }
 
       .catalog-heading {
@@ -3969,6 +4236,7 @@
       </div>
       <div class="hub-actions">
         <button class="hub-settings-button" type="button" data-open-settings aria-label="Open arcade settings">⚙</button>
+        <button id="hubLeaderboardChip" class="hub-leaderboard-button" type="button" aria-label="Open local leaderboards"><i aria-hidden="true">♛</i><span>Legends</span></button>
         <button id="hubProfileChip" class="hub-profile-chip" type="button" aria-label="Open your player profile">
           <span id="profileChipName">Arcade Player</span>
           <small>Profile</small>
@@ -4112,6 +4380,23 @@
           <div id="recentActivityList" class="recent-activity-list" aria-live="polite">
             <div class="activity-empty">Finish a match to start your activity feed.</div>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="leaderboardPanel" class="leaderboard-panel" aria-labelledby="leaderboardTitle">
+      <div class="leaderboard-heading">
+        <div>
+          <span class="catalog-kicker">Couch competition</span>
+          <h2 id="leaderboardTitle">Arcade Legends</h2>
+        </div>
+        <p>Each player name keeps its best result. Switch the profile name above when friends take a turn.</p>
+      </div>
+      <div id="leaderboardGameTabs" class="leaderboard-tabs" role="tablist" aria-label="Choose a game leaderboard"></div>
+      <div class="leaderboard-board">
+        <div class="leaderboard-board-heading"><span>Local top five</span><span id="leaderboardCaption">Waiting for the first result · saved on this device</span></div>
+        <div id="leaderboardList" class="leaderboard-list" role="list" aria-live="polite">
+          <div class="leaderboard-empty">Finish a match to claim the first spot.</div>
         </div>
       </div>
     </section>

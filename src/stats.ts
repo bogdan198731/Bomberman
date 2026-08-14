@@ -99,7 +99,7 @@ interface StorageLike {
   setItem(key: string, value: string): void;
 }
 
-const GAME_META: Record<ArcadeGameId, { name: string; icon: string }> = {
+export const GAME_META: Record<ArcadeGameId, { name: string; icon: string }> = {
   bomberman: { name: 'Blast Buddies', icon: '💣' },
   tintar: { name: 'Țintar', icon: '◎' },
   paddle: { name: 'Paddle Clash', icon: '⚡' },
