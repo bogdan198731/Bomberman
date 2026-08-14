@@ -1,4 +1,5 @@
 import { GameRoomClient } from './game-room.js';
+import { ArcadeResultReporter } from './stats.js';
 
 export type SurvivalPlayer = 1 | 2;
 export type SurvivalMode = 'solo' | 'coop';
@@ -274,6 +275,7 @@ export function initSurvivalArena(): void {
   const coralControls = document.getElementById('survivalCoralControls');
   const roomMount = document.querySelector<HTMLElement>('[data-game-room="survival"]');
   let room: GameRoomClient | null = null;
+  const resultReporter = new ArcadeResultReporter('survival');
 
   function snapshot(): Record<string, unknown> {
     return {
@@ -328,6 +330,12 @@ export function initSurvivalArena(): void {
       button.disabled = Boolean(room?.session().online);
     });
     coralControls?.classList.toggle('solo-hidden', game.mode === 'solo');
+    const session = room?.session();
+    const trackedPlayer = (session?.online ? session.playerId : 1) ?? 1;
+    const runScore = !session?.online && game.mode === 'coop'
+      ? game.players[1].score + game.players[2].score
+      : game.players[trackedPlayer].score;
+    resultReporter.report(game.phase === 'finished', { outcome: 'complete', score: runScore });
   }
 
   function render(): void {

@@ -7,6 +7,7 @@ import { initSurvivalArena } from './survival.js';
 import { initStarDefender } from './star.js';
 import { initMicroRacers } from './racing.js';
 import { initBlockDrop } from './blocks.js';
+import { ArcadeResultReporter, initArcadeProfile } from './stats.js';
 import type { OnlineRoom, PlayerAction } from './multiplayer.js';
 
 export const CELL_SIZE = 64;
@@ -1223,6 +1224,7 @@ export function initGame(): void {
   let localPlayerId: 1 | 2 | undefined;
   let activeRoomCode = '';
   let activeBotDifficulty: 'easy' | 'normal' | 'hard' | undefined;
+  const resultReporter = new ArcadeResultReporter('bomberman');
 
   function setActiveView(view: 'hub' | 'bomberman' | 'tintar' | 'paddle' | 'snake' | 'tanks' | 'septica' | 'survival' | 'star' | 'racing' | 'blocks'): void {
     elements.hubView?.classList.toggle('view-hidden', view !== 'hub');
@@ -1293,6 +1295,12 @@ export function initGame(): void {
         ? 'Share this code with your opponent. The match starts when they join.'
         : `You are ${localPlayerId === 1 ? 'Mint' : 'Coral'}.`;
     }
+    const trackedPlayer = localMode ? 1 : localPlayerId ?? 1;
+    const winner = onlineState.gameStatus === 'player1-wins' ? 1 : onlineState.gameStatus === 'player2-wins' ? 2 : 0;
+    resultReporter.report(onlineState.phase === 'finished', {
+      outcome: winner === 0 ? 'draw' : winner === trackedPlayer ? 'win' : 'loss',
+      score: onlineState.scores[trackedPlayer],
+    });
   }
 
   function mergePlayers(incoming: Player[], round: number): void {
@@ -1582,6 +1590,7 @@ export function initGame(): void {
 
 if (typeof window !== 'undefined') {
   window.addEventListener('DOMContentLoaded', () => {
+    initArcadeProfile();
     initGame();
     initTintar();
     initPaddleClash();

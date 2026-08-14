@@ -1,4 +1,5 @@
 import { GameRoomClient } from './game-room.js';
+import { ArcadeResultReporter } from './stats.js';
 
 export type SepticaPlayer = 1 | 2;
 export type SepticaRank = '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | 'A';
@@ -237,6 +238,7 @@ export function initSeptica(): void {
   let room: GameRoomClient | null = null;
   let offlineMode: SepticaOfflineMode = 'bot';
   let localHandVisible = false;
+  const resultReporter = new ArcadeResultReporter('septica');
 
   function localPlayer(): SepticaPlayer {
     if (!room?.session().online && offlineMode === 'local') return game.currentPlayer;
@@ -335,6 +337,11 @@ export function initSeptica(): void {
     modeButtons.forEach(button => {
       button.classList.toggle('active', button.dataset.septicaMode === offlineMode);
       button.disabled = Boolean(room?.session().online);
+    });
+    const trackedPlayer = (room?.session().online ? room.session().playerId : 1) ?? 1;
+    resultReporter.report(game.phase === 'finished', {
+      outcome: game.winner === 0 ? 'draw' : game.winner === trackedPlayer ? 'win' : 'loss',
+      score: game.points[trackedPlayer],
     });
   }
 

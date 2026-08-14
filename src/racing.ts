@@ -1,4 +1,5 @@
 import { GameRoomClient } from './game-room.js';
+import { ArcadeResultReporter } from './stats.js';
 
 export type RacingPlayer = 1 | 2;
 export type RacingMode = 'bot' | 'duel';
@@ -299,6 +300,7 @@ export function initMicroRacers(): void {
   const modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-racing-mode]');
   const roomMount = document.querySelector<HTMLElement>('[data-game-room="racing"]');
   let room: GameRoomClient | null = null;
+  const resultReporter = new ArcadeResultReporter('racing');
 
   function snapshot(): Record<string, unknown> {
     return createRacingSnapshot(game) as unknown as Record<string, unknown>;
@@ -345,6 +347,11 @@ export function initMicroRacers(): void {
     modeButtons.forEach(button => {
       button.classList.toggle('active', button.dataset.racingMode === game.mode);
       button.disabled = Boolean(room?.session().online) || game.phase === 'countdown' || game.phase === 'racing';
+    });
+    const trackedPlayer = (room?.session().online ? room.session().playerId : 1) ?? 1;
+    resultReporter.report(game.phase === 'finished', {
+      outcome: game.winner === trackedPlayer ? 'win' : 'loss',
+      score: game.cars[trackedPlayer].laps,
     });
   }
 

@@ -1,4 +1,5 @@
 import { GameRoomClient } from './game-room.js';
+import { ArcadeResultReporter } from './stats.js';
 
 export type PaddlePlayer = 1 | 2;
 export type PaddleDirection = 'up' | 'down';
@@ -177,6 +178,7 @@ export function initPaddleClash(): void {
   const restartButton = document.getElementById('paddleRestartButton');
   const roomMount = document.querySelector<HTMLElement>('[data-game-room="paddle"]');
   let room: GameRoomClient | null = null;
+  const resultReporter = new ArcadeResultReporter('paddle');
 
   function snapshot(): Record<string, unknown> {
     return {
@@ -222,6 +224,11 @@ export function initPaddleClash(): void {
       serveButton.disabled = game.phase !== 'ready';
       serveButton.textContent = game.phase === 'finished' ? 'Match over' : 'Serve ball';
     }
+    const trackedPlayer = (room?.session().online ? room.session().playerId : 1) ?? 1;
+    resultReporter.report(game.phase === 'finished', {
+      outcome: game.winner === trackedPlayer ? 'win' : 'loss',
+      score: game.players[trackedPlayer].score,
+    });
   }
 
   function roundedRect(
