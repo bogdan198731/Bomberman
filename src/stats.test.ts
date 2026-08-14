@@ -8,10 +8,12 @@ import {
   dailyGameForDate,
   ensureDailyChallenge,
   loadArcadeProfile,
+  MAX_MATCH_HISTORY,
   normalizeArcadeProfile,
   PROFILE_STORAGE_KEY,
   profileLevel,
   profileLevelProgress,
+  profileInsights,
   sanitizeProfileName,
   saveArcadeProfile,
   unlockEligibleAchievements,
@@ -39,6 +41,7 @@ test('recording a win updates totals, game stats, score, and experience', () => 
   assert.equal(profile.games.racing?.wins, 1);
   assert.equal(profile.games.racing?.bestScore, 830);
   assert.equal(profile.games.racing?.lastPlayed, 1234);
+  assert.deepEqual(profile.recentMatches[0], { gameId: 'racing', outcome: 'win', score: 830, playedAt: 1234 });
   assert.ok(profile.xp > 120);
 });
 
@@ -57,16 +60,56 @@ test('profile normalization repairs malformed stored values', () => {
   assert.equal(profile.totalPlays, 0);
   assert.equal(profile.games.tanks?.plays, 3);
   assert.equal(profile.games.tanks?.wins, 0);
+  assert.deepEqual(profile.recentMatches, []);
 });
 
 test('version one profiles migrate without losing their arcade record', () => {
   const profile = normalizeArcadeProfile({ version: 1, name: 'Veteran', totalPlays: 12, totalWins: 4, totalScore: 900 });
-  assert.equal(profile.version, 2);
+  assert.equal(profile.version, 3);
   assert.equal(profile.name, 'Veteran');
   assert.equal(profile.totalPlays, 12);
   assert.equal(profile.totalWins, 4);
   assert.deepEqual(profile.unlockedAchievements, []);
   assert.equal(profile.dailyChallenge, null);
+  assert.deepEqual(profile.recentMatches, []);
+});
+
+test('profile normalization keeps only valid, repaired recent matches', () => {
+  const profile = normalizeArcadeProfile({
+    recentMatches: [
+      { gameId: 'paddle', outcome: 'win', score: 82.9, playedAt: 99.7 },
+      { gameId: 'unknown', outcome: 'loss', score: 10, playedAt: 100 },
+      { gameId: 'snake', outcome: 'invalid', score: 4, playedAt: 101 },
+      null,
+    ],
+  });
+  assert.deepEqual(profile.recentMatches, [
+    { gameId: 'paddle', outcome: 'win', score: 82, playedAt: 99 },
+  ]);
+});
+
+test('match history keeps the newest results and stays bounded', () => {
+  let profile = createDefaultProfile();
+  for (let index = 1; index <= MAX_MATCH_HISTORY + 5; index += 1) {
+    profile = applyArcadeResult(profile, 'blocks', { outcome: 'loss', score: index }, index);
+  }
+  assert.equal(profile.recentMatches.length, MAX_MATCH_HISTORY);
+  assert.equal(profile.recentMatches[0].playedAt, MAX_MATCH_HISTORY + 5);
+  assert.equal(profile.recentMatches.at(-1)?.playedAt, 6);
+});
+
+test('profile insights summarize recent form and all-time favorite games', () => {
+  let profile = createDefaultProfile();
+  profile = applyArcadeResult(profile, 'paddle', { outcome: 'loss', score: 15 }, 1);
+  profile = applyArcadeResult(profile, 'snake', { outcome: 'complete', score: 240 }, 2);
+  profile = applyArcadeResult(profile, 'paddle', { outcome: 'win', score: 40 }, 3);
+  profile = applyArcadeResult(profile, 'paddle', { outcome: 'win', score: 55 }, 4);
+  const insights = profileInsights(profile);
+  assert.equal(insights.winRate, 67);
+  assert.equal(insights.mostPlayedGame, 'paddle');
+  assert.equal(insights.bestGame, 'snake');
+  assert.equal(insights.bestScore, 240);
+  assert.equal(insights.winStreak, 2);
 });
 
 test('the daily challenge is stable for one date and rotates cleanly on another', () => {

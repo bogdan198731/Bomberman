@@ -7,6 +7,7 @@ export const XP_PER_LEVEL = 250;
 export const DAILY_CHALLENGE_TARGET = 2;
 export const DAILY_CHALLENGE_XP = 100;
 export const ACHIEVEMENT_XP = 75;
+export const MAX_MATCH_HISTORY = 30;
 
 export const ACHIEVEMENT_IDS = [
   'first-round', 'first-win', 'arcade-regular', 'champion', 'score-chaser', 'world-tour', 'level-five',
@@ -42,8 +43,23 @@ export interface GameStatistics {
   lastPlayed: number;
 }
 
+export interface ArcadeMatchRecord {
+  gameId: ArcadeGameId;
+  outcome: ArcadeOutcome;
+  score: number;
+  playedAt: number;
+}
+
+export interface ArcadeInsights {
+  winRate: number;
+  mostPlayedGame: ArcadeGameId | null;
+  bestGame: ArcadeGameId | null;
+  bestScore: number;
+  winStreak: number;
+}
+
 export interface ArcadeProfile {
-  version: 2;
+  version: 3;
   name: string;
   xp: number;
   totalPlays: number;
@@ -51,6 +67,7 @@ export interface ArcadeProfile {
   totalDraws: number;
   totalScore: number;
   games: Partial<Record<ArcadeGameId, GameStatistics>>;
+  recentMatches: ArcadeMatchRecord[];
   unlockedAchievements: AchievementId[];
   dailyChallenge: DailyChallenge | null;
 }
@@ -95,7 +112,7 @@ export function sanitizeProfileName(value: unknown): string {
 
 export function createDefaultProfile(): ArcadeProfile {
   return {
-    version: 2,
+    version: 3,
     name: 'Arcade Player',
     xp: 0,
     totalPlays: 0,
@@ -103,6 +120,7 @@ export function createDefaultProfile(): ArcadeProfile {
     totalDraws: 0,
     totalScore: 0,
     games: {},
+    recentMatches: [],
     unlockedAchievements: [],
     dailyChallenge: null,
   };
@@ -133,6 +151,19 @@ export function normalizeArcadeProfile(value: unknown): ArcadeProfile {
       lastPlayed: nonNegativeInteger(source.lastPlayed),
     };
   }
+  const recentMatches = Array.isArray(candidate.recentMatches) ? candidate.recentMatches : [];
+  profile.recentMatches = recentMatches.flatMap(record => {
+    if (!record || typeof record !== 'object') return [];
+    const source = record as Partial<ArcadeMatchRecord>;
+    if (!ARCADE_GAME_IDS.includes(source.gameId as ArcadeGameId)
+      || !['win', 'loss', 'draw', 'complete'].includes(source.outcome as ArcadeOutcome)) return [];
+    return [{
+      gameId: source.gameId as ArcadeGameId,
+      outcome: source.outcome as ArcadeOutcome,
+      score: nonNegativeInteger(source.score),
+      playedAt: nonNegativeInteger(source.playedAt),
+    }];
+  }).slice(0, MAX_MATCH_HISTORY);
   const daily = candidate.dailyChallenge;
   if (daily && typeof daily === 'object' && /^\d{4}-\d{2}-\d{2}$/.test(daily.date ?? '') && ARCADE_GAME_IDS.includes(daily.gameId as ArcadeGameId)) {
     const progress = Math.min(DAILY_CHALLENGE_TARGET, nonNegativeInteger(daily.progress));
@@ -190,9 +221,49 @@ export function applyArcadeResult(profileValue: ArcadeProfile, gameId: ArcadeGam
   profile.totalWins += won ? 1 : 0;
   profile.totalDraws += drawn ? 1 : 0;
   profile.totalScore += score;
+  profile.recentMatches = [{
+    gameId,
+    outcome: result.outcome,
+    score,
+    playedAt: Math.max(0, Math.floor(now)),
+  }, ...profile.recentMatches].slice(0, MAX_MATCH_HISTORY);
   const outcomeXp = won ? 120 : drawn ? 70 : result.outcome === 'complete' ? 55 : 35;
   profile.xp += outcomeXp + Math.min(50, Math.floor(score / 100));
   return profile;
+}
+
+export function profileInsights(profileValue: ArcadeProfile): ArcadeInsights {
+  const profile = normalizeArcadeProfile(profileValue);
+  const competitiveMatches = profile.recentMatches.filter(match => match.outcome !== 'complete');
+  const recentWins = competitiveMatches.filter(match => match.outcome === 'win').length;
+  let mostPlayedGame: ArcadeGameId | null = null;
+  let bestGame: ArcadeGameId | null = null;
+  let mostPlays = 0;
+  let bestScore = 0;
+  for (const gameId of ARCADE_GAME_IDS) {
+    const stats = profile.games[gameId];
+    if ((stats?.plays ?? 0) > mostPlays) {
+      mostPlays = stats!.plays;
+      mostPlayedGame = gameId;
+    }
+    if ((stats?.bestScore ?? 0) > bestScore) {
+      bestScore = stats!.bestScore;
+      bestGame = gameId;
+    }
+  }
+  let winStreak = 0;
+  for (const match of profile.recentMatches) {
+    if (match.outcome === 'complete') continue;
+    if (match.outcome !== 'win') break;
+    winStreak += 1;
+  }
+  return {
+    winRate: competitiveMatches.length ? Math.round(recentWins / competitiveMatches.length * 100) : 0,
+    mostPlayedGame,
+    bestGame,
+    bestScore,
+    winStreak,
+  };
 }
 
 export function profileLevel(profile: ArcadeProfile): number {
@@ -327,6 +398,12 @@ export function initArcadeProfile(): void {
   const dailyLaunchButton = document.getElementById('dailyChallengeLaunch') as HTMLButtonElement | null;
   const achievementCount = document.getElementById('achievementCount');
   const achievementGrid = document.getElementById('achievementGrid');
+  const activityWinRate = document.getElementById('activityWinRate');
+  const activityMostPlayed = document.getElementById('activityMostPlayed');
+  const activityBestScore = document.getElementById('activityBestScore');
+  const activityWinStreak = document.getElementById('activityWinStreak');
+  const recentActivityList = document.getElementById('recentActivityList');
+  const recentActivityCount = document.getElementById('recentActivityCount');
   const rewardToast = document.getElementById('progressionToast');
   if (!panel || !nameInput || !gameStats) return;
   const activeNameInput = nameInput;
@@ -406,6 +483,49 @@ export function initArcadeProfile(): void {
       item.append(icon, copy, state);
       return item;
     }));
+    const insights = profileInsights(profile);
+    if (activityWinRate) activityWinRate.textContent = `${insights.winRate}%`;
+    if (activityMostPlayed) activityMostPlayed.textContent = insights.mostPlayedGame ? GAME_META[insights.mostPlayedGame].name : '—';
+    if (activityBestScore) {
+      activityBestScore.textContent = insights.bestGame
+        ? `${insights.bestScore.toLocaleString()} · ${GAME_META[insights.bestGame].name}`
+        : '—';
+    }
+    if (activityWinStreak) activityWinStreak.textContent = `${insights.winStreak}×`;
+    if (recentActivityCount) recentActivityCount.textContent = `${profile.recentMatches.length} saved`;
+    if (recentActivityList) {
+      const visibleMatches = profile.recentMatches.slice(0, 6);
+      if (!visibleMatches.length) {
+        const empty = document.createElement('div');
+        empty.className = 'activity-empty';
+        empty.textContent = 'Finish a match to start your activity feed.';
+        recentActivityList.replaceChildren(empty);
+      } else {
+        const outcomeLabels: Record<ArcadeOutcome, string> = {
+          win: 'Win', loss: 'Loss', draw: 'Draw', complete: 'Completed',
+        };
+        recentActivityList.replaceChildren(...visibleMatches.map(match => {
+          const item = document.createElement('div');
+          item.className = `activity-row ${match.outcome}`;
+          const icon = document.createElement('span');
+          icon.className = 'activity-game-icon';
+          icon.textContent = GAME_META[match.gameId].icon;
+          const copy = document.createElement('div');
+          copy.className = 'activity-copy';
+          const title = document.createElement('strong');
+          title.textContent = GAME_META[match.gameId].name;
+          const detail = document.createElement('span');
+          const date = new Date(match.playedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+          detail.textContent = match.score ? `${date} · ${match.score.toLocaleString()} points` : date;
+          copy.append(title, detail);
+          const outcome = document.createElement('span');
+          outcome.className = 'activity-outcome';
+          outcome.textContent = outcomeLabels[match.outcome];
+          item.append(icon, copy, outcome);
+          return item;
+        }));
+      }
+    }
   }
 
   function saveName(): void {

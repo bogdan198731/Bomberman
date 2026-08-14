@@ -685,6 +685,169 @@
       white-space: nowrap;
     }
 
+    .activity-panel {
+      margin-top: 18px;
+      padding: 22px;
+      border: 1px solid var(--panel-border);
+      border-radius: 22px;
+      background:
+        radial-gradient(circle at 12% 0%, rgba(73, 226, 255, 0.09), transparent 32%),
+        rgba(23, 30, 43, 0.78);
+    }
+
+    .activity-heading {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 17px;
+    }
+
+    .activity-heading h2 {
+      margin: 5px 0 0;
+      font-size: 1.2rem;
+      letter-spacing: -0.035em;
+    }
+
+    .activity-heading small {
+      color: var(--muted);
+      font-size: 0.64rem;
+      font-weight: 800;
+    }
+
+    .activity-layout {
+      display: grid;
+      grid-template-columns: minmax(260px, 0.72fr) minmax(0, 1.28fr);
+      gap: 18px;
+    }
+
+    .insight-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .insight-card {
+      min-width: 0;
+      min-height: 78px;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 13px;
+      background: rgba(255, 255, 255, 0.035);
+    }
+
+    .insight-card span,
+    .activity-list-label {
+      display: block;
+      color: var(--muted);
+      font-size: 0.59rem;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .insight-card strong {
+      display: block;
+      margin-top: 9px;
+      overflow: hidden;
+      color: var(--ink);
+      font-size: 0.9rem;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .activity-list-label {
+      margin: 2px 0 8px;
+    }
+
+    .recent-activity-list {
+      display: grid;
+      gap: 6px;
+    }
+
+    .activity-row {
+      display: grid;
+      min-width: 0;
+      padding: 9px 10px;
+      grid-template-columns: 34px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.055);
+      border-radius: 12px;
+      background: rgba(5, 9, 15, 0.24);
+    }
+
+    .activity-game-icon {
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.07);
+      font-size: 0.75rem;
+      font-weight: 950;
+    }
+
+    .activity-copy {
+      min-width: 0;
+    }
+
+    .activity-copy strong,
+    .activity-copy span {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .activity-copy strong {
+      font-size: 0.7rem;
+    }
+
+    .activity-copy span {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 0.59rem;
+    }
+
+    .activity-outcome {
+      padding: 5px 8px;
+      border-radius: 999px;
+      color: #b8c5d6;
+      background: rgba(255, 255, 255, 0.07);
+      font-size: 0.57rem;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .activity-row.win .activity-outcome,
+    .activity-row.complete .activity-outcome {
+      color: var(--p1);
+      background: rgba(84, 227, 142, 0.1);
+    }
+
+    .activity-row.loss .activity-outcome {
+      color: #ff9696;
+      background: rgba(255, 93, 93, 0.1);
+    }
+
+    .activity-row.draw .activity-outcome {
+      color: var(--gold);
+      background: rgba(255, 200, 87, 0.1);
+    }
+
+    .activity-empty {
+      display: grid;
+      min-height: 88px;
+      place-items: center;
+      padding: 18px;
+      border: 1px dashed rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      color: var(--muted);
+      font-size: 0.68rem;
+      text-align: center;
+    }
+
     .progression-toast {
       position: fixed;
       z-index: 50;
@@ -1239,6 +1402,7 @@
 
     html.high-contrast .catalog-card,
     html.high-contrast .profile-panel,
+    html.high-contrast .activity-panel,
     html.high-contrast .daily-challenge-card,
     html.high-contrast .achievement-cabinet,
     html.high-contrast .game-card,
@@ -2286,6 +2450,10 @@
       }
 
       .achievement-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .activity-layout {
         grid-template-columns: 1fr;
       }
 
@@ -3557,6 +3725,30 @@
         </div>
         <div id="achievementGrid" class="achievement-grid" aria-label="Player achievements"></div>
       </article>
+    </section>
+
+    <section class="activity-panel" aria-labelledby="activityTitle">
+      <div class="activity-heading">
+        <div>
+          <span class="catalog-kicker">Personal insights</span>
+          <h2 id="activityTitle">Your recent arcade form</h2>
+        </div>
+        <small id="recentActivityCount">0 saved</small>
+      </div>
+      <div class="activity-layout">
+        <div class="insight-grid" aria-label="Player insights">
+          <div class="insight-card"><span>Recent win rate</span><strong id="activityWinRate">0%</strong></div>
+          <div class="insight-card"><span>Most played</span><strong id="activityMostPlayed">—</strong></div>
+          <div class="insight-card"><span>Best score</span><strong id="activityBestScore">—</strong></div>
+          <div class="insight-card"><span>Current win streak</span><strong id="activityWinStreak">0×</strong></div>
+        </div>
+        <div>
+          <span class="activity-list-label">Latest results</span>
+          <div id="recentActivityList" class="recent-activity-list" aria-live="polite">
+            <div class="activity-empty">Finish a match to start your activity feed.</div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <div id="progressionToast" class="progression-toast" role="status" aria-live="polite" hidden></div>
