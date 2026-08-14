@@ -5,6 +5,7 @@ import { initMiniTanks } from './tanks.js';
 import { initSeptica } from './septica.js';
 import { initSurvivalArena } from './survival.js';
 import { initStarDefender } from './star.js';
+import type { OnlineRoom, PlayerAction } from './multiplayer.js';
 
 export const CELL_SIZE = 64;
 export const BOMB_TIMER = 3000;
@@ -1183,6 +1184,7 @@ export function initGame(): void {
     roomCodeInput: document.getElementById('roomCodeInput') as HTMLInputElement | null,
     connectionMessage: document.getElementById('connectionMessage'),
     createRoomButton: document.getElementById('createRoomButton'),
+    playLocalButton: document.getElementById('playLocalButton'),
     joinRoomButton: document.getElementById('joinRoomButton'),
     copyRoomButton: document.getElementById('copyRoomButton'),
     botButtons: document.querySelectorAll<HTMLButtonElement>('[data-bot-difficulty]'),
@@ -1190,6 +1192,8 @@ export function initGame(): void {
     mobilePlayerLabel: document.getElementById('mobilePlayerLabel'),
     mobileBombButton: document.getElementById('mobileBombButton') as HTMLButtonElement | null,
     mobileRestartButton: document.getElementById('mobileRestartButton'),
+    localMobileControls: document.getElementById('bombermanLocalControls'),
+    localMobileRestartButton: document.getElementById('bombermanLocalRestartButton'),
   };
 
   const initialMap = createMapGrid();
@@ -1210,6 +1214,8 @@ export function initGame(): void {
   let renderedPlayers: Player[] = createPlayers();
   let renderedRound = 0;
   let socket: WebSocket | undefined;
+  let localRoom: OnlineRoom | undefined;
+  let localMode = false;
   let localPlayerId: 1 | 2 | undefined;
   let activeRoomCode = '';
   let activeBotDifficulty: 'easy' | 'normal' | 'hard' | undefined;
@@ -1247,9 +1253,11 @@ export function initGame(): void {
     if (elements.playerTwoScore) elements.playerTwoScore.textContent = String(onlineState.scores[2]);
     if (elements.playerOneStats) elements.playerOneStats.textContent = playerStatsText(renderedPlayers[0]);
     if (elements.playerTwoStats) elements.playerTwoStats.textContent = playerStatsText(renderedPlayers[1]);
-    if (elements.playerOneRole) elements.playerOneRole.textContent = localPlayerId === 1 ? 'You' : 'Online';
+    if (elements.playerOneRole) elements.playerOneRole.textContent = localMode ? 'Local P1' : localPlayerId === 1 ? 'You' : 'Online';
     if (elements.playerTwoRole) {
-      elements.playerTwoRole.textContent = localPlayerId === 2
+      elements.playerTwoRole.textContent = localMode
+        ? 'Local P2'
+        : localPlayerId === 2
         ? 'You'
         : activeBotDifficulty
           ? `${activeBotDifficulty} bot`
@@ -1260,13 +1268,14 @@ export function initGame(): void {
     elements.roundOverlay?.classList.toggle('visible', showRoundOverlay);
     if (elements.roundOverlayText) elements.roundOverlayText.textContent = onlineState.overlayText;
 
-    const waiting = Boolean(localPlayerId) && onlineState.connectedPlayers.length < 2;
-    const matchReady = Boolean(localPlayerId) && onlineState.connectedPlayers.length === 2;
-    elements.lobbyOverlay?.classList.toggle('hidden', Boolean(localPlayerId) && !waiting);
-    elements.lobbyActions?.classList.toggle('hidden', Boolean(localPlayerId));
-    elements.roomReady?.classList.toggle('hidden', !localPlayerId);
+    const waiting = !localMode && Boolean(localPlayerId) && onlineState.connectedPlayers.length < 2;
+    const onlineReady = !localMode && Boolean(localPlayerId) && onlineState.connectedPlayers.length === 2;
+    elements.lobbyOverlay?.classList.toggle('hidden', localMode || Boolean(localPlayerId) && !waiting);
+    elements.lobbyActions?.classList.toggle('hidden', localMode || Boolean(localPlayerId));
+    elements.roomReady?.classList.toggle('hidden', localMode || !localPlayerId);
     if (elements.roomCode) elements.roomCode.textContent = activeRoomCode || '-----';
-    elements.mobileControls?.classList.toggle('hidden', !matchReady);
+    elements.mobileControls?.classList.toggle('hidden', !onlineReady);
+    elements.localMobileControls?.classList.toggle('hidden', !localMode);
     if (elements.mobilePlayerLabel) {
       elements.mobilePlayerLabel.textContent = localPlayerId
         ? `Playing as ${localPlayerId === 1 ? 'Mint' : 'Coral'}`
@@ -1320,6 +1329,9 @@ export function initGame(): void {
       | { type: 'join'; roomCode: string }
       | { type: 'createBot'; difficulty: 'easy' | 'normal' | 'hard' }
   ): void {
+    localMode = false;
+    localRoom = undefined;
+    elements.localMobileControls?.classList.add('hidden');
     if (socket && socket.readyState <= WebSocket.OPEN) socket.close();
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     socket = new WebSocket(`${protocol}//${location.host}`);
@@ -1347,6 +1359,7 @@ export function initGame(): void {
       syncUi();
     });
     socket.addEventListener('close', () => {
+      if (localMode) return;
       if (!localPlayerId) return;
       localPlayerId = undefined;
       activeRoomCode = '';
@@ -1366,7 +1379,32 @@ export function initGame(): void {
     }
   }
 
+  function sendPlayerAction(player: 1 | 2, action: PlayerAction): void {
+    if (localMode && localRoom) localRoom.handleAction(player, action);
+    else sendAction(action);
+  }
+
+  async function startLocalMatch(): Promise<void> {
+    localPlayerId = undefined;
+    const previousSocket = socket;
+    socket = undefined;
+    previousSocket?.close();
+    const { OnlineRoom: LocalRoom } = await import('./multiplayer.js');
+    const now = Date.now();
+    localRoom = new LocalRoom('LOCAL');
+    localRoom.connectPlayer(1, now);
+    localRoom.connectPlayer(2, now);
+    localMode = true;
+    activeRoomCode = '';
+    activeBotDifficulty = undefined;
+    onlineState = localRoom.snapshot(now);
+    mergePlayers(onlineState.players, onlineState.round);
+    history.replaceState(null, '', location.pathname);
+    syncUi();
+  }
+
   elements.createRoomButton?.addEventListener('click', () => connectAndSend({ type: 'create' }));
+  elements.playLocalButton?.addEventListener('click', () => { void startLocalMatch(); });
   elements.launchGameButtons.forEach(button => {
     button.addEventListener('click', () => {
       const game = button.dataset.launchGame;
@@ -1377,6 +1415,8 @@ export function initGame(): void {
     button.addEventListener('click', () => {
       if (socket && socket.readyState <= WebSocket.OPEN) socket.close();
       socket = undefined;
+      localRoom = undefined;
+      localMode = false;
       localPlayerId = undefined;
       activeRoomCode = '';
       activeBotDifficulty = undefined;
@@ -1385,6 +1425,7 @@ export function initGame(): void {
       elements.lobbyActions?.classList.remove('hidden');
       elements.roomReady?.classList.add('hidden');
       elements.mobileControls?.classList.add('hidden');
+      elements.localMobileControls?.classList.add('hidden');
       showLobbyMessage('Choose a bot difficulty, create a room, or enter an invitation code.');
       setActiveView('hub');
     });
@@ -1419,16 +1460,19 @@ export function initGame(): void {
       if (elements.copyRoomButton) elements.copyRoomButton.textContent = 'Copy invite';
     }, 1_200);
   });
-  elements.restartButton?.addEventListener('click', () => sendAction({ type: 'restart' }));
-  elements.mobileRestartButton?.addEventListener('click', () => sendAction({ type: 'restart' }));
+  elements.restartButton?.addEventListener('click', () => sendPlayerAction(1, { type: 'restart' }));
+  elements.mobileRestartButton?.addEventListener('click', () => sendPlayerAction(1, { type: 'restart' }));
+  elements.localMobileRestartButton?.addEventListener('click', () => sendPlayerAction(1, { type: 'restart' }));
 
   const touchTimers = new Map<number, number>();
   function bindTouchControl(
     button: HTMLButtonElement,
-    action: unknown,
+    action: PlayerAction,
     repeat: boolean,
-    haptic: boolean = false
+    haptic: boolean = false,
+    player?: 1 | 2
   ): void {
+    const dispatch = (): void => player ? sendPlayerAction(player, action) : sendAction(action);
     const release = (pointerId: number): void => {
       const timer = touchTimers.get(pointerId);
       if (timer !== undefined && timer >= 0) window.clearInterval(timer);
@@ -1441,10 +1485,10 @@ export function initGame(): void {
       if (touchTimers.has(event.pointerId)) return;
       button.classList.add('pressed');
       button.setPointerCapture?.(event.pointerId);
-      sendAction(action);
+      dispatch();
       if (haptic && 'vibrate' in navigator) navigator.vibrate(24);
       const timer = repeat
-        ? window.setInterval(() => sendAction(action), 35)
+        ? window.setInterval(dispatch, 35)
         : -1;
       touchTimers.set(event.pointerId, timer);
     });
@@ -1453,7 +1497,7 @@ export function initGame(): void {
     button.addEventListener('lostpointercapture', event => release(event.pointerId));
     button.addEventListener('contextmenu', event => event.preventDefault());
     button.addEventListener('click', event => {
-      if (event.detail === 0) sendAction(action);
+      if (event.detail === 0) dispatch();
     });
   }
 
@@ -1465,6 +1509,17 @@ export function initGame(): void {
   if (elements.mobileBombButton) {
     bindTouchControl(elements.mobileBombButton, { type: 'bomb' }, false, true);
   }
+  document.querySelectorAll<HTMLButtonElement>('[data-bomberman-player][data-bomberman-action]').forEach(button => {
+    const player = Number(button.dataset.bombermanPlayer) as 1 | 2;
+    const actionName = button.dataset.bombermanAction;
+    const moves: Record<string, PlayerAction> = {
+      up: { type: 'move', dx: 0, dy: -1 }, down: { type: 'move', dx: 0, dy: 1 },
+      left: { type: 'move', dx: -1, dy: 0 }, right: { type: 'move', dx: 1, dy: 0 },
+      bomb: { type: 'bomb' },
+    };
+    const action = actionName ? moves[actionName] : undefined;
+    if (action) bindTouchControl(button, action, action.type === 'move', action.type === 'bomb', player);
+  });
 
   const handledKeys = new Set([
     'KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
@@ -1475,21 +1530,21 @@ export function initGame(): void {
     if (!handledKeys.has(event.code)) return;
     event.preventDefault();
 
-    const moves: Record<string, { dx: -1 | 0 | 1; dy: -1 | 0 | 1 }> = {
-      KeyW: { dx: 0, dy: -1 },
-      ArrowUp: { dx: 0, dy: -1 },
-      KeyS: { dx: 0, dy: 1 },
-      ArrowDown: { dx: 0, dy: 1 },
-      KeyA: { dx: -1, dy: 0 },
-      ArrowLeft: { dx: -1, dy: 0 },
-      KeyD: { dx: 1, dy: 0 },
-      ArrowRight: { dx: 1, dy: 0 },
+    const moves: Record<string, readonly [1 | 2, PlayerAction]> = {
+      KeyW: [1, { type: 'move', dx: 0, dy: -1 }],
+      ArrowUp: [2, { type: 'move', dx: 0, dy: -1 }],
+      KeyS: [1, { type: 'move', dx: 0, dy: 1 }],
+      ArrowDown: [2, { type: 'move', dx: 0, dy: 1 }],
+      KeyA: [1, { type: 'move', dx: -1, dy: 0 }],
+      ArrowLeft: [2, { type: 'move', dx: -1, dy: 0 }],
+      KeyD: [1, { type: 'move', dx: 1, dy: 0 }],
+      ArrowRight: [2, { type: 'move', dx: 1, dy: 0 }],
     };
-    if (moves[event.code]) sendAction({ type: 'move', ...moves[event.code] });
+    if (moves[event.code]) sendPlayerAction(moves[event.code][0], moves[event.code][1]);
     else if ((event.code === 'Space' || event.code === 'Enter') && !event.repeat) {
-      sendAction({ type: 'bomb' });
+      sendPlayerAction(event.code === 'Space' ? 1 : 2, { type: 'bomb' });
     } else if (event.code === 'KeyR' && !event.repeat) {
-      sendAction({ type: 'restart' });
+      sendPlayerAction(1, { type: 'restart' });
     }
   });
 
@@ -1498,6 +1553,14 @@ export function initGame(): void {
   setActiveView(roomFromUrl ? 'bomberman' : 'hub');
 
   function gameLoop(): void {
+    if (localRoom) {
+      const now = Date.now();
+      localRoom.update(now);
+      const snapshot = localRoom.snapshot(now);
+      mergePlayers(snapshot.players, snapshot.round);
+      onlineState = snapshot;
+      syncUi();
+    }
     render(ctx as CanvasRenderingContext2D, canvas as HTMLCanvasElement, { ...onlineState, players: renderedPlayers });
     if (onlineState.phase === 'finished') {
       if (onlineState.gameStatus === 'draw') renderDrawScreen(ctx as CanvasRenderingContext2D, canvas as HTMLCanvasElement);

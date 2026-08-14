@@ -50,6 +50,18 @@ test('each online client can move only its assigned player', () => {
   );
 });
 
+test('a same-device match accepts controls for both local players', () => {
+  const room = createPlayingRoom();
+  room.handleAction(1, { type: 'move', dx: 1, dy: 0 }, 3_000);
+  room.handleAction(2, { type: 'move', dx: -1, dy: 0 }, 3_000);
+  room.handleAction(1, { type: 'bomb' }, 3_100);
+  room.handleAction(2, { type: 'bomb' }, 3_100);
+
+  assert.equal(room.players[0].x, 2);
+  assert.equal(room.players[1].x, 10);
+  assert.deepEqual(room.gameState.bombs.map(bomb => bomb.ownerId).sort(), [1, 2]);
+});
+
 test('online bomb actions retain owner and player blast radius', () => {
   const room = createPlayingRoom();
   room.players[1].blastRadius = 4;

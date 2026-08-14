@@ -2123,6 +2123,16 @@
     .tank-touch-button.right { grid-column: 3; grid-row: 3; }
     .tank-touch-button.fire { grid-column: 1 / -1; grid-row: 4; background: rgba(255,200,87,.2); }
 
+    .bomberman-local-restart {
+      grid-column: 1 / -1;
+      min-height: 42px;
+      border: 1px solid var(--panel-border);
+      border-radius: 11px;
+      color: var(--ink);
+      background: rgba(255,255,255,.06);
+      font-weight: 850;
+    }
+
     @media (max-width: 760px) {
       .tanks-touch-controls { display: grid; }
     }
@@ -2282,7 +2292,8 @@
     }
 
     .paddle-score-player.coral .survival-health { color: var(--p2) !important; }
-    .survival-touch-controls .solo-hidden { display: none; }
+    .survival-touch-controls .solo-hidden,
+    .star-touch-controls .solo-hidden { display: none; }
 
     .star-brand-mark {
       position: relative;
@@ -2340,9 +2351,7 @@
 
     .star-readout strong { color: #55d9ff; }
 
-    .star-touch-controls {
-      grid-template-columns: 1fr;
-    }
+    .star-touch-controls { grid-template-columns: 1fr 1fr; }
 
     .sr-only {
       position: absolute;
@@ -2513,7 +2522,7 @@
             <h3>Blast Buddies</h3>
             <p>Outsmart bots or invite a friend into a fast explosive maze battle.</p>
             <div class="catalog-card-footer">
-              <span class="mode-label">Solo · Online PvP</span>
+              <span class="mode-label">Bot · Local · Online PvP</span>
               <button class="card-play-button" type="button" data-launch-game="bomberman">Play now</button>
             </div>
           </div>
@@ -2588,7 +2597,7 @@
             <h3>Șeptică</h3>
             <p>Cut with sevens, capture aces and tens, and outplay the Coral dealer.</p>
             <div class="catalog-card-footer">
-              <span class="mode-label">Bot · Online 2P</span>
+              <span class="mode-label">Bot · Local · Online 2P</span>
               <button class="card-play-button" type="button" data-launch-game="septica">Play now</button>
             </div>
           </div>
@@ -2618,7 +2627,7 @@
             <h3>Star Defender</h3>
             <p>Break invader formations, collect weapon boosts, and challenge a command ship every fifth wave.</p>
             <div class="catalog-card-footer">
-              <span class="mode-label">Solo · Wave shooter</span>
+              <span class="mode-label">Solo · Local co-op</span>
               <button class="card-play-button" type="button" data-launch-game="star">Play now</button>
             </div>
           </div>
@@ -2638,7 +2647,7 @@
         <div class="brand-mark" aria-hidden="true"></div>
         <div>
           <h1>Blast Buddies</h1>
-          <p>Online bomber battle</p>
+          <p>Bot, local, or online bomber battle</p>
         </div>
       </div>
       <div class="game-nav-actions">
@@ -2686,9 +2695,11 @@
         </div>
         <div id="lobbyOverlay" class="lobby-overlay">
           <div class="lobby-panel">
-            <h2>Play online</h2>
-            <p>Battle a smart computer rival or challenge a friend in another browser.</p>
+            <h2>Choose how to play</h2>
+            <p>Share this device, battle a smart bot, or challenge a friend online.</p>
             <div id="lobbyActions">
+              <button id="playLocalButton" class="lobby-button" type="button">Play local 2P</button>
+              <div class="lobby-divider">or challenge a bot</div>
               <div class="bot-heading">Single player vs bot</div>
               <div class="bot-options" aria-label="Bot difficulty">
                 <button class="bot-button" type="button" data-bot-difficulty="easy">Easy</button>
@@ -2752,6 +2763,26 @@
         </div>
         <button id="mobileRestartButton" class="mobile-round-button" type="button">New round</button>
         <button id="mobileBombButton" class="mobile-bomb-button" type="button" aria-label="Place bomb">Bomb</button>
+      </div>
+
+      <div id="bombermanLocalControls" class="tanks-touch-controls hidden" aria-label="Local touch Bomberman controls">
+        <div class="tank-touch-team">
+          <strong>Mint</strong>
+          <button class="tank-touch-button up" type="button" data-bomberman-player="1" data-bomberman-action="up">↑</button>
+          <button class="tank-touch-button left" type="button" data-bomberman-player="1" data-bomberman-action="left">←</button>
+          <button class="tank-touch-button down" type="button" data-bomberman-player="1" data-bomberman-action="down">↓</button>
+          <button class="tank-touch-button right" type="button" data-bomberman-player="1" data-bomberman-action="right">→</button>
+          <button class="tank-touch-button fire" type="button" data-bomberman-player="1" data-bomberman-action="bomb">Bomb</button>
+        </div>
+        <div class="tank-touch-team coral">
+          <strong>Coral</strong>
+          <button class="tank-touch-button up" type="button" data-bomberman-player="2" data-bomberman-action="up">↑</button>
+          <button class="tank-touch-button left" type="button" data-bomberman-player="2" data-bomberman-action="left">←</button>
+          <button class="tank-touch-button down" type="button" data-bomberman-player="2" data-bomberman-action="down">↓</button>
+          <button class="tank-touch-button right" type="button" data-bomberman-player="2" data-bomberman-action="right">→</button>
+          <button class="tank-touch-button fire" type="button" data-bomberman-player="2" data-bomberman-action="bomb">Bomb</button>
+        </div>
+        <button id="bombermanLocalRestartButton" class="bomberman-local-restart" type="button">New round</button>
       </div>
     </section>
   </main>
@@ -3012,7 +3043,7 @@
     <header class="topbar">
       <div class="brand">
         <div class="septica-brand-mark" aria-hidden="true"></div>
-        <div><h1>Șeptică</h1><p>Romanian card duel · Bot or online</p></div>
+        <div><h1>Șeptică</h1><p>Romanian card duel · Bot, local, or online</p></div>
       </div>
       <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub>← Arcade</button></div>
     </header>
@@ -3022,6 +3053,10 @@
     <section class="paddle-shell" aria-label="Șeptică card match">
       <div class="snake-toolbar">
         <span>Sevens and the opening rank cut. Aces and tens score one point each.</span>
+        <div class="snake-modes" aria-label="Șeptică game mode">
+          <button class="snake-mode-button active" type="button" data-septica-mode="bot">Vs bot</button>
+          <button class="snake-mode-button" type="button" data-septica-mode="local">Local 2P</button>
+        </div>
       </div>
       <div class="paddle-scorebar">
         <div class="paddle-score-player"><i class="paddle-score-swatch" aria-hidden="true"></i><div><span>Mint</span><b id="septicaMintPoints">0</b></div></div>
@@ -3035,6 +3070,7 @@
       </div>
       <div class="paddle-statusbar" aria-live="polite">
         <span id="septicaStatus">Rândul tău: deschide o mână nouă.</span>
+        <button id="septicaRevealButton" class="paddle-serve" type="button" hidden>Reveal hand</button>
         <button id="septicaPassButton" class="paddle-serve" type="button" hidden>Cedează masa</button>
       </div>
       <footer class="paddle-footer">
@@ -3104,7 +3140,7 @@
     <header class="topbar">
       <div class="brand">
         <div class="star-brand-mark" aria-hidden="true"></div>
-        <div><h1>Star Defender</h1><p>Neon invasion · Endless solo mission</p></div>
+        <div><h1>Star Defender</h1><p>Neon invasion · Solo or local co-op</p></div>
       </div>
       <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub>← Arcade</button></div>
     </header>
@@ -3112,11 +3148,15 @@
     <section class="paddle-shell" aria-label="Star Defender mission">
       <div class="snake-toolbar">
         <span>Clear formations, collect spread, rapid-fire, and shield boosts, then face a boss every fifth wave.</span>
+        <div class="snake-modes" aria-label="Star Defender game mode">
+          <button class="snake-mode-button active" type="button" data-star-mode="solo">Solo</button>
+          <button class="snake-mode-button" type="button" data-star-mode="coop">Play local</button>
+        </div>
       </div>
       <div class="paddle-scorebar">
-        <div class="paddle-score-player"><i class="paddle-score-swatch" aria-hidden="true"></i><div><span>Score</span><b id="starScore">0</b><span id="starHealth" class="survival-health">3 hull</span></div></div>
+        <div class="paddle-score-player"><i class="paddle-score-swatch" aria-hidden="true"></i><div><span>Mint score</span><b id="starMintScore">0</b><span id="starMintHealth" class="survival-health">3 hull</span></div></div>
         <div class="paddle-score-goal">Wave <strong id="starWave">0</strong></div>
-        <div class="paddle-score-player coral"><i class="paddle-score-swatch" aria-hidden="true"></i><div><span>Weapon system</span><b id="starBoost">Standard</b></div></div>
+        <div class="paddle-score-player coral"><i class="paddle-score-swatch" aria-hidden="true"></i><div><span>Coral score</span><b id="starCoralScore">—</b><span id="starCoralHealth" class="survival-health">Solo</span></div></div>
       </div>
       <div class="star-arena"><canvas id="starCanvas" width="900" height="600" aria-label="Star Defender space battle"></canvas></div>
       <div class="paddle-statusbar" aria-live="polite">
@@ -3124,18 +3164,26 @@
         <button id="starStartButton" class="paddle-serve" type="button">Launch</button>
       </div>
       <footer class="paddle-footer">
-        <div class="paddle-key-guide">Move: <kbd>WASD</kbd> or <kbd>Arrows</kbd></div>
+        <div class="paddle-key-guide">Mint: <kbd>WASD</kbd> + <kbd>F</kbd></div>
         <button id="starRestartButton" class="paddle-restart" type="button">Reset mission</button>
-        <div class="star-readout">Fire: <strong>F · Space · Enter</strong></div>
+        <div class="paddle-key-guide coral">Coral: <kbd>Arrows</kbd> + <kbd>Enter</kbd></div>
       </footer>
       <div class="tanks-touch-controls star-touch-controls" aria-label="Touch star-fighter controls">
         <div class="tank-touch-team">
-          <strong>Star fighter</strong>
-          <button class="tank-touch-button up" type="button" data-star-action="up">↑</button>
-          <button class="tank-touch-button left" type="button" data-star-action="left">←</button>
-          <button class="tank-touch-button down" type="button" data-star-action="down">↓</button>
-          <button class="tank-touch-button right" type="button" data-star-action="right">→</button>
-          <button class="tank-touch-button fire" type="button" data-star-action="fire">Fire</button>
+          <strong>Mint</strong>
+          <button class="tank-touch-button up" type="button" data-star-player="1" data-star-action="up">↑</button>
+          <button class="tank-touch-button left" type="button" data-star-player="1" data-star-action="left">←</button>
+          <button class="tank-touch-button down" type="button" data-star-player="1" data-star-action="down">↓</button>
+          <button class="tank-touch-button right" type="button" data-star-player="1" data-star-action="right">→</button>
+          <button class="tank-touch-button fire" type="button" data-star-player="1" data-star-action="fire">Fire</button>
+        </div>
+        <div id="starCoralControls" class="tank-touch-team coral solo-hidden">
+          <strong>Coral</strong>
+          <button class="tank-touch-button up" type="button" data-star-player="2" data-star-action="up">↑</button>
+          <button class="tank-touch-button left" type="button" data-star-player="2" data-star-action="left">←</button>
+          <button class="tank-touch-button down" type="button" data-star-player="2" data-star-action="down">↓</button>
+          <button class="tank-touch-button right" type="button" data-star-player="2" data-star-action="right">→</button>
+          <button class="tank-touch-button fire" type="button" data-star-player="2" data-star-action="fire">Fire</button>
         </div>
       </div>
     </section>

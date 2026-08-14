@@ -329,6 +329,12 @@ export function initNeonSnake(): void {
     room = new GameRoomClient({
       game: 'snake',
       mount: roomMount,
+      onPlayLocal: () => {
+        accumulator = 0;
+        game.restart('duel');
+        syncUi();
+        render();
+      },
       onSessionChange: session => {
         accumulator = 0;
         if (session.ready && session.playerId === 1) {

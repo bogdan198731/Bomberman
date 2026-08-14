@@ -371,6 +371,7 @@ export function initMiniTanks(): void {
     room = new GameRoomClient({
       game: 'tanks',
       mount: roomMount,
+      onPlayLocal: () => { game.restart('duel'); syncUi(); render(); },
       onSessionChange: session => {
         if (session.online && !session.ready && session.playerId === 1) {
           (['up', 'down', 'left', 'right', 'fire'] as Array<keyof TankInput>).forEach(action => game.setInput(2, action, false));
