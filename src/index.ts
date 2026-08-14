@@ -1159,6 +1159,7 @@ type ClientMessage =
       roomCode: string;
       playerId: 1 | 2;
       botDifficulty?: 'easy' | 'normal' | 'hard';
+      quickMatch?: boolean;
     }
   | { type: 'state'; state: OnlineClientState }
   | { type: 'error'; message: string };
@@ -1202,6 +1203,7 @@ export function initGame(): void {
     roomCodeInput: document.getElementById('roomCodeInput') as HTMLInputElement | null,
     connectionMessage: document.getElementById('connectionMessage'),
     createRoomButton: document.getElementById('createRoomButton'),
+    quickMatchButton: document.getElementById('quickMatchButton'),
     playLocalButton: document.getElementById('playLocalButton'),
     joinRoomButton: document.getElementById('joinRoomButton'),
     copyRoomButton: document.getElementById('copyRoomButton'),
@@ -1238,6 +1240,7 @@ export function initGame(): void {
   let localPlayerId: 1 | 2 | undefined;
   let activeRoomCode = '';
   let activeBotDifficulty: 'easy' | 'normal' | 'hard' | undefined;
+  let quickMatching = false;
   const resultReporter = new ArcadeResultReporter('bomberman');
 
   function setActiveView(view: 'hub' | 'bomberman' | 'tintar' | 'paddle' | 'snake' | 'tanks' | 'septica' | 'survival' | 'star' | 'racing' | 'blocks'): void {
@@ -1292,6 +1295,7 @@ export function initGame(): void {
 
     const waiting = !localMode && Boolean(localPlayerId) && onlineState.connectedPlayers.length < 2;
     const onlineReady = !localMode && Boolean(localPlayerId) && onlineState.connectedPlayers.length === 2;
+    if (onlineReady) quickMatching = false;
     elements.lobbyOverlay?.classList.toggle('hidden', localMode || Boolean(localPlayerId) && !waiting);
     elements.lobbyActions?.classList.toggle('hidden', localMode || Boolean(localPlayerId));
     elements.roomReady?.classList.toggle('hidden', localMode || !localPlayerId);
@@ -1306,7 +1310,9 @@ export function initGame(): void {
     if (elements.connectionMessage && localPlayerId) {
       elements.connectionMessage.classList.remove('error');
       elements.connectionMessage.textContent = waiting
-        ? 'Share this code with your opponent. The match starts when they join.'
+        ? quickMatching
+          ? 'Searching for a Quick Match opponent. You can also share this code while you wait.'
+          : 'Share this code with your opponent. The match starts when they join.'
         : `You are ${localPlayerId === 1 ? 'Mint' : 'Coral'}.`;
     }
     const trackedPlayer = localMode ? 1 : localPlayerId ?? 1;
@@ -1354,6 +1360,7 @@ export function initGame(): void {
   function connectAndSend(
     message:
       | { type: 'create' }
+      | { type: 'quickMatch' }
       | { type: 'join'; roomCode: string }
       | { type: 'createBot'; difficulty: 'easy' | 'normal' | 'hard' }
   ): void {
@@ -1363,7 +1370,8 @@ export function initGame(): void {
     if (socket && socket.readyState <= WebSocket.OPEN) socket.close();
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     socket = new WebSocket(`${protocol}//${location.host}`);
-    showLobbyMessage('Connecting to the game server…');
+    quickMatching = message.type === 'quickMatch';
+    showLobbyMessage(quickMatching ? 'Looking for a Quick Match opponent…' : 'Connecting to the game server…');
 
     socket.addEventListener('open', () => socket?.send(JSON.stringify(message)));
     socket.addEventListener('message', event => {
@@ -1376,6 +1384,7 @@ export function initGame(): void {
         localPlayerId = response.playerId;
         activeRoomCode = response.roomCode;
         activeBotDifficulty = response.botDifficulty;
+        quickMatching = response.quickMatch === true;
         if (activeBotDifficulty) history.replaceState(null, '', clearArcadeInviteUrl(location.href));
         else history.replaceState(null, '', createArcadeInviteUrl(location.href, 'bomberman', activeRoomCode));
         syncUi();
@@ -1392,6 +1401,7 @@ export function initGame(): void {
       localPlayerId = undefined;
       activeRoomCode = '';
       activeBotDifficulty = undefined;
+      quickMatching = false;
       elements.lobbyOverlay?.classList.remove('hidden');
       elements.lobbyActions?.classList.remove('hidden');
       elements.roomReady?.classList.add('hidden');
@@ -1425,6 +1435,7 @@ export function initGame(): void {
     localMode = true;
     activeRoomCode = '';
     activeBotDifficulty = undefined;
+    quickMatching = false;
     onlineState = localRoom.snapshot(now);
     mergePlayers(onlineState.players, onlineState.round);
     history.replaceState(null, '', clearArcadeInviteUrl(location.href));
@@ -1432,6 +1443,7 @@ export function initGame(): void {
   }
 
   elements.createRoomButton?.addEventListener('click', () => connectAndSend({ type: 'create' }));
+  elements.quickMatchButton?.addEventListener('click', () => connectAndSend({ type: 'quickMatch' }));
   elements.playLocalButton?.addEventListener('click', () => { void startLocalMatch(); });
   elements.launchGameButtons.forEach(button => {
     button.addEventListener('click', () => {
@@ -1448,6 +1460,7 @@ export function initGame(): void {
       localPlayerId = undefined;
       activeRoomCode = '';
       activeBotDifficulty = undefined;
+      quickMatching = false;
       history.replaceState(null, '', clearArcadeInviteUrl(location.href));
       elements.lobbyOverlay?.classList.remove('hidden');
       elements.lobbyActions?.classList.remove('hidden');

@@ -30,6 +30,7 @@ export class GameRoomClient {
   private roomCode = '';
   private playerId: RelayPlayerId | null = null;
   private ready = false;
+  private quickMatching = false;
   private lastStateSentAt = 0;
   private statusElement: HTMLElement;
   private input: HTMLInputElement;
@@ -49,6 +50,7 @@ export class GameRoomClient {
       </div>
       <div class="game-room-actions" data-room-local>
         <button class="game-room-primary" type="button" data-room-play-local>Play local</button>
+        <button class="game-room-matchmake" type="button" data-room-matchmake>Quick Match</button>
         <button type="button" data-room-create>Create code</button>
         <label class="game-room-join"><span class="sr-only">Room code</span><input type="text" inputmode="text" maxlength="5" placeholder="CODE" autocomplete="off" data-room-input><button type="button" data-room-join>Join</button></label>
       </div>
@@ -107,6 +109,7 @@ export class GameRoomClient {
     this.roomCode = '';
     this.playerId = null;
     this.ready = false;
+    this.quickMatching = false;
     this.localActions.hidden = false;
     this.joinedActions.hidden = true;
     this.statusElement.textContent = 'Play locally, or create an invite code for a friend.';
@@ -122,12 +125,14 @@ export class GameRoomClient {
       this.roomCode = '';
       this.playerId = null;
       this.ready = false;
+      this.quickMatching = false;
       this.localActions.hidden = false;
       this.joinedActions.hidden = true;
       this.statusElement.textContent = 'Local two-player mode ready on this device.';
       history.replaceState(null, '', clearArcadeInviteUrl(location.href));
       this.options.onPlayLocal();
     });
+    this.mount.querySelector('[data-room-matchmake]')?.addEventListener('click', () => this.connect({ type: 'quickMatchGameRoom', game: this.game }));
     this.mount.querySelector('[data-room-create]')?.addEventListener('click', () => this.connect({ type: 'createGameRoom', game: this.game }));
     this.mount.querySelector('[data-room-join]')?.addEventListener('click', () => this.joinFromInput());
     this.input.addEventListener('input', () => { this.input.value = this.input.value.toUpperCase().replace(/[^A-Z2-9]/g, ''); });
@@ -182,7 +187,8 @@ export class GameRoomClient {
 
   private connect(firstMessage: Record<string, unknown>): void {
     if (this.socket) return;
-    this.statusElement.textContent = 'Connecting to the arcade server…';
+    this.quickMatching = firstMessage.type === 'quickMatchGameRoom';
+    this.statusElement.textContent = this.quickMatching ? 'Looking for a Quick Match opponent…' : 'Connecting to the arcade server…';
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const socket = new WebSocket(`${protocol}//${location.host}`);
     this.socket = socket;
@@ -196,6 +202,7 @@ export class GameRoomClient {
       this.roomCode = '';
       this.playerId = null;
       this.ready = false;
+      this.quickMatching = false;
       this.localActions.hidden = false;
       this.joinedActions.hidden = true;
       this.statusElement.textContent = wasOnline ? 'The online room closed. Local play is still available.' : 'Connection closed. Try again.';
@@ -216,19 +223,28 @@ export class GameRoomClient {
       this.roomCode = data.roomCode;
       this.playerId = data.playerId;
       this.ready = false;
+      this.quickMatching = data.quickMatch === true;
       this.codeElement.textContent = this.roomCode;
       history.replaceState(null, '', arcadeInviteShareData(location.href, this.game, this.roomCode).url);
       this.localActions.hidden = true;
       this.joinedActions.hidden = false;
-      this.statusElement.textContent = this.playerId === 1 ? 'Invite Coral with this code.' : 'Joined as Coral. Waiting for Mint…';
+      this.statusElement.textContent = this.quickMatching
+        ? this.playerId === 1 ? 'Searching for a Quick Match opponent…' : 'Opponent found. Preparing the match…'
+        : this.playerId === 1 ? 'Invite Coral with this code.' : 'Joined as Coral. Waiting for Mint…';
       this.options.onSessionChange(this.session());
       return;
     }
     if (data.type === 'gameRoomStatus' && data.game === this.game && Array.isArray(data.connectedPlayers)) {
       const wasReady = this.ready;
       this.ready = data.connectedPlayers.includes(1) && data.connectedPlayers.includes(2);
-      if (this.ready) this.statusElement.textContent = `Online match ready · You are ${this.playerId === 1 ? 'Mint' : 'Coral'}`;
-      else this.statusElement.textContent = this.playerId === 1 ? 'Invite Coral with this code.' : 'Waiting for Mint to reconnect…';
+      if (this.ready) {
+        this.quickMatching = false;
+        this.statusElement.textContent = `Online match ready · You are ${this.playerId === 1 ? 'Mint' : 'Coral'}`;
+      } else {
+        this.statusElement.textContent = this.quickMatching
+          ? 'Searching for a Quick Match opponent…'
+          : this.playerId === 1 ? 'Invite Coral with this code.' : 'Waiting for Mint to reconnect…';
+      }
       this.options.onSessionChange(this.session());
       if (!wasReady && this.ready && this.isHost()) this.lastStateSentAt = 0;
       return;
