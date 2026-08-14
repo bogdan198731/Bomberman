@@ -4,6 +4,7 @@ import {
   applySepticaOnlineState,
   createSepticaDeck,
   createSepticaOnlineState,
+  SEPTICA_TRICK_REVEAL_MS,
   SepticaGame,
   type SepticaCard,
 } from './septica.js';
@@ -39,14 +40,24 @@ test('a card matching the opening rank cuts', () => {
   assert.equal(game.lastCutter, 2);
 });
 
-test('a non-cutting response awards the table to the leader', () => {
+test('a non-cutting response remains visible before the table is awarded', () => {
   const game = new SepticaGame(() => .5);
   game.hands = { 1: [card('10')], 2: [card('K')] };
   game.deck = [];
   game.playCard(1, 0);
   game.playCard(2, 0);
+
+  assert.equal(SEPTICA_TRICK_REVEAL_MS, 1_000);
+  assert.equal(game.phase, 'settling');
+  assert.equal(game.table.length, 2);
+  assert.equal(game.points[1], 0);
+  assert.deepEqual(game.legalCardIndexes(1), []);
+  assert.deepEqual(game.legalCardIndexes(2), []);
+  assert.equal(game.settleTrick(), true);
   assert.equal(game.points[1], 1);
   assert.equal(game.phase, 'finished');
+  assert.equal(game.table.length, 0);
+  assert.equal(game.settleTrick(), false);
 });
 
 test('a player can concede after being cut', () => {
@@ -85,6 +96,9 @@ test('the responder must discard a card after the leader cuts back', () => {
   assert.deepEqual(game.legalCardIndexes(2), [0]);
   assert.equal(game.pass(2), false);
   assert.equal(game.playCard(2, 0), true);
+  assert.equal(game.phase, 'settling');
+  assert.equal(game.table.length, 4);
+  assert.equal(game.settleTrick(), true);
   assert.equal(game.table.length, 0);
   assert.equal(game.points[1], 3);
 });
@@ -126,6 +140,8 @@ test('the last two deck cards are shared instead of given to one player', () => 
   game.playCard(1, 0);
   game.playCard(2, 0);
 
+  assert.equal(game.phase, 'settling');
+  assert.equal(game.settleTrick(), true);
   assert.equal(game.deck.length, 0);
   assert.equal(game.hands[1].length, 1);
   assert.equal(game.hands[2].length, 1);

@@ -3,8 +3,9 @@ import { GameRoomClient } from './game-room.js';
 export type SepticaPlayer = 1 | 2;
 export type SepticaRank = '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | 'A';
 export type SepticaSuit = 'clubs' | 'diamonds' | 'hearts' | 'spades';
-export type SepticaPhase = 'playing' | 'continue-choice' | 'finished';
+export type SepticaPhase = 'playing' | 'continue-choice' | 'settling' | 'finished';
 export type SepticaOfflineMode = 'bot' | 'local';
+export const SEPTICA_TRICK_REVEAL_MS = 1_000;
 
 export interface SepticaCard {
   rank: SepticaRank;
@@ -78,7 +79,7 @@ export class SepticaGame {
   }
 
   legalCardIndexes(player: SepticaPlayer): number[] {
-    if (this.phase === 'finished' || player !== this.currentPlayer) return [];
+    if (this.phase === 'finished' || this.phase === 'settling' || player !== this.currentPlayer) return [];
     if (this.phase === 'continue-choice') {
       return this.hands[player].map((card, index) => this.isCut(card) ? index : -1).filter(index => index >= 0);
     }
@@ -105,7 +106,13 @@ export class SepticaGame {
       this.lastCutter = player;
       this.currentPlayer = otherPlayer(player);
       this.phase = this.currentPlayer === this.leader ? 'continue-choice' : 'playing';
-    } else this.collectTrick();
+    } else this.phase = 'settling';
+    return true;
+  }
+
+  settleTrick(): boolean {
+    if (this.phase !== 'settling') return false;
+    this.collectTrick();
     return true;
   }
 
@@ -116,7 +123,7 @@ export class SepticaGame {
   }
 
   botMove(): boolean {
-    if (this.currentPlayer !== 2 || this.phase === 'finished') return false;
+    if (this.currentPlayer !== 2 || this.phase === 'finished' || this.phase === 'settling') return false;
     const legal = this.legalCardIndexes(2);
     if (this.phase === 'continue-choice' && legal.length === 0) return this.pass(2);
     if (legal.length === 0) return false;
@@ -133,6 +140,7 @@ export class SepticaGame {
       if (this.winner === 0) return 'Egalitate — fiecare a capturat patru puncte.';
       return `${this.winner === 1 ? 'Mint' : 'Coral'} câștigă partida!`;
     }
+    if (this.phase === 'settling') return 'Cărțile rămân o clipă pe masă…';
     if (this.currentPlayer === 2) return 'Coral se gândește…';
     if (this.phase === 'continue-choice') return 'Ai fost tăiat. Continuă cu un 7 sau aceeași figură, ori cedează masa.';
     if (this.table.length === 0) return 'Rândul tău: deschide o mână nouă.';
@@ -225,6 +233,7 @@ export function initSeptica(): void {
   const modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-septica-mode]');
   const roomMount = document.querySelector<HTMLElement>('[data-game-room="septica"]');
   let botTimer = 0;
+  let settleTimer = 0;
   let room: GameRoomClient | null = null;
   let offlineMode: SepticaOfflineMode = 'bot';
   let localHandVisible = false;
@@ -236,6 +245,7 @@ export function initSeptica(): void {
 
   function onlineStatus(player: SepticaPlayer): string {
     if (game.phase === 'finished') return game.statusText();
+    if (game.phase === 'settling') return 'Cărțile rămân o clipă pe masă…';
     if (game.currentPlayer !== player) return `${game.currentPlayer === 1 ? 'Mint' : 'Coral'} își alege cartea…`;
     if (game.phase === 'continue-choice') return 'Ai fost tăiat. Continuă cu un 7 sau aceeași figură, ori cedează masa.';
     if (game.table.length === 0) return 'Rândul tău: deschide o mână nouă.';
@@ -246,22 +256,38 @@ export function initSeptica(): void {
     room?.broadcastState(createSepticaOnlineState(game, 2) as unknown as Record<string, unknown>, true);
   }
 
+  function scheduleSettlement(): void {
+    window.clearTimeout(settleTimer);
+    if (game.phase !== 'settling' || room?.isGuest()) return;
+    settleTimer = window.setTimeout(() => {
+      if (!game.settleTrick()) return;
+      if (!room?.session().online && offlineMode === 'local') localHandVisible = false;
+      render();
+      if (room?.session().online) broadcastState(); else scheduleBot();
+    }, SEPTICA_TRICK_REVEAL_MS);
+  }
+
+  function afterAuthoritativeMove(): void {
+    if (!room?.session().online && offlineMode === 'local') localHandVisible = game.phase === 'finished';
+    render();
+    if (room?.session().online) broadcastState();
+    scheduleSettlement();
+    if (!room?.session().online && offlineMode === 'bot' && game.phase !== 'settling') scheduleBot();
+  }
+
   function playLocalCard(index: number): void {
     const player = localPlayer();
     const session = room?.session();
     if (!session?.online) {
       if (offlineMode === 'local') {
         if (!localHandVisible) return;
-        if (game.playCard(player, index)) {
-          localHandVisible = game.phase === 'finished';
-          render();
-        }
-      } else if (game.playCard(1, index)) { render(); scheduleBot(); }
+        if (game.playCard(player, index)) afterAuthoritativeMove();
+      } else if (game.playCard(1, index)) afterAuthoritativeMove();
       return;
     }
     if (!session.ready || game.currentPlayer !== player) return;
     if (room?.isGuest()) room.sendAction({ type: 'play', index });
-    else if (game.playCard(1, index)) { render(); broadcastState(); }
+    else if (game.playCard(1, index)) afterAuthoritativeMove();
   }
 
   function cardButton(card: SepticaCard, index: number, playable: boolean): HTMLButtonElement {
@@ -292,18 +318,20 @@ export function initSeptica(): void {
       card.classList.add(entry.player === 1 ? 'played-mint' : 'played-coral');
       return card;
     }));
-    if (status) status.textContent = room?.session().online
-      ? onlineStatus(player)
-      : localHotSeat
-        ? localHandVisible
-          ? onlineStatus(player)
-          : `Pass the device to ${player === 1 ? 'Mint' : 'Coral'}, then reveal the hand.`
-        : game.statusText();
+    if (status) status.textContent = game.phase === 'settling'
+      ? game.statusText()
+      : room?.session().online
+        ? onlineStatus(player)
+        : localHotSeat
+          ? localHandVisible
+            ? onlineStatus(player)
+            : `Pass the device to ${player === 1 ? 'Mint' : 'Coral'}, then reveal the hand.`
+          : game.statusText();
     if (mintPoints) mintPoints.textContent = String(game.points[1]);
     if (coralPoints) coralPoints.textContent = String(game.points[2]);
     if (deckCount) deckCount.textContent = String(game.deck.length);
     if (passButton) passButton.hidden = !(game.currentPlayer === player && game.phase === 'continue-choice' && (!localHotSeat || localHandVisible));
-    if (revealButton) revealButton.hidden = !(localHotSeat && !localHandVisible && game.phase !== 'finished');
+    if (revealButton) revealButton.hidden = !(localHotSeat && !localHandVisible && game.phase !== 'finished' && game.phase !== 'settling');
     modeButtons.forEach(button => {
       button.classList.toggle('active', button.dataset.septicaMode === offlineMode);
       button.disabled = Boolean(room?.session().online);
@@ -313,11 +341,9 @@ export function initSeptica(): void {
   function scheduleBot(): void {
     window.clearTimeout(botTimer);
     if (room?.session().online || offlineMode === 'local') return;
-    if (game.currentPlayer !== 2 || game.phase === 'finished') return;
+    if (game.currentPlayer !== 2 || game.phase === 'finished' || game.phase === 'settling') return;
     botTimer = window.setTimeout(() => {
-      game.botMove();
-      render();
-      if (game.currentPlayer === 2) scheduleBot();
+      if (game.botMove()) afterAuthoritativeMove();
     }, 520);
   }
 
@@ -337,6 +363,7 @@ export function initSeptica(): void {
     if (mode !== 'bot' && mode !== 'local') return;
     offlineMode = mode;
     localHandVisible = false;
+    window.clearTimeout(settleTimer);
     game.restart();
     render();
     scheduleBot();
@@ -344,6 +371,7 @@ export function initSeptica(): void {
   document.getElementById('septicaRestartButton')?.addEventListener('click', () => {
     if (room?.isGuest()) room.sendAction({ type: 'restart' });
     else {
+      window.clearTimeout(settleTimer);
       game.restart();
       localHandVisible = false;
       render();
@@ -356,6 +384,7 @@ export function initSeptica(): void {
       game: 'septica',
       mount: roomMount,
       onPlayLocal: () => {
+        window.clearTimeout(settleTimer);
         offlineMode = 'local';
         localHandVisible = false;
         game.restart();
@@ -364,11 +393,13 @@ export function initSeptica(): void {
       onSessionChange: session => {
         window.clearTimeout(botTimer);
         if (!session.online) {
+          window.clearTimeout(settleTimer);
           offlineMode = 'bot';
           localHandVisible = false;
           game.restart();
           scheduleBot();
         } else if (session.ready && session.playerId === 1) {
+          window.clearTimeout(settleTimer);
           localHandVisible = false;
           game.restart();
           broadcastState();
@@ -381,8 +412,8 @@ export function initSeptica(): void {
         if (action.type === 'play' && typeof action.index === 'number' && Number.isInteger(action.index) && game.currentPlayer === 2) {
           changed = game.playCard(2, action.index);
         } else if (action.type === 'pass' && game.currentPlayer === 2) changed = game.pass(2);
-        else if (action.type === 'restart') { game.restart(); changed = true; }
-        if (changed) { render(); broadcastState(); }
+        else if (action.type === 'restart') { window.clearTimeout(settleTimer); game.restart(); changed = true; }
+        if (changed) afterAuthoritativeMove();
       },
       onState: state => {
         if (!room?.isGuest()) return;
