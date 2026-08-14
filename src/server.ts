@@ -22,6 +22,8 @@ const mimeTypes: Record<string, string> = {
   '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.map': 'application/json; charset=utf-8',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
 };
 
 const server = createServer((request, response) => {
@@ -30,7 +32,10 @@ const server = createServer((request, response) => {
   const safePath = normalize(relativePath).replace(/^(\.\.[/\\])+/, '');
   const publicPath = safePath.replace(/\\/g, '/');
   const filePath = join(root, safePath);
-  const isPublicFile = publicPath === 'index.html' || publicPath.startsWith('dist/');
+  const isPublicFile =
+    publicPath === 'index.html' ||
+    publicPath.startsWith('dist/') ||
+    publicPath.startsWith('public/');
 
   if (
     !isPublicFile ||

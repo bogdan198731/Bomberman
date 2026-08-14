@@ -1,3 +1,5 @@
+import { initTintar } from './tintar.js';
+
 export const CELL_SIZE = 64;
 export const BOMB_TIMER = 3000;
 export const EXPLOSION_DURATION = 500;
@@ -1146,6 +1148,11 @@ export function initGame(): void {
   if (!canvas || !ctx) return;
 
   const elements = {
+    hubView: document.getElementById('hubView'),
+    gameView: document.getElementById('gameView'),
+    tintarView: document.getElementById('tintarView'),
+    launchGameButtons: document.querySelectorAll<HTMLButtonElement>('[data-launch-game]'),
+    backToHubButtons: document.querySelectorAll<HTMLButtonElement>('[data-back-to-hub]'),
     statusText: document.getElementById('gameStatusText'),
     roundLabel: document.getElementById('roundLabel'),
     playerOneScore: document.getElementById('playerOneScore'),
@@ -1194,6 +1201,14 @@ export function initGame(): void {
   let localPlayerId: 1 | 2 | undefined;
   let activeRoomCode = '';
   let activeBotDifficulty: 'easy' | 'normal' | 'hard' | undefined;
+
+  function setActiveView(view: 'hub' | 'bomberman' | 'tintar'): void {
+    elements.hubView?.classList.toggle('view-hidden', view !== 'hub');
+    elements.gameView?.classList.toggle('view-hidden', view !== 'bomberman');
+    elements.tintarView?.classList.toggle('view-hidden', view !== 'tintar');
+    document.body.dataset.view = view;
+    if (view !== 'hub') window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 
   canvas.width = initialMap.width * CELL_SIZE;
   canvas.height = initialMap.height * CELL_SIZE;
@@ -1334,6 +1349,28 @@ export function initGame(): void {
   }
 
   elements.createRoomButton?.addEventListener('click', () => connectAndSend({ type: 'create' }));
+  elements.launchGameButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const game = button.dataset.launchGame;
+      if (game === 'bomberman' || game === 'tintar') setActiveView(game);
+    });
+  });
+  elements.backToHubButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      if (socket && socket.readyState <= WebSocket.OPEN) socket.close();
+      socket = undefined;
+      localPlayerId = undefined;
+      activeRoomCode = '';
+      activeBotDifficulty = undefined;
+      history.replaceState(null, '', location.pathname);
+      elements.lobbyOverlay?.classList.remove('hidden');
+      elements.lobbyActions?.classList.remove('hidden');
+      elements.roomReady?.classList.add('hidden');
+      elements.mobileControls?.classList.add('hidden');
+      showLobbyMessage('Choose a bot difficulty, create a room, or enter an invitation code.');
+      setActiveView('hub');
+    });
+  });
   elements.botButtons.forEach(button => {
     button.addEventListener('click', () => {
       const difficulty = button.dataset.botDifficulty;
@@ -1440,6 +1477,7 @@ export function initGame(): void {
 
   const roomFromUrl = new URLSearchParams(location.search).get('room')?.toUpperCase();
   if (roomFromUrl && elements.roomCodeInput) elements.roomCodeInput.value = roomFromUrl;
+  setActiveView(roomFromUrl ? 'bomberman' : 'hub');
 
   function gameLoop(): void {
     render(ctx as CanvasRenderingContext2D, canvas as HTMLCanvasElement, { ...onlineState, players: renderedPlayers });
@@ -1456,5 +1494,8 @@ export function initGame(): void {
 }
 
 if (typeof window !== 'undefined') {
-  window.addEventListener('DOMContentLoaded', initGame);
+  window.addEventListener('DOMContentLoaded', () => {
+    initGame();
+    initTintar();
+  });
 }

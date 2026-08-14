@@ -1,7 +1,7 @@
 {
   "name": "bomberman",
   "version": "0.1.0",
-  "description": "A two-player online Bomberman game in HTML5 Canvas",
+  "description": "A mobile-friendly browser gaming hub with solo and online multiplayer games",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
@@ -13,6 +13,8 @@
   },
   "keywords": [
     "game",
+    "arcade",
+    "gaming-hub",
     "bomberman",
     "canvas"
   ],
