@@ -402,6 +402,7 @@ export function initSurvivalArena(): void {
     room = new GameRoomClient({
       game: 'survival',
       mount: roomMount,
+      onPlayLocal: () => { game.restart('coop'); syncUi(); render(); },
       onSessionChange: session => {
         if (session.online && !session.ready && session.playerId === 1) {
           (['up', 'down', 'left', 'right', 'fire'] as Array<keyof SurvivalInput>).forEach(action => game.setInput(2, action, false));

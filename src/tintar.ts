@@ -293,6 +293,7 @@ export function initTintar(): void {
     room = new GameRoomClient({
       game: 'tintar',
       mount: roomMount,
+      onPlayLocal: () => { game.reset(); render(); },
       onSessionChange: session => {
         if (session.ready && session.playerId === 1) {
           game.reset();

@@ -96,3 +96,30 @@ test('three unshielded hits end the mission', () => {
   assert.equal(game.phase, 'finished');
   assert.equal(game.player.health, 0);
 });
+
+test('local co-op launches two independently controlled fighters', () => {
+  const game = new StarDefenderGame(() => .5);
+  game.restart('coop');
+  assert.equal(game.start(), true);
+  const mintStart = game.players[1].x;
+  const coralStart = game.players[2].x;
+  game.setInput('left', true, 1);
+  game.setInput('right', true, 2);
+  game.update(.05);
+  assert.ok(game.players[1].x < mintStart);
+  assert.ok(game.players[2].x > coralStart);
+  assert.equal(game.shoot(1), true);
+  assert.equal(game.shoot(2), true);
+  assert.deepEqual(game.bullets.slice(-2).map(bullet => bullet.owner), [1, 2]);
+});
+
+test('a co-op mission continues until both fighters are destroyed', () => {
+  const game = new StarDefenderGame(() => .5);
+  game.restart('coop');
+  game.start();
+  game.damagePlayer(1); game.damagePlayer(1); game.damagePlayer(1);
+  assert.equal(game.phase, 'playing');
+  assert.equal(game.players[1].health, 0);
+  game.damagePlayer(2); game.damagePlayer(2); game.damagePlayer(2);
+  assert.equal(game.phase, 'finished');
+});

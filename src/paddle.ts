@@ -348,6 +348,7 @@ export function initPaddleClash(): void {
     room = new GameRoomClient({
       game: 'paddle',
       mount: roomMount,
+      onPlayLocal: () => { game.restart(); syncUi(); render(); },
       onSessionChange: session => {
         if (session.online && !session.ready && session.playerId === 1) {
           game.setInput(2, 'up', false); game.setInput(2, 'down', false);

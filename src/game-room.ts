@@ -10,6 +10,7 @@ export interface GameRoomSession {
 interface GameRoomClientOptions {
   game: OnlineGameId;
   mount: HTMLElement;
+  onPlayLocal: () => void;
   onSessionChange: (session: GameRoomSession) => void;
   onRemoteAction: (action: Record<string, unknown>, from: RelayPlayerId) => void;
   onState: (state: Record<string, unknown>) => void;
@@ -41,7 +42,8 @@ export class GameRoomClient {
         <span data-room-status>Play locally, or create an invite code for a friend.</span>
       </div>
       <div class="game-room-actions" data-room-local>
-        <button class="game-room-primary" type="button" data-room-create>Create code</button>
+        <button class="game-room-primary" type="button" data-room-play-local>Play local</button>
+        <button type="button" data-room-create>Create code</button>
         <label class="game-room-join"><span class="sr-only">Room code</span><input type="text" inputmode="text" maxlength="5" placeholder="CODE" autocomplete="off" data-room-input><button type="button" data-room-join>Join</button></label>
       </div>
       <div class="game-room-actions" data-room-joined hidden>
@@ -100,6 +102,18 @@ export class GameRoomClient {
   }
 
   private bindUi(): void {
+    this.mount.querySelector('[data-room-play-local]')?.addEventListener('click', () => {
+      const socket = this.socket;
+      this.socket = null;
+      socket?.close();
+      this.roomCode = '';
+      this.playerId = null;
+      this.ready = false;
+      this.localActions.hidden = false;
+      this.joinedActions.hidden = true;
+      this.statusElement.textContent = 'Local two-player mode ready on this device.';
+      this.options.onPlayLocal();
+    });
     this.mount.querySelector('[data-room-create]')?.addEventListener('click', () => this.connect({ type: 'createGameRoom', game: this.game }));
     this.mount.querySelector('[data-room-join]')?.addEventListener('click', () => this.joinFromInput());
     this.input.addEventListener('input', () => { this.input.value = this.input.value.toUpperCase().replace(/[^A-Z2-9]/g, ''); });

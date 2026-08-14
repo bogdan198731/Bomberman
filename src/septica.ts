@@ -4,6 +4,7 @@ export type SepticaPlayer = 1 | 2;
 export type SepticaRank = '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | 'A';
 export type SepticaSuit = 'clubs' | 'diamonds' | 'hearts' | 'spades';
 export type SepticaPhase = 'playing' | 'continue-choice' | 'finished';
+export type SepticaOfflineMode = 'bot' | 'local';
 
 export interface SepticaCard {
   rank: SepticaRank;
@@ -211,11 +212,16 @@ export function initSeptica(): void {
   const coralPoints = document.getElementById('septicaCoralPoints');
   const deckCount = document.getElementById('septicaDeckCount');
   const passButton = document.getElementById('septicaPassButton') as HTMLButtonElement | null;
+  const revealButton = document.getElementById('septicaRevealButton') as HTMLButtonElement | null;
+  const modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-septica-mode]');
   const roomMount = document.querySelector<HTMLElement>('[data-game-room="septica"]');
   let botTimer = 0;
   let room: GameRoomClient | null = null;
+  let offlineMode: SepticaOfflineMode = 'bot';
+  let localHandVisible = false;
 
   function localPlayer(): SepticaPlayer {
+    if (!room?.session().online && offlineMode === 'local') return game.currentPlayer;
     return (room?.session().playerId as SepticaPlayer | null) ?? 1;
   }
 
@@ -235,7 +241,13 @@ export function initSeptica(): void {
     const player = localPlayer();
     const session = room?.session();
     if (!session?.online) {
-      if (game.playCard(1, index)) { render(); scheduleBot(); }
+      if (offlineMode === 'local') {
+        if (!localHandVisible) return;
+        if (game.playCard(player, index)) {
+          localHandVisible = game.phase === 'finished';
+          render();
+        }
+      } else if (game.playCard(1, index)) { render(); scheduleBot(); }
       return;
     }
     if (!session.ready || game.currentPlayer !== player) return;
@@ -257,8 +269,12 @@ export function initSeptica(): void {
   function render(): void {
     const player = localPlayer();
     const opponent = otherPlayer(player);
-    const legal = new Set(game.legalCardIndexes(player));
-    hand!.replaceChildren(...game.hands[player].map((card, index) => cardButton(card, index, legal.has(index))));
+    const localHotSeat = !room?.session().online && offlineMode === 'local';
+    const legal = new Set(localHotSeat && !localHandVisible ? [] : game.legalCardIndexes(player));
+    hand!.replaceChildren(...game.hands[player].map((card, index) => {
+      if (!localHotSeat || localHandVisible) return cardButton(card, index, legal.has(index));
+      const back = document.createElement('span'); back.className = 'septica-card card-back'; back.textContent = 'BA'; return back;
+    }));
     botHand!.replaceChildren(...game.hands[opponent].map(() => {
       const back = document.createElement('span'); back.className = 'septica-card card-back'; back.textContent = 'BA'; return back;
     }));
@@ -267,16 +283,27 @@ export function initSeptica(): void {
       card.classList.add(entry.player === 1 ? 'played-mint' : 'played-coral');
       return card;
     }));
-    if (status) status.textContent = room?.session().online ? onlineStatus(player) : game.statusText();
+    if (status) status.textContent = room?.session().online
+      ? onlineStatus(player)
+      : localHotSeat
+        ? localHandVisible
+          ? onlineStatus(player)
+          : `Pass the device to ${player === 1 ? 'Mint' : 'Coral'}, then reveal the hand.`
+        : game.statusText();
     if (mintPoints) mintPoints.textContent = String(game.points[1]);
     if (coralPoints) coralPoints.textContent = String(game.points[2]);
     if (deckCount) deckCount.textContent = String(game.deck.length);
-    if (passButton) passButton.hidden = !(game.currentPlayer === player && game.phase === 'continue-choice');
+    if (passButton) passButton.hidden = !(game.currentPlayer === player && game.phase === 'continue-choice' && (!localHotSeat || localHandVisible));
+    if (revealButton) revealButton.hidden = !(localHotSeat && !localHandVisible && game.phase !== 'finished');
+    modeButtons.forEach(button => {
+      button.classList.toggle('active', button.dataset.septicaMode === offlineMode);
+      button.disabled = Boolean(room?.session().online);
+    });
   }
 
   function scheduleBot(): void {
     window.clearTimeout(botTimer);
-    if (room?.session().online) return;
+    if (room?.session().online || offlineMode === 'local') return;
     if (game.currentPlayer !== 2 || game.phase === 'finished') return;
     botTimer = window.setTimeout(() => {
       game.botMove();
@@ -289,14 +316,28 @@ export function initSeptica(): void {
     const player = localPlayer();
     if (room?.isGuest()) room.sendAction({ type: 'pass' });
     else if (game.pass(player)) {
+      if (!room?.session().online && offlineMode === 'local') localHandVisible = game.phase === 'finished';
       render();
       if (room?.session().online) broadcastState(); else scheduleBot();
     }
   });
+  revealButton?.addEventListener('click', () => { localHandVisible = true; render(); });
+  modeButtons.forEach(button => button.addEventListener('click', () => {
+    if (room?.session().online) return;
+    const mode = button.dataset.septicaMode;
+    if (mode !== 'bot' && mode !== 'local') return;
+    offlineMode = mode;
+    localHandVisible = false;
+    game.restart();
+    render();
+    scheduleBot();
+  }));
   document.getElementById('septicaRestartButton')?.addEventListener('click', () => {
     if (room?.isGuest()) room.sendAction({ type: 'restart' });
     else {
-      game.restart(); render();
+      game.restart();
+      localHandVisible = false;
+      render();
       if (room?.session().online) broadcastState(); else scheduleBot();
     }
   });
@@ -305,12 +346,21 @@ export function initSeptica(): void {
     room = new GameRoomClient({
       game: 'septica',
       mount: roomMount,
+      onPlayLocal: () => {
+        offlineMode = 'local';
+        localHandVisible = false;
+        game.restart();
+        render();
+      },
       onSessionChange: session => {
         window.clearTimeout(botTimer);
         if (!session.online) {
+          offlineMode = 'bot';
+          localHandVisible = false;
           game.restart();
           scheduleBot();
         } else if (session.ready && session.playerId === 1) {
+          localHandVisible = false;
           game.restart();
           broadcastState();
         }
