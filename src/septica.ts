@@ -1,0 +1,209 @@
+export type SepticaPlayer = 1 | 2;
+export type SepticaRank = '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | 'A';
+export type SepticaSuit = 'clubs' | 'diamonds' | 'hearts' | 'spades';
+export type SepticaPhase = 'playing' | 'continue-choice' | 'finished';
+
+export interface SepticaCard {
+  rank: SepticaRank;
+  suit: SepticaSuit;
+  id: string;
+}
+
+const RANKS: SepticaRank[] = ['7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+const SUITS: SepticaSuit[] = ['clubs', 'diamonds', 'hearts', 'spades'];
+
+function otherPlayer(player: SepticaPlayer): SepticaPlayer { return player === 1 ? 2 : 1; }
+function cardPoints(card: SepticaCard): number { return card.rank === '10' || card.rank === 'A' ? 1 : 0; }
+
+export function createSepticaDeck(): SepticaCard[] {
+  return SUITS.flatMap(suit => RANKS.map(rank => ({ rank, suit, id: `${rank}-${suit}` })));
+}
+
+export class SepticaGame {
+  deck: SepticaCard[] = [];
+  hands: Record<SepticaPlayer, SepticaCard[]> = { 1: [], 2: [] };
+  table: Array<{ player: SepticaPlayer; card: SepticaCard }> = [];
+  points: Record<SepticaPlayer, number> = { 1: 0, 2: 0 };
+  currentPlayer: SepticaPlayer = 1;
+  leader: SepticaPlayer = 1;
+  lastCutter: SepticaPlayer = 1;
+  leadRank: SepticaRank | null = null;
+  phase: SepticaPhase = 'playing';
+  winner: SepticaPlayer | 0 | null = null;
+  private random: () => number;
+
+  constructor(random: () => number = Math.random) {
+    this.random = random;
+    this.restart();
+  }
+
+  restart(): void {
+    this.deck = createSepticaDeck();
+    for (let index = this.deck.length - 1; index > 0; index -= 1) {
+      const target = Math.floor(this.random() * (index + 1));
+      [this.deck[index], this.deck[target]] = [this.deck[target], this.deck[index]];
+    }
+    this.hands = { 1: [], 2: [] };
+    this.table = [];
+    this.points = { 1: 0, 2: 0 };
+    this.currentPlayer = 1;
+    this.leader = 1;
+    this.lastCutter = 1;
+    this.leadRank = null;
+    this.phase = 'playing';
+    this.winner = null;
+    this.drawToFour(1);
+    this.drawToFour(2);
+  }
+
+  isCut(card: SepticaCard): boolean {
+    return card.rank === '7' || card.rank === this.leadRank;
+  }
+
+  legalCardIndexes(player: SepticaPlayer): number[] {
+    if (this.phase === 'finished' || player !== this.currentPlayer) return [];
+    if (this.phase === 'continue-choice') {
+      return this.hands[player].map((card, index) => this.isCut(card) ? index : -1).filter(index => index >= 0);
+    }
+    return this.hands[player].map((_, index) => index);
+  }
+
+  playCard(player: SepticaPlayer, cardIndex: number): boolean {
+    if (!this.legalCardIndexes(player).includes(cardIndex)) return false;
+    const [card] = this.hands[player].splice(cardIndex, 1);
+    const openingPlay = this.table.length === 0;
+    if (openingPlay) {
+      this.leader = player;
+      this.lastCutter = player;
+      this.leadRank = card.rank;
+      this.table.push({ player, card });
+      this.currentPlayer = otherPlayer(player);
+      this.phase = 'playing';
+      return true;
+    }
+
+    const cut = this.isCut(card);
+    this.table.push({ player, card });
+    if (cut) {
+      this.lastCutter = player;
+      this.currentPlayer = otherPlayer(player);
+      this.phase = 'continue-choice';
+    } else this.collectTrick();
+    return true;
+  }
+
+  pass(player: SepticaPlayer): boolean {
+    if (this.phase !== 'continue-choice' || this.currentPlayer !== player) return false;
+    this.collectTrick();
+    return true;
+  }
+
+  botMove(): boolean {
+    if (this.currentPlayer !== 2 || this.phase === 'finished') return false;
+    const legal = this.legalCardIndexes(2);
+    if (this.phase === 'continue-choice' && legal.length === 0) return this.pass(2);
+    if (legal.length === 0) return false;
+    let chosen = legal.find(index => cardPoints(this.hands[2][index]) === 0 && this.hands[2][index].rank !== '7');
+    if (this.phase === 'playing' && this.table.length > 0) {
+      const cuttingCard = legal.find(index => this.isCut(this.hands[2][index]) && cardPoints(this.hands[2][index]) === 0);
+      chosen = cuttingCard ?? legal.find(index => this.isCut(this.hands[2][index])) ?? chosen;
+    }
+    return this.playCard(2, chosen ?? legal[0]);
+  }
+
+  statusText(): string {
+    if (this.phase === 'finished') {
+      if (this.winner === 0) return 'Egalitate — fiecare a capturat patru puncte.';
+      return `${this.winner === 1 ? 'Mint' : 'Coral'} câștigă partida!`;
+    }
+    if (this.currentPlayer === 2) return 'Coral se gândește…';
+    if (this.phase === 'continue-choice') return 'Ai fost tăiat. Continuă cu un 7 sau aceeași figură, ori cedează masa.';
+    if (this.table.length === 0) return 'Rândul tău: deschide o mână nouă.';
+    return 'Joacă orice carte. Un 7 sau aceeași figură taie.';
+  }
+
+  private collectTrick(): void {
+    this.points[this.lastCutter] += this.table.reduce((total, entry) => total + cardPoints(entry.card), 0);
+    const nextLeader = this.lastCutter;
+    this.table = [];
+    this.leadRank = null;
+    this.drawToFour(nextLeader);
+    this.drawToFour(otherPlayer(nextLeader));
+    if (this.deck.length === 0 && this.hands[1].length === 0 && this.hands[2].length === 0) {
+      this.phase = 'finished';
+      this.winner = this.points[1] === this.points[2] ? 0 : this.points[1] > this.points[2] ? 1 : 2;
+      return;
+    }
+    this.leader = nextLeader;
+    this.lastCutter = nextLeader;
+    this.currentPlayer = nextLeader;
+    this.phase = 'playing';
+  }
+
+  private drawToFour(player: SepticaPlayer): void {
+    while (this.hands[player].length < 4 && this.deck.length > 0) this.hands[player].push(this.deck.pop()!);
+  }
+}
+
+const SUIT_SYMBOLS: Record<SepticaSuit, string> = { clubs: '♣', diamonds: '♦', hearts: '♥', spades: '♠' };
+
+export function initSeptica(): void {
+  if (typeof document === 'undefined') return;
+  const view = document.getElementById('septicaView');
+  const hand = document.getElementById('septicaHand');
+  const botHand = document.getElementById('septicaBotHand');
+  const table = document.getElementById('septicaTable');
+  if (!view || !hand || !botHand || !table) return;
+  const game = new SepticaGame();
+  const status = document.getElementById('septicaStatus');
+  const mintPoints = document.getElementById('septicaMintPoints');
+  const coralPoints = document.getElementById('septicaCoralPoints');
+  const deckCount = document.getElementById('septicaDeckCount');
+  const passButton = document.getElementById('septicaPassButton') as HTMLButtonElement | null;
+  let botTimer = 0;
+
+  function cardButton(card: SepticaCard, index: number, playable: boolean): HTMLButtonElement {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `septica-card ${card.suit === 'diamonds' || card.suit === 'hearts' ? 'red' : ''}`;
+    button.disabled = !playable;
+    button.innerHTML = `<b>${card.rank}</b><span>${SUIT_SYMBOLS[card.suit]}</span>`;
+    button.setAttribute('aria-label', `${card.rank} of ${card.suit}`);
+    button.addEventListener('click', () => {
+      if (game.playCard(1, index)) { render(); scheduleBot(); }
+    });
+    return button;
+  }
+
+  function render(): void {
+    const legal = new Set(game.legalCardIndexes(1));
+    hand!.replaceChildren(...game.hands[1].map((card, index) => cardButton(card, index, legal.has(index))));
+    botHand!.replaceChildren(...game.hands[2].map(() => {
+      const back = document.createElement('span'); back.className = 'septica-card card-back'; back.textContent = 'BA'; return back;
+    }));
+    table!.replaceChildren(...game.table.map(entry => {
+      const card = cardButton(entry.card, 0, false);
+      card.classList.add(entry.player === 1 ? 'played-mint' : 'played-coral');
+      return card;
+    }));
+    if (status) status.textContent = game.statusText();
+    if (mintPoints) mintPoints.textContent = String(game.points[1]);
+    if (coralPoints) coralPoints.textContent = String(game.points[2]);
+    if (deckCount) deckCount.textContent = String(game.deck.length);
+    if (passButton) passButton.hidden = !(game.currentPlayer === 1 && game.phase === 'continue-choice');
+  }
+
+  function scheduleBot(): void {
+    window.clearTimeout(botTimer);
+    if (game.currentPlayer !== 2 || game.phase === 'finished') return;
+    botTimer = window.setTimeout(() => {
+      game.botMove();
+      render();
+      if (game.currentPlayer === 2) scheduleBot();
+    }, 520);
+  }
+
+  passButton?.addEventListener('click', () => { if (game.pass(1)) { render(); scheduleBot(); } });
+  document.getElementById('septicaRestartButton')?.addEventListener('click', () => { game.restart(); render(); scheduleBot(); });
+  render();
+}
