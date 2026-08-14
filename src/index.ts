@@ -5,6 +5,7 @@ import { initMiniTanks } from './tanks.js';
 import { initSeptica } from './septica.js';
 import { initSurvivalArena } from './survival.js';
 import { initStarDefender } from './star.js';
+import { initMicroRacers } from './racing.js';
 import type { OnlineRoom, PlayerAction } from './multiplayer.js';
 
 export const CELL_SIZE = 64;
@@ -1164,6 +1165,7 @@ export function initGame(): void {
     septicaView: document.getElementById('septicaView'),
     survivalView: document.getElementById('survivalView'),
     starView: document.getElementById('starView'),
+    racingView: document.getElementById('racingView'),
     launchGameButtons: document.querySelectorAll<HTMLButtonElement>('[data-launch-game]'),
     backToHubButtons: document.querySelectorAll<HTMLButtonElement>('[data-back-to-hub]'),
     statusText: document.getElementById('gameStatusText'),
@@ -1220,7 +1222,7 @@ export function initGame(): void {
   let activeRoomCode = '';
   let activeBotDifficulty: 'easy' | 'normal' | 'hard' | undefined;
 
-  function setActiveView(view: 'hub' | 'bomberman' | 'tintar' | 'paddle' | 'snake' | 'tanks' | 'septica' | 'survival' | 'star'): void {
+  function setActiveView(view: 'hub' | 'bomberman' | 'tintar' | 'paddle' | 'snake' | 'tanks' | 'septica' | 'survival' | 'star' | 'racing'): void {
     elements.hubView?.classList.toggle('view-hidden', view !== 'hub');
     elements.gameView?.classList.toggle('view-hidden', view !== 'bomberman');
     elements.tintarView?.classList.toggle('view-hidden', view !== 'tintar');
@@ -1230,6 +1232,7 @@ export function initGame(): void {
     elements.septicaView?.classList.toggle('view-hidden', view !== 'septica');
     elements.survivalView?.classList.toggle('view-hidden', view !== 'survival');
     elements.starView?.classList.toggle('view-hidden', view !== 'star');
+    elements.racingView?.classList.toggle('view-hidden', view !== 'racing');
     document.body.dataset.view = view;
     if (view !== 'hub') window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -1408,7 +1411,7 @@ export function initGame(): void {
   elements.launchGameButtons.forEach(button => {
     button.addEventListener('click', () => {
       const game = button.dataset.launchGame;
-      if (game === 'bomberman' || game === 'tintar' || game === 'paddle' || game === 'snake' || game === 'tanks' || game === 'septica' || game === 'survival' || game === 'star') setActiveView(game);
+      if (game === 'bomberman' || game === 'tintar' || game === 'paddle' || game === 'snake' || game === 'tanks' || game === 'septica' || game === 'survival' || game === 'star' || game === 'racing') setActiveView(game);
     });
   });
   elements.backToHubButtons.forEach(button => {
@@ -1584,5 +1587,6 @@ if (typeof window !== 'undefined') {
     initSeptica();
     initSurvivalArena();
     initStarDefender();
+    initMicroRacers();
   });
 }

@@ -4,15 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#10151f">
-  <meta name="description" content="Blast Arcade is a mobile-friendly hub with eight instant browser games for solo, co-op, local, and online play.">
+  <meta name="description" content="Blast Arcade is a mobile-friendly hub with nine instant browser games for solo, co-op, local, and online play.">
   <meta property="og:title" content="Blast Arcade">
-  <meta property="og:description" content="Eight games. One hub. Play solo, co-op, local, or online instantly in your browser.">
-  <meta property="og:image" content="/public/og.png">
+  <meta property="og:description" content="Nine games. One hub. Play solo, co-op, local, or online instantly in your browser.">
+  <meta property="og:image" content="/public/og-v2.png">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Blast Arcade">
-  <meta name="twitter:description" content="Eight games. One hub. Play. Compete. Repeat.">
-  <meta name="twitter:image" content="/public/og.png">
+  <meta name="twitter:description" content="Nine games. One hub. Play. Compete. Repeat.">
+  <meta name="twitter:image" content="/public/og-v2.png">
   <title>Blast Arcade — Browser Gaming Hub</title>
   <style>
     :root {
@@ -357,6 +357,13 @@
         radial-gradient(circle at 28% 64%, rgba(84,227,142,.42), transparent 18%),
         radial-gradient(circle at 74% 32%, rgba(255,107,120,.38), transparent 18%),
         #17232d;
+    }
+
+    .racing-cover::before {
+      background:
+        repeating-linear-gradient(90deg, transparent 0 38px, rgba(255,255,255,.13) 39px 43px, transparent 44px 82px),
+        radial-gradient(ellipse at 50% 50%, transparent 0 25%, #2d3542 26% 60%, transparent 61%),
+        linear-gradient(145deg, #174732, #10251f);
     }
 
     .septica-cover::before {
@@ -2137,6 +2144,75 @@
       .tanks-touch-controls { display: grid; }
     }
 
+    .racing-brand-mark {
+      position: relative;
+      width: 48px;
+      height: 38px;
+      flex: 0 0 auto;
+      border-radius: 13px 18px 10px 10px;
+      background: var(--p1);
+      box-shadow: 0 0 20px rgba(84,227,142,.3), inset -11px 0 rgba(31,157,90,.55);
+      transform: skewX(-7deg);
+    }
+
+    .racing-brand-mark::before {
+      position: absolute;
+      top: 7px;
+      right: 8px;
+      width: 16px;
+      height: 12px;
+      border-radius: 5px 8px 3px 3px;
+      content: "";
+      background: #162332;
+    }
+
+    .racing-brand-mark::after {
+      position: absolute;
+      right: 5px;
+      bottom: -5px;
+      width: 11px;
+      height: 11px;
+      border: 3px solid #a9b8c8;
+      border-radius: 50%;
+      content: "";
+      background: #0b1018;
+      box-shadow: -28px 0 0 -3px #0b1018, -28px 0 0 0 #a9b8c8;
+    }
+
+    .racing-arena {
+      padding: clamp(10px, 2.2vw, 22px);
+      background: #0b1512;
+    }
+
+    #racingCanvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 17px;
+      background: #183a2d;
+      box-shadow: 0 18px 42px rgba(0,0,0,.34);
+      touch-action: none;
+    }
+
+    .racing-speed {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: .68rem;
+      font-weight: 800;
+    }
+
+    .racing-team {
+      grid-template-columns: repeat(2, minmax(54px, 80px));
+      grid-template-rows: auto repeat(2, 48px);
+    }
+
+    .racing-team .racing-left { grid-column: 1; grid-row: 2; }
+    .racing-team .racing-right { grid-column: 2; grid-row: 2; }
+    .racing-team .racing-brake { grid-column: 1; grid-row: 3; background: rgba(255,255,255,.1); }
+    .racing-team .racing-accelerate { grid-column: 2; grid-row: 3; background: rgba(255,200,87,.24); }
+
     .septica-brand-mark {
       position: relative;
       width: 48px;
@@ -2479,7 +2555,7 @@
         </div>
       </div>
       <div class="hub-actions">
-        <span class="live-chip">8 games live</span>
+        <span class="live-chip">9 games live</span>
       </div>
     </header>
 
@@ -2499,7 +2575,7 @@
         </div>
       </div>
       <div class="hub-visual">
-        <img src="/public/og.png" alt="Blast Arcade heroes surrounded by eight game arenas">
+        <img src="/public/og-v2.png" alt="Blast Arcade heroes surrounded by nine game arenas">
       </div>
     </section>
 
@@ -2509,7 +2585,7 @@
           <span class="catalog-kicker">Game library</span>
           <h2 id="gamesTitle">Choose your next round</h2>
         </div>
-        <p>Eight instant games, from explosive duels and Romanian classics to neon races, co-op survival, and a star-fighter mission.</p>
+        <p>Nine instant games, from explosive duels and Romanian classics to neon racing, co-op survival, and a star-fighter mission.</p>
       </div>
 
       <div class="game-grid">
@@ -2589,6 +2665,21 @@
         </article>
 
         <article class="catalog-card featured">
+          <div class="game-cover racing-cover">
+            <span class="cover-label">New race</span>
+            <span class="game-glyph" aria-hidden="true">🏁</span>
+          </div>
+          <div class="catalog-card-body">
+            <h3>Micro Racers</h3>
+            <p>Drift around a neon circuit, collect turbo bolts, and race a bot or friend through three laps.</p>
+            <div class="catalog-card-footer">
+              <span class="mode-label">Bot · Local · Online</span>
+              <button class="card-play-button" type="button" data-launch-game="racing">Play now</button>
+            </div>
+          </div>
+        </article>
+
+        <article class="catalog-card featured">
           <div class="game-cover septica-cover">
             <span class="cover-label">Live now</span>
             <span class="game-glyph" aria-hidden="true">7♥</span>
@@ -2637,7 +2728,7 @@
 
     <footer class="hub-footer">
       <span>Blast Arcade · Play instantly in your browser</span>
-      <span>Eight live games · Keyboard, touch, bots, and online rooms</span>
+      <span>Nine live games · Keyboard, touch, bots, and online rooms</span>
     </footer>
   </main>
 
@@ -3184,6 +3275,65 @@
           <button class="tank-touch-button down" type="button" data-star-player="2" data-star-action="down">↓</button>
           <button class="tank-touch-button right" type="button" data-star-player="2" data-star-action="right">→</button>
           <button class="tank-touch-button fire" type="button" data-star-player="2" data-star-action="fire">Fire</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <main id="racingView" class="paddle-app view-hidden">
+    <header class="topbar">
+      <div class="brand">
+        <div class="racing-brand-mark" aria-hidden="true"></div>
+        <div><h1>Micro Racers</h1><p>Turbo circuit · Bot, local, or online</p></div>
+      </div>
+      <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub>← Arcade</button></div>
+    </header>
+
+    <div data-game-room="racing"></div>
+
+    <section class="paddle-shell" aria-label="Micro Racers match">
+      <div class="snake-toolbar">
+        <span>Complete three laps in order and collect the golden bolts for a temporary turbo boost.</span>
+        <div class="snake-modes" aria-label="Racing game mode">
+          <button class="snake-mode-button active" type="button" data-racing-mode="bot">Vs bot</button>
+          <button class="snake-mode-button" type="button" data-racing-mode="duel">Local race</button>
+        </div>
+      </div>
+      <div class="paddle-scorebar">
+        <div class="paddle-score-player">
+          <i class="paddle-score-swatch" aria-hidden="true"></i>
+          <div><span>Mint lap</span><b id="racingMintLap">1/3</b><span id="racingMintSpeed" class="racing-speed">0 km/h</span></div>
+        </div>
+        <div class="paddle-score-goal">First to finish</div>
+        <div class="paddle-score-player coral">
+          <i class="paddle-score-swatch" aria-hidden="true"></i>
+          <div><span>Coral lap</span><b id="racingCoralLap">1/3</b><span id="racingCoralSpeed" class="racing-speed">0 km/h</span></div>
+        </div>
+      </div>
+      <div class="racing-arena"><canvas id="racingCanvas" width="900" height="600" aria-label="Micro Racers top-down circuit"></canvas></div>
+      <div class="paddle-statusbar" aria-live="polite">
+        <span id="racingStatus">Race the Coral bot through three turbo-charged laps.</span>
+        <button id="racingStartButton" class="paddle-serve" type="button">Start race</button>
+      </div>
+      <footer class="paddle-footer">
+        <div class="paddle-key-guide">Mint: <kbd>WASD</kbd></div>
+        <button id="racingRestartButton" class="paddle-restart" type="button">Reset race</button>
+        <div class="paddle-key-guide coral">Coral: <kbd>Arrows</kbd></div>
+      </footer>
+      <div class="tanks-touch-controls racing-touch-controls" aria-label="Touch racing controls">
+        <div class="tank-touch-team racing-team">
+          <strong>Mint</strong>
+          <button class="tank-touch-button racing-left" type="button" data-racing-player="1" data-racing-action="left" aria-label="Steer Mint left">←</button>
+          <button class="tank-touch-button racing-right" type="button" data-racing-player="1" data-racing-action="right" aria-label="Steer Mint right">→</button>
+          <button class="tank-touch-button racing-brake" type="button" data-racing-player="1" data-racing-action="brake" aria-label="Brake Mint">Brake</button>
+          <button class="tank-touch-button racing-accelerate" type="button" data-racing-player="1" data-racing-action="accelerate" aria-label="Accelerate Mint">Go</button>
+        </div>
+        <div class="tank-touch-team racing-team coral">
+          <strong>Coral</strong>
+          <button class="tank-touch-button racing-left" type="button" data-racing-player="2" data-racing-action="left" aria-label="Steer Coral left">←</button>
+          <button class="tank-touch-button racing-right" type="button" data-racing-player="2" data-racing-action="right" aria-label="Steer Coral right">→</button>
+          <button class="tank-touch-button racing-brake" type="button" data-racing-player="2" data-racing-action="brake" aria-label="Brake Coral">Brake</button>
+          <button class="tank-touch-button racing-accelerate" type="button" data-racing-player="2" data-racing-action="accelerate" aria-label="Accelerate Coral">Go</button>
         </div>
       </div>
     </section>

@@ -1,4 +1,4 @@
-export const ONLINE_GAME_IDS = ['tintar', 'paddle', 'snake', 'tanks', 'septica', 'survival'] as const;
+export const ONLINE_GAME_IDS = ['tintar', 'paddle', 'snake', 'tanks', 'septica', 'survival', 'racing'] as const;
 export type OnlineGameId = typeof ONLINE_GAME_IDS[number];
 export type RelayPlayerId = 1 | 2;
 
