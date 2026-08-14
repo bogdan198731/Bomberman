@@ -274,6 +274,7 @@ export function recordArcadeResult(gameId: ArcadeGameId, result: ArcadeResult): 
   const progression = applyProgressionResult(loadArcadeProfile(), gameId, result);
   const profile = saveArcadeProfile(progression.profile);
   if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('arcade-game-result', { detail: { gameId, result } }));
     window.dispatchEvent(new CustomEvent('arcade-profile-updated', { detail: profile }));
     if (progression.achievements.length || progression.dailyCompleted) {
       window.dispatchEvent(new CustomEvent('arcade-progression-rewarded', { detail: progression }));

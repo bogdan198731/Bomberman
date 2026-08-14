@@ -9,6 +9,7 @@ import { initMicroRacers } from './racing.js';
 import { initBlockDrop } from './blocks.js';
 import { ArcadeResultReporter, initArcadeProfile } from './stats.js';
 import { initGameCatalog } from './catalog.js';
+import { initArcadeSettings } from './settings.js';
 import type { OnlineRoom, PlayerAction } from './multiplayer.js';
 
 export const CELL_SIZE = 64;
@@ -1591,6 +1592,7 @@ export function initGame(): void {
 
 if (typeof window !== 'undefined') {
   window.addEventListener('DOMContentLoaded', () => {
+    initArcadeSettings();
     initArcadeProfile();
     initGameCatalog();
     initGame();

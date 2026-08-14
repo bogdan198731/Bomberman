@@ -107,6 +107,31 @@
       gap: 10px;
     }
 
+    .hub-settings-button,
+    .settings-nav-button {
+      min-height: 40px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.045);
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.7rem;
+      font-weight: 850;
+    }
+
+    .hub-settings-button {
+      display: grid;
+      width: 42px;
+      padding: 0;
+      place-items: center;
+      font-size: 1rem;
+    }
+
+    .settings-nav-button {
+      padding: 0 12px;
+    }
+
     .live-chip,
     .eyebrow,
     .game-tag,
@@ -1040,6 +1065,198 @@
       padding: 30px 4px 0;
       color: #718097;
       font-size: 0.76rem;
+    }
+
+    body.settings-open {
+      overflow: hidden;
+    }
+
+    .settings-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: grid;
+      place-items: stretch end;
+      background: rgba(4, 7, 12, 0.72);
+      backdrop-filter: blur(10px);
+    }
+
+    .settings-overlay[hidden] {
+      display: none;
+    }
+
+    .settings-panel {
+      width: min(430px, 100vw);
+      height: 100%;
+      padding: 26px;
+      overflow-y: auto;
+      border-left: 1px solid rgba(255, 255, 255, 0.12);
+      background:
+        radial-gradient(circle at 100% 0, rgba(84, 227, 142, 0.13), transparent 23rem),
+        #121925;
+      box-shadow: -24px 0 70px rgba(0, 0, 0, 0.42);
+    }
+
+    .settings-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 25px;
+    }
+
+    .settings-header h2 {
+      margin: 6px 0 0;
+      font-size: 1.65rem;
+      letter-spacing: -0.045em;
+    }
+
+    .settings-close-button {
+      display: grid;
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.05);
+      cursor: pointer;
+      font-size: 1.25rem;
+    }
+
+    .settings-group {
+      margin-top: 14px;
+      padding: 17px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 17px;
+      background: rgba(255, 255, 255, 0.035);
+    }
+
+    .settings-group-title {
+      display: block;
+      margin-bottom: 12px;
+      color: var(--gold);
+      font-size: 0.66rem;
+      font-weight: 900;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+    }
+
+    .settings-toggle-row,
+    .settings-volume-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .settings-toggle-row + .settings-toggle-row {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    .settings-toggle-copy strong,
+    .settings-toggle-copy span {
+      display: block;
+    }
+
+    .settings-toggle-copy strong {
+      font-size: 0.82rem;
+    }
+
+    .settings-toggle-copy span {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 0.68rem;
+      line-height: 1.4;
+    }
+
+    .settings-toggle-row input {
+      width: 22px;
+      height: 22px;
+      flex: 0 0 auto;
+      accent-color: var(--p1);
+    }
+
+    .settings-volume-heading {
+      margin: 18px 0 9px;
+      color: #cbd5e4;
+      font-size: 0.7rem;
+      font-weight: 850;
+    }
+
+    .settings-volume-heading output {
+      color: var(--gold);
+    }
+
+    .settings-volume {
+      width: 100%;
+      accent-color: var(--p1);
+    }
+
+    .settings-button-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px;
+      margin-top: 14px;
+    }
+
+    .settings-action-button {
+      min-height: 42px;
+      padding: 0 12px;
+      border: 1px solid rgba(255, 255, 255, 0.11);
+      border-radius: 12px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.05);
+      cursor: pointer;
+      font-weight: 850;
+    }
+
+    .settings-action-button.primary {
+      border-color: rgba(84, 227, 142, 0.25);
+      color: #07120c;
+      background: var(--p1);
+    }
+
+    .settings-device-note {
+      margin: 18px 2px 0;
+      color: var(--muted);
+      font-size: 0.66rem;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    html.high-contrast {
+      --muted: #d8e1ed;
+      --panel-border: rgba(255, 255, 255, 0.28);
+    }
+
+    html.high-contrast body {
+      background-color: #05080d;
+    }
+
+    html.high-contrast .catalog-card,
+    html.high-contrast .profile-panel,
+    html.high-contrast .daily-challenge-card,
+    html.high-contrast .achievement-cabinet,
+    html.high-contrast .game-card,
+    html.high-contrast .paddle-shell {
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    html.reduce-motion {
+      scroll-behavior: auto;
+    }
+
+    html.reduce-motion *,
+    html.reduce-motion *::before,
+    html.reduce-motion *::after {
+      scroll-behavior: auto !important;
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
     }
 
     .game-nav-actions {
@@ -2008,6 +2225,11 @@
         gap: 6px;
       }
 
+      .hub-settings-button {
+        width: 38px;
+        min-height: 38px;
+      }
+
       .hub-profile-chip {
         max-width: 118px;
         padding-inline: 10px;
@@ -2106,6 +2328,22 @@
       .hub-footer span {
         display: block;
         margin-bottom: 5px;
+      }
+
+      .settings-panel {
+        width: 100%;
+        height: min(88vh, 720px);
+        align-self: end;
+        padding: 21px 18px max(21px, env(safe-area-inset-bottom));
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        border-left: 0;
+        border-radius: 24px 24px 0 0;
+      }
+
+      .settings-nav-button {
+        min-height: 38px;
+        padding-inline: 10px;
+        font-size: 0.65rem;
       }
 
       .app {
@@ -3234,6 +3472,7 @@
         </div>
       </div>
       <div class="hub-actions">
+        <button class="hub-settings-button" type="button" data-open-settings aria-label="Open arcade settings">⚙</button>
         <button id="hubProfileChip" class="hub-profile-chip" type="button" aria-label="Open your player profile">
           <span id="profileChipName">Arcade Player</span>
           <small>Profile</small>
@@ -4188,6 +4427,47 @@
       </div>
     </section>
   </main>
+
+  <div id="settingsOverlay" class="settings-overlay" hidden>
+    <section id="settingsPanel" class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <header class="settings-header">
+        <div>
+          <span class="catalog-kicker">Make it yours</span>
+          <h2 id="settingsTitle">Arcade settings</h2>
+        </div>
+        <button id="settingsCloseButton" class="settings-close-button" type="button" aria-label="Close arcade settings">×</button>
+      </header>
+
+      <div class="settings-group">
+        <span class="settings-group-title">Sound</span>
+        <label class="settings-toggle-row" for="settingsSoundToggle">
+          <span class="settings-toggle-copy"><strong>Sound effects</strong><span>Play lightweight cues for launches, results, and rewards.</span></span>
+          <input id="settingsSoundToggle" type="checkbox">
+        </label>
+        <label class="settings-volume-heading" for="settingsVolume"><span>Effects volume</span><output id="settingsVolumeValue">60%</output></label>
+        <input id="settingsVolume" class="settings-volume" type="range" min="0" max="100" step="5" value="60">
+        <button id="settingsTestSound" class="settings-action-button primary" type="button">Test sound</button>
+      </div>
+
+      <div class="settings-group">
+        <span class="settings-group-title">Accessibility</span>
+        <label class="settings-toggle-row" for="settingsMotionToggle">
+          <span class="settings-toggle-copy"><strong>Reduce motion</strong><span>Remove animated transitions and smooth scrolling.</span></span>
+          <input id="settingsMotionToggle" type="checkbox">
+        </label>
+        <label class="settings-toggle-row" for="settingsContrastToggle">
+          <span class="settings-toggle-copy"><strong>Higher contrast</strong><span>Strengthen borders and secondary text throughout the arcade.</span></span>
+          <input id="settingsContrastToggle" type="checkbox">
+        </label>
+      </div>
+
+      <div class="settings-button-row">
+        <button id="settingsFullscreenButton" class="settings-action-button" type="button">Enter fullscreen</button>
+        <button id="settingsResetButton" class="settings-action-button" type="button">Reset settings</button>
+      </div>
+      <p class="settings-device-note">Settings are saved privately on this device and apply to every game.</p>
+    </section>
+  </div>
 
   <script type="module" src="./dist/index.js"></script>
 </body>
