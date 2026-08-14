@@ -109,6 +109,29 @@ test('a forced response can cut and return the choice to the opening player', ()
   assert.equal(game.points[2], 2);
 });
 
+test('the last two deck cards are shared instead of given to one player', () => {
+  const game = new SepticaGame(() => .5);
+  game.hands = {
+    1: [card('A', 'spades'), card('7', 'clubs'), card('A', 'clubs'), card('A', 'diamonds')],
+    2: [card('A', 'hearts'), card('7', 'diamonds'), card('7', 'hearts'), card('K', 'spades')],
+  };
+  game.deck = [card('8'), card('9')];
+
+  game.playCard(1, 0);
+  game.playCard(2, 0);
+  game.playCard(1, 0);
+  game.playCard(2, 0);
+  game.playCard(1, 0);
+  game.playCard(2, 0);
+  game.playCard(1, 0);
+  game.playCard(2, 0);
+
+  assert.equal(game.deck.length, 0);
+  assert.equal(game.hands[1].length, 1);
+  assert.equal(game.hands[2].length, 1);
+  assert.equal(game.currentPlayer, 1);
+});
+
 test('online snapshots reveal only the receiving player hand', () => {
   const hostGame = new SepticaGame(() => .5);
   hostGame.hands = {

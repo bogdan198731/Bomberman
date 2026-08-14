@@ -70,8 +70,7 @@ export class SepticaGame {
     this.leadRank = null;
     this.phase = 'playing';
     this.winner = null;
-    this.drawToFour(1);
-    this.drawToFour(2);
+    this.refillHands(1);
   }
 
   isCut(card: SepticaCard): boolean {
@@ -145,8 +144,7 @@ export class SepticaGame {
     const nextLeader = this.lastCutter;
     this.table = [];
     this.leadRank = null;
-    this.drawToFour(nextLeader);
-    this.drawToFour(otherPlayer(nextLeader));
+    this.refillHands(nextLeader);
     if (this.deck.length === 0 && this.hands[1].length === 0 && this.hands[2].length === 0) {
       this.phase = 'finished';
       this.winner = this.points[1] === this.points[2] ? 0 : this.points[1] > this.points[2] ? 1 : 2;
@@ -158,8 +156,19 @@ export class SepticaGame {
     this.phase = 'playing';
   }
 
-  private drawToFour(player: SepticaPlayer): void {
-    while (this.hands[player].length < 4 && this.deck.length > 0) this.hands[player].push(this.deck.pop()!);
+  private refillHands(firstPlayer: SepticaPlayer): void {
+    const order: SepticaPlayer[] = [firstPlayer, otherPlayer(firstPlayer)];
+    while (this.deck.length > 0) {
+      let dealtCard = false;
+      for (const player of order) {
+        if (this.deck.length === 0) break;
+        if (this.hands[player].length < 4) {
+          this.hands[player].push(this.deck.pop()!);
+          dealtCard = true;
+        }
+      }
+      if (!dealtCard) break;
+    }
   }
 }
 
