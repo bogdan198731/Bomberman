@@ -13,6 +13,7 @@ import { initArcadeSettings } from './settings.js';
 import { initQuickPlay } from './quick-play.js';
 import { initArcadePwa } from './pwa.js';
 import { initArcadeLeaderboard } from './leaderboard.js';
+import { initArcadeCircuit } from './circuit.js';
 import {
   arcadeInviteShareData,
   clearArcadeInviteUrl,
@@ -1634,6 +1635,7 @@ if (typeof window !== 'undefined') {
     initArcadePwa();
     initArcadeProfile();
     initArcadeLeaderboard();
+    initArcadeCircuit();
     initGameCatalog();
     initQuickPlay();
     initGame();
