@@ -1,3 +1,5 @@
+import { GameRoomClient } from './game-room.js';
+
 export type SurvivalPlayer = 1 | 2;
 export type SurvivalMode = 'solo' | 'coop';
 export type SurvivalPhase = 'ready' | 'playing' | 'finished';
@@ -270,6 +272,47 @@ export function initSurvivalArena(): void {
   const startButton = document.getElementById('survivalStartButton') as HTMLButtonElement | null;
   const modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-survival-mode]');
   const coralControls = document.getElementById('survivalCoralControls');
+  const roomMount = document.querySelector<HTMLElement>('[data-game-room="survival"]');
+  let room: GameRoomClient | null = null;
+
+  function snapshot(): Record<string, unknown> {
+    return {
+      mode: game.mode, phase: game.phase, wave: game.wave, upgradeLevel: game.upgradeLevel,
+      players: game.players, enemies: game.enemies, bullets: game.bullets,
+    };
+  }
+
+  function restore(state: Record<string, unknown>): void {
+    if (!state.players || !Array.isArray(state.enemies) || !Array.isArray(state.bullets)) return;
+    game.mode = state.mode as SurvivalMode;
+    game.phase = state.phase as SurvivalPhase;
+    game.wave = Number(state.wave) || 0;
+    game.upgradeLevel = Number(state.upgradeLevel) || 0;
+    game.players = state.players as Record<SurvivalPlayer, Survivor>;
+    game.enemies = state.enemies as SurvivalEnemy[];
+    game.bullets = state.bullets as SurvivalBullet[];
+  }
+
+  function setPlayerInput(player: SurvivalPlayer, action: keyof SurvivalInput, pressed: boolean): void {
+    const session = room?.session();
+    if (!session?.online) game.setInput(player, action, pressed);
+    else if (session.ready && room?.canControl(player)) {
+      if (room.isGuest()) room.sendAction({ type: 'input', action, pressed });
+      else game.setInput(player, action, pressed);
+    }
+  }
+
+  function startRun(): void {
+    const session = room?.session();
+    if (session?.online && !session.ready) return;
+    if (room?.isGuest()) room.sendAction({ type: 'start' });
+    else {
+      if (game.phase === 'finished') game.restart(game.mode);
+      game.start();
+      room?.broadcastState(snapshot(), true);
+    }
+    syncUi();
+  }
 
   function visible(): boolean { return !view.classList.contains('view-hidden'); }
   function syncUi(): void {
@@ -280,7 +323,10 @@ export function initSurvivalArena(): void {
     if (mintHealth) mintHealth.textContent = `${Math.ceil(game.players[1].health)} HP`;
     if (coralHealth) coralHealth.textContent = game.mode === 'solo' ? 'Solo' : `${Math.ceil(game.players[2].health)} HP`;
     if (startButton) startButton.textContent = game.phase === 'ready' ? 'Start run' : game.phase === 'finished' ? 'New run' : 'Run live';
-    modeButtons.forEach(button => button.classList.toggle('active', button.dataset.survivalMode === game.mode));
+    modeButtons.forEach(button => {
+      button.classList.toggle('active', button.dataset.survivalMode === game.mode);
+      button.disabled = Boolean(room?.session().online);
+    });
     coralControls?.classList.toggle('solo-hidden', game.mode === 'solo');
   }
 
@@ -320,23 +366,22 @@ export function initSurvivalArena(): void {
   window.addEventListener('keydown', event => {
     if (!visible()) return;
     const command = commands[event.code];
-    if (command) { event.preventDefault(); game.setInput(command[0], command[1], true); }
+    if (command) { event.preventDefault(); setPlayerInput(command[0], command[1], true); }
     else if (event.code === 'Space' && !event.repeat) {
       event.preventDefault();
-      if (game.phase === 'finished') game.restart();
-      game.start(); syncUi();
+      startRun();
     }
   });
   window.addEventListener('keyup', event => {
     const command = commands[event.code];
-    if (command) game.setInput(command[0], command[1], false);
+    if (command) setPlayerInput(command[0], command[1], false);
   });
   document.querySelectorAll<HTMLButtonElement>('[data-survival-player][data-survival-action]').forEach(button => {
     const player = Number(button.dataset.survivalPlayer) as SurvivalPlayer;
     const action = button.dataset.survivalAction as keyof SurvivalInput;
-    const release = (): void => game.setInput(player, action, false);
+    const release = (): void => setPlayerInput(player, action, false);
     button.addEventListener('pointerdown', event => {
-      event.preventDefault(); button.setPointerCapture?.(event.pointerId); game.setInput(player, action, true);
+      event.preventDefault(); button.setPointerCapture?.(event.pointerId); setPlayerInput(player, action, true);
     });
     button.addEventListener('pointerup', release); button.addEventListener('pointercancel', release); button.addEventListener('lostpointercapture', release);
   });
@@ -344,15 +389,52 @@ export function initSurvivalArena(): void {
     const mode = button.dataset.survivalMode;
     if (mode === 'solo' || mode === 'coop') { game.restart(mode); syncUi(); render(); }
   }));
-  startButton?.addEventListener('click', () => {
-    if (game.phase === 'finished') game.restart();
-    game.start(); syncUi();
+  startButton?.addEventListener('click', startRun);
+  document.getElementById('survivalRestartButton')?.addEventListener('click', () => {
+    if (room?.isGuest()) room.sendAction({ type: 'restart' });
+    else {
+      game.restart(game.mode); syncUi(); render();
+      room?.broadcastState(snapshot(), true);
+    }
   });
-  document.getElementById('survivalRestartButton')?.addEventListener('click', () => { game.restart(); syncUi(); render(); });
+
+  if (roomMount) {
+    room = new GameRoomClient({
+      game: 'survival',
+      mount: roomMount,
+      onSessionChange: session => {
+        if (session.online && !session.ready && session.playerId === 1) {
+          (['up', 'down', 'left', 'right', 'fire'] as Array<keyof SurvivalInput>).forEach(action => game.setInput(2, action, false));
+        }
+        if (session.ready && session.playerId === 1) {
+          game.restart('coop');
+          room?.broadcastState(snapshot(), true);
+        }
+        syncUi(); render();
+      },
+      onRemoteAction: (action, from) => {
+        if (!room?.isHost() || from !== 2) return;
+        if (action.type === 'input' && (action.action === 'up' || action.action === 'down' || action.action === 'left' || action.action === 'right' || action.action === 'fire') && typeof action.pressed === 'boolean') {
+          game.setInput(2, action.action, action.pressed);
+        } else if (action.type === 'start') {
+          if (game.phase === 'finished') game.restart('coop');
+          game.start();
+        } else if (action.type === 'restart') game.restart('coop');
+        room.broadcastState(snapshot(), true); syncUi();
+      },
+      onState: state => { if (room?.isGuest()) { restore(state); syncUi(); render(); } },
+    });
+  }
 
   let previous = performance.now();
   function loop(now: number): void {
-    if (visible()) { game.update((now - previous) / 1000); render(); syncUi(); }
+    if (visible()) {
+      if (!room?.isGuest()) {
+        game.update((now - previous) / 1000);
+        room?.broadcastState(snapshot());
+      }
+      render(); syncUi();
+    }
     previous = now; requestAnimationFrame(loop);
   }
   syncUi(); render(); requestAnimationFrame(loop);

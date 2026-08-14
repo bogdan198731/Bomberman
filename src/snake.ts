@@ -1,3 +1,5 @@
+import { GameRoomClient } from './game-room.js';
+
 export type SnakePlayer = 1 | 2;
 export type SnakeMode = 'solo' | 'duel';
 export type SnakePhase = 'ready' | 'playing' | 'finished';
@@ -185,6 +187,46 @@ export function initNeonSnake(): void {
   const coralScore = document.getElementById('snakeCoralScore');
   const startButton = document.getElementById('snakeStartButton') as HTMLButtonElement | null;
   const modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-snake-mode]');
+  const roomMount = document.querySelector<HTMLElement>('[data-game-room="snake"]');
+  let room: GameRoomClient | null = null;
+
+  function snapshot(): Record<string, unknown> {
+    return {
+      riders: game.riders, food: game.food, mode: game.mode,
+      phase: game.phase, winner: game.winner, ticks: game.ticks,
+    };
+  }
+
+  function restore(state: Record<string, unknown>): void {
+    if (!state.riders || !state.food) return;
+    game.riders = state.riders as Record<SnakePlayer, SnakeRider>;
+    game.food = state.food as SnakeCell;
+    game.mode = state.mode as SnakeMode;
+    game.phase = state.phase as SnakePhase;
+    game.winner = state.winner as SnakePlayer | 0 | null;
+    game.ticks = Number(state.ticks) || 0;
+  }
+
+  function turn(player: SnakePlayer, direction: SnakeDirection): void {
+    const session = room?.session();
+    if (!session?.online) game.turn(player, direction);
+    else if (session.ready && room?.canControl(player)) {
+      if (room.isGuest()) room.sendAction({ type: 'turn', direction });
+      else game.turn(player, direction);
+    }
+  }
+
+  function startRun(): void {
+    const session = room?.session();
+    if (session?.online && !session.ready) return;
+    if (room?.isGuest()) room.sendAction({ type: 'start' });
+    else {
+      if (game.phase === 'finished') game.restart(game.mode);
+      game.start();
+      room?.broadcastState(snapshot(), true);
+    }
+    syncUi(); render();
+  }
 
   function visible(): boolean {
     return !snakeView.classList.contains('view-hidden');
@@ -195,7 +237,10 @@ export function initNeonSnake(): void {
     if (mintScore) mintScore.textContent = String(game.riders[1].score);
     if (coralScore) coralScore.textContent = game.mode === 'solo' ? '—' : String(game.riders[2].score);
     if (startButton) startButton.textContent = game.phase === 'ready' ? 'Start run' : game.phase === 'finished' ? 'Play again' : 'Running';
-    modeButtons.forEach(button => button.classList.toggle('active', button.dataset.snakeMode === game.mode));
+    modeButtons.forEach(button => {
+      button.classList.toggle('active', button.dataset.snakeMode === game.mode);
+      button.disabled = Boolean(room?.session().online);
+    });
   }
 
   function render(): void {
@@ -250,19 +295,17 @@ export function initNeonSnake(): void {
     const command = directions[event.code];
     if (command) {
       event.preventDefault();
-      game.turn(command[0], command[1]);
+      turn(command[0], command[1]);
     } else if (event.code === 'Space' && !event.repeat) {
       event.preventDefault();
-      if (game.phase === 'finished') game.restart();
-      game.start();
-      syncUi();
+      startRun();
     }
   });
 
   document.querySelectorAll<HTMLButtonElement>('[data-snake-player][data-snake-direction]').forEach(button => {
     button.addEventListener('pointerdown', event => {
       event.preventDefault();
-      game.turn(Number(button.dataset.snakePlayer) as SnakePlayer, button.dataset.snakeDirection as SnakeDirection);
+      turn(Number(button.dataset.snakePlayer) as SnakePlayer, button.dataset.snakeDirection as SnakeDirection);
     });
   });
   modeButtons.forEach(button => button.addEventListener('click', () => {
@@ -273,25 +316,53 @@ export function initNeonSnake(): void {
       render();
     }
   }));
-  startButton?.addEventListener('click', () => {
-    if (game.phase === 'finished') game.restart();
-    game.start();
-    syncUi();
-    render();
-  });
+  startButton?.addEventListener('click', startRun);
   document.getElementById('snakeRestartButton')?.addEventListener('click', () => {
-    game.restart(); syncUi(); render();
+    if (room?.isGuest()) room.sendAction({ type: 'restart' });
+    else {
+      game.restart(game.mode); syncUi(); render();
+      room?.broadcastState(snapshot(), true);
+    }
   });
+
+  if (roomMount) {
+    room = new GameRoomClient({
+      game: 'snake',
+      mount: roomMount,
+      onSessionChange: session => {
+        accumulator = 0;
+        if (session.ready && session.playerId === 1) {
+          game.restart('duel');
+          room?.broadcastState(snapshot(), true);
+        }
+        syncUi(); render();
+      },
+      onRemoteAction: (action, from) => {
+        if (!room?.isHost() || from !== 2) return;
+        if (action.type === 'turn' && (action.direction === 'up' || action.direction === 'down' || action.direction === 'left' || action.direction === 'right')) {
+          game.turn(2, action.direction);
+        } else if (action.type === 'start') {
+          if (game.phase === 'finished') game.restart('duel');
+          game.start();
+        } else if (action.type === 'restart') game.restart('duel');
+        room.broadcastState(snapshot(), true); syncUi(); render();
+      },
+      onState: state => { if (room?.isGuest()) { restore(state); syncUi(); render(); } },
+    });
+  }
 
   let accumulator = 0;
   let previous = performance.now();
   function loop(now: number): void {
     if (visible()) {
-      accumulator += Math.min(100, now - previous);
-      while (accumulator >= 115) {
-        game.tick();
-        accumulator -= 115;
-        syncUi();
+      if (!room?.isGuest()) {
+        accumulator += Math.min(100, now - previous);
+        while (accumulator >= 115) {
+          game.tick();
+          accumulator -= 115;
+          syncUi();
+        }
+        room?.broadcastState(snapshot());
       }
       render();
     } else accumulator = 0;

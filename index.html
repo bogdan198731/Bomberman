@@ -2343,6 +2343,120 @@
     .star-touch-controls {
       grid-template-columns: 1fr;
     }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .game-room-panel {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin: 0 0 14px;
+      padding: 12px 14px;
+      border: 1px solid rgba(85,217,255,.2);
+      border-radius: 16px;
+      background: linear-gradient(100deg, rgba(85,217,255,.08), rgba(160,100,255,.055));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+    }
+
+    .game-room-copy strong,
+    .game-room-copy span { display: block; }
+
+    .game-room-copy strong {
+      color: #55d9ff;
+      font-size: .72rem;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+    }
+
+    .game-room-copy span {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: .76rem;
+      font-weight: 720;
+    }
+
+    .game-room-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
+    .game-room-actions button,
+    .game-room-join input {
+      min-height: 38px;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 10px;
+      color: var(--ink);
+      background: rgba(255,255,255,.05);
+      font-weight: 850;
+    }
+
+    .game-room-actions button {
+      padding: 0 12px;
+      cursor: pointer;
+    }
+
+    .game-room-actions .game-room-primary {
+      border-color: rgba(84,227,142,.3);
+      color: #092416;
+      background: var(--p1);
+    }
+
+    .game-room-join { display: flex; gap: 6px; }
+
+    .game-room-join input {
+      width: 86px;
+      padding: 0 9px;
+      outline: none;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .game-room-join input:focus { border-color: #55d9ff; }
+
+    .game-room-code {
+      padding: 8px 10px;
+      border-radius: 10px;
+      color: var(--muted);
+      background: rgba(0,0,0,.18);
+      font-size: .72rem;
+      font-weight: 850;
+      text-transform: uppercase;
+    }
+
+    .game-room-code b {
+      margin-left: 5px;
+      color: var(--gold);
+      font-size: .9rem;
+      letter-spacing: .14em;
+    }
+
+    @media (max-width: 760px) {
+      .game-room-panel {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .game-room-actions { justify-content: stretch; }
+      .game-room-actions > button,
+      .game-room-join,
+      .game-room-join button { flex: 1; }
+      .game-room-join input { width: 76px; }
+      .game-room-code { flex: 1; text-align: center; }
+    }
   </style>
 </head>
 <body>
@@ -2414,7 +2528,7 @@
             <h3>Țintar</h3>
             <p>Build mills, capture rival pieces, and master Romania's classic strategy board game.</p>
             <div class="catalog-card-footer">
-              <span class="mode-label">Local 2P · Strategy</span>
+              <span class="mode-label">Local · Online 2P</span>
               <button class="card-play-button" type="button" data-launch-game="tintar">Play now</button>
             </div>
           </div>
@@ -2429,7 +2543,7 @@
             <h3>Paddle Clash</h3>
             <p>A quick-fire paddle duel with accelerating rallies, sharp angles, and local rivalry.</p>
             <div class="catalog-card-footer">
-              <span class="mode-label">Local 2P · Arcade</span>
+              <span class="mode-label">Local · Online 2P</span>
               <button class="card-play-button" type="button" data-launch-game="paddle">Play now</button>
             </div>
           </div>
@@ -2444,7 +2558,7 @@
             <h3>Neon Snake Arena</h3>
             <p>Chase glowing cells in a solo high-score run or survive a local two-snake duel.</p>
             <div class="catalog-card-footer">
-              <span class="mode-label">Solo · Local 2P</span>
+              <span class="mode-label">Solo · Local · Online</span>
               <button class="card-play-button" type="button" data-launch-game="snake">Play now</button>
             </div>
           </div>
@@ -2459,7 +2573,7 @@
             <h3>Mini Tanks</h3>
             <p>Break cover, bank one-bounce shots, and battle a bot or a friend to five rounds.</p>
             <div class="catalog-card-footer">
-              <span class="mode-label">Bot · Local 2P</span>
+              <span class="mode-label">Bot · Local · Online</span>
               <button class="card-play-button" type="button" data-launch-game="tanks">Play now</button>
             </div>
           </div>
@@ -2489,7 +2603,7 @@
             <h3>Survival Arena</h3>
             <p>Hold the center, auto-aim at neon crawlers, and power up through endless waves.</p>
             <div class="catalog-card-footer">
-              <span class="mode-label">Solo · Couch co-op</span>
+              <span class="mode-label">Solo · Local · Online co-op</span>
               <button class="card-play-button" type="button" data-launch-game="survival">Play now</button>
             </div>
           </div>
@@ -2648,13 +2762,15 @@
         <div class="tintar-brand-mark" aria-hidden="true"></div>
         <div>
           <h1>Țintar</h1>
-          <p>Nine Men's Morris · Local two player</p>
+          <p>Nine Men's Morris · Local or online</p>
         </div>
       </div>
       <div class="game-nav-actions">
         <button class="back-to-hub" type="button" data-back-to-hub>← Arcade</button>
       </div>
     </header>
+
+    <div data-game-room="tintar"></div>
 
     <section class="tintar-shell" aria-label="Țintar match">
       <aside class="tintar-panel">
@@ -2713,13 +2829,15 @@
         <div class="paddle-brand-mark" aria-hidden="true"><i class="paddle-brand-ball"></i></div>
         <div>
           <h1>Paddle Clash</h1>
-          <p>Local two-player arcade duel</p>
+          <p>Local or online arcade duel</p>
         </div>
       </div>
       <div class="game-nav-actions">
         <button class="back-to-hub" type="button" data-back-to-hub>← Arcade</button>
       </div>
     </header>
+
+    <div data-game-room="paddle"></div>
 
     <section class="paddle-shell" aria-label="Paddle Clash match">
       <div class="paddle-scorebar">
@@ -2770,13 +2888,15 @@
         <div class="snake-brand-mark" aria-hidden="true"><i></i><i></i><i></i></div>
         <div>
           <h1>Neon Snake Arena</h1>
-          <p>Solo high score · Local two player</p>
+          <p>Solo high score · Local or online duel</p>
         </div>
       </div>
       <div class="game-nav-actions">
         <button class="back-to-hub" type="button" data-back-to-hub>← Arcade</button>
       </div>
     </header>
+
+    <div data-game-room="snake"></div>
 
     <section class="paddle-shell" aria-label="Neon Snake Arena match">
       <div class="snake-toolbar">
@@ -2837,10 +2957,12 @@
     <header class="topbar">
       <div class="brand">
         <div class="tanks-brand-mark" aria-hidden="true"></div>
-        <div><h1>Mini Tanks</h1><p>Ricochet arena · Bot or local duel</p></div>
+        <div><h1>Mini Tanks</h1><p>Ricochet arena · Bot, local, or online</p></div>
       </div>
       <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub>← Arcade</button></div>
     </header>
+
+    <div data-game-room="tanks"></div>
 
     <section class="paddle-shell" aria-label="Mini Tanks match">
       <div class="snake-toolbar">
@@ -2925,10 +3047,12 @@
     <header class="topbar">
       <div class="brand">
         <div class="survival-brand-mark" aria-hidden="true"></div>
-        <div><h1>Survival Arena</h1><p>Endless waves · Solo or couch co-op</p></div>
+        <div><h1>Survival Arena</h1><p>Endless waves · Solo, local, or online co-op</p></div>
       </div>
       <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub>← Arcade</button></div>
     </header>
+
+    <div data-game-room="survival"></div>
 
     <section class="paddle-shell" aria-label="Survival Arena run">
       <div class="snake-toolbar">

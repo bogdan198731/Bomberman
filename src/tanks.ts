@@ -1,3 +1,5 @@
+import { GameRoomClient } from './game-room.js';
+
 export type TankPlayer = 1 | 2;
 export type TankMode = 'bot' | 'duel';
 export type TankDirection = 'up' | 'down' | 'left' | 'right';
@@ -249,6 +251,47 @@ export function initMiniTanks(): void {
   const coralScore = document.getElementById('tanksCoralScore');
   const launchButton = document.getElementById('tanksLaunchButton') as HTMLButtonElement | null;
   const modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-tanks-mode]');
+  const roomMount = document.querySelector<HTMLElement>('[data-game-room="tanks"]');
+  let room: GameRoomClient | null = null;
+
+  function snapshot(): Record<string, unknown> {
+    return {
+      tanks: game.tanks, bullets: game.bullets, obstacles: game.obstacles,
+      mode: game.mode, phase: game.phase, roundWinner: game.roundWinner, matchWinner: game.matchWinner,
+    };
+  }
+
+  function restore(state: Record<string, unknown>): void {
+    if (!state.tanks || !Array.isArray(state.bullets) || !Array.isArray(state.obstacles)) return;
+    game.tanks = state.tanks as Record<TankPlayer, MiniTank>;
+    game.bullets = state.bullets as TankBullet[];
+    game.obstacles = state.obstacles as TankObstacle[];
+    game.mode = state.mode as TankMode;
+    game.phase = state.phase as TankPhase;
+    game.roundWinner = state.roundWinner as TankPlayer | null;
+    game.matchWinner = state.matchWinner as TankPlayer | null;
+  }
+
+  function setPlayerInput(player: TankPlayer, action: keyof TankInput, pressed: boolean): void {
+    const session = room?.session();
+    if (!session?.online) game.setInput(player, action, pressed);
+    else if (session.ready && room?.canControl(player)) {
+      if (room.isGuest()) room.sendAction({ type: 'input', action, pressed });
+      else game.setInput(player, action, pressed);
+    }
+  }
+
+  function launchRound(): void {
+    const session = room?.session();
+    if (session?.online && !session.ready) return;
+    if (room?.isGuest()) room.sendAction({ type: 'launch' });
+    else {
+      if (game.phase === 'finished') game.restart(game.mode);
+      game.startRound();
+      room?.broadcastState(snapshot(), true);
+    }
+    syncUi();
+  }
 
   function visible(): boolean { return !view.classList.contains('view-hidden'); }
   function syncUi(): void {
@@ -256,7 +299,10 @@ export function initMiniTanks(): void {
     if (mintScore) mintScore.textContent = String(game.tanks[1].score);
     if (coralScore) coralScore.textContent = String(game.tanks[2].score);
     if (launchButton) launchButton.textContent = game.phase === 'round-over' ? 'Next round' : game.phase === 'finished' ? 'New match' : game.phase === 'ready' ? 'Start duel' : 'Battle live';
-    modeButtons.forEach(button => button.classList.toggle('active', button.dataset.tanksMode === game.mode));
+    modeButtons.forEach(button => {
+      button.classList.toggle('active', button.dataset.tanksMode === game.mode);
+      button.disabled = Boolean(room?.session().online);
+    });
   }
 
   function render(): void {
@@ -294,30 +340,70 @@ export function initMiniTanks(): void {
   window.addEventListener('keydown', event => {
     if (!visible()) return;
     const command = commands[event.code];
-    if (command) { event.preventDefault(); game.setInput(command[0], command[1], true); }
-    else if (event.code === 'Space' && !event.repeat) { event.preventDefault(); if (game.phase === 'finished') game.restart(); game.startRound(); syncUi(); }
+    if (command) { event.preventDefault(); setPlayerInput(command[0], command[1], true); }
+    else if (event.code === 'Space' && !event.repeat) { event.preventDefault(); launchRound(); }
   });
   window.addEventListener('keyup', event => {
     const command = commands[event.code];
-    if (command) game.setInput(command[0], command[1], false);
+    if (command) setPlayerInput(command[0], command[1], false);
   });
   document.querySelectorAll<HTMLButtonElement>('[data-tank-player][data-tank-action]').forEach(button => {
     const player = Number(button.dataset.tankPlayer) as TankPlayer;
     const action = button.dataset.tankAction as keyof TankInput;
-    const release = (): void => game.setInput(player, action, false);
-    button.addEventListener('pointerdown', event => { event.preventDefault(); button.setPointerCapture?.(event.pointerId); game.setInput(player, action, true); });
+    const release = (): void => setPlayerInput(player, action, false);
+    button.addEventListener('pointerdown', event => { event.preventDefault(); button.setPointerCapture?.(event.pointerId); setPlayerInput(player, action, true); });
     button.addEventListener('pointerup', release); button.addEventListener('pointercancel', release); button.addEventListener('lostpointercapture', release);
   });
   modeButtons.forEach(button => button.addEventListener('click', () => {
     const mode = button.dataset.tanksMode;
     if (mode === 'bot' || mode === 'duel') { game.restart(mode); syncUi(); render(); }
   }));
-  launchButton?.addEventListener('click', () => { if (game.phase === 'finished') game.restart(); game.startRound(); syncUi(); });
-  document.getElementById('tanksRestartButton')?.addEventListener('click', () => { game.restart(); syncUi(); render(); });
+  launchButton?.addEventListener('click', launchRound);
+  document.getElementById('tanksRestartButton')?.addEventListener('click', () => {
+    if (room?.isGuest()) room.sendAction({ type: 'restart' });
+    else {
+      game.restart(game.mode); syncUi(); render();
+      room?.broadcastState(snapshot(), true);
+    }
+  });
+
+  if (roomMount) {
+    room = new GameRoomClient({
+      game: 'tanks',
+      mount: roomMount,
+      onSessionChange: session => {
+        if (session.online && !session.ready && session.playerId === 1) {
+          (['up', 'down', 'left', 'right', 'fire'] as Array<keyof TankInput>).forEach(action => game.setInput(2, action, false));
+        }
+        if (session.ready && session.playerId === 1) {
+          game.restart('duel');
+          room?.broadcastState(snapshot(), true);
+        }
+        syncUi(); render();
+      },
+      onRemoteAction: (action, from) => {
+        if (!room?.isHost() || from !== 2) return;
+        if (action.type === 'input' && (action.action === 'up' || action.action === 'down' || action.action === 'left' || action.action === 'right' || action.action === 'fire') && typeof action.pressed === 'boolean') {
+          game.setInput(2, action.action, action.pressed);
+        } else if (action.type === 'launch') {
+          if (game.phase === 'finished') game.restart('duel');
+          game.startRound();
+        } else if (action.type === 'restart') game.restart('duel');
+        room.broadcastState(snapshot(), true); syncUi();
+      },
+      onState: state => { if (room?.isGuest()) { restore(state); syncUi(); render(); } },
+    });
+  }
 
   let previous = performance.now();
   function loop(now: number): void {
-    if (visible()) { game.update((now - previous) / 1000); render(); syncUi(); }
+    if (visible()) {
+      if (!room?.isGuest()) {
+        game.update((now - previous) / 1000);
+        room?.broadcastState(snapshot());
+      }
+      render(); syncUi();
+    }
     previous = now; requestAnimationFrame(loop);
   }
   syncUi(); render(); requestAnimationFrame(loop);
