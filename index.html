@@ -366,6 +366,15 @@
         linear-gradient(145deg, #6a1725, #26101f 64%, #121825);
     }
 
+    .survival-cover::before {
+      background:
+        radial-gradient(circle at 50% 50%, rgba(84,227,142,.36), transparent 13%),
+        radial-gradient(circle at 22% 25%, rgba(160,100,255,.4), transparent 12%),
+        radial-gradient(circle at 78% 70%, rgba(160,100,255,.34), transparent 14%),
+        repeating-radial-gradient(circle at 50% 50%, transparent 0 25px, rgba(255,255,255,.045) 26px 27px),
+        #151b2b;
+    }
+
     .game-glyph {
       font-size: 4.4rem;
       filter: drop-shadow(0 12px 15px rgba(0,0,0,.4));
@@ -2219,6 +2228,52 @@
       .septica-table { min-height: 125px; }
       .septica-deck-readout { text-align: center; }
     }
+
+    .survival-brand-mark {
+      position: relative;
+      width: 44px;
+      height: 44px;
+      flex: 0 0 auto;
+      border: 3px solid var(--p1);
+      border-radius: 50%;
+      box-shadow: 0 0 18px rgba(84,227,142,.35), inset 0 0 12px rgba(84,227,142,.18);
+    }
+
+    .survival-brand-mark::before,
+    .survival-brand-mark::after {
+      position: absolute;
+      content: "";
+      background: var(--p1);
+      box-shadow: 0 0 10px rgba(84,227,142,.7);
+    }
+
+    .survival-brand-mark::before { top: 17px; left: 6px; width: 26px; height: 4px; }
+    .survival-brand-mark::after { top: 6px; left: 17px; width: 4px; height: 26px; }
+
+    .survival-arena {
+      position: relative;
+      padding: clamp(10px, 2.2vw, 22px);
+      background: #0c111a;
+    }
+
+    #survivalCanvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 17px;
+      background: #101722;
+      box-shadow: 0 18px 42px rgba(0,0,0,.34);
+    }
+
+    .survival-health {
+      margin-top: 3px;
+      color: var(--p1) !important;
+      letter-spacing: .03em !important;
+    }
+
+    .paddle-score-player.coral .survival-health { color: var(--p2) !important; }
+    .survival-touch-controls .solo-hidden { display: none; }
   </style>
 </head>
 <body>
@@ -2232,7 +2287,7 @@
         </div>
       </div>
       <div class="hub-actions">
-        <span class="live-chip">6 games live</span>
+        <span class="live-chip">7 games live</span>
       </div>
     </header>
 
@@ -2355,12 +2410,27 @@
             </div>
           </div>
         </article>
+
+        <article class="catalog-card featured">
+          <div class="game-cover survival-cover">
+            <span class="cover-label">Live now</span>
+            <span class="game-glyph" aria-hidden="true">✦</span>
+          </div>
+          <div class="catalog-card-body">
+            <h3>Survival Arena</h3>
+            <p>Hold the center, auto-aim at neon crawlers, and power up through endless waves.</p>
+            <div class="catalog-card-footer">
+              <span class="mode-label">Solo · Couch co-op</span>
+              <button class="card-play-button" type="button" data-launch-game="survival">Play now</button>
+            </div>
+          </div>
+        </article>
       </div>
     </section>
 
     <footer class="hub-footer">
       <span>Blast Arcade · Play instantly in your browser</span>
-      <span>Six live games · Keyboard, touch, bots, and online rooms</span>
+      <span>Seven live games · Keyboard, touch, bots, and online rooms</span>
     </footer>
   </main>
 
@@ -2764,6 +2834,59 @@
         <button id="septicaRestartButton" class="paddle-restart" type="button">Amestecă din nou</button>
         <div class="septica-deck-readout">Cărți rămase: <strong id="septicaDeckCount">24</strong></div>
       </footer>
+    </section>
+  </main>
+
+  <main id="survivalView" class="paddle-app view-hidden">
+    <header class="topbar">
+      <div class="brand">
+        <div class="survival-brand-mark" aria-hidden="true"></div>
+        <div><h1>Survival Arena</h1><p>Endless waves · Solo or couch co-op</p></div>
+      </div>
+      <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub>← Arcade</button></div>
+    </header>
+
+    <section class="paddle-shell" aria-label="Survival Arena run">
+      <div class="snake-toolbar">
+        <span>Move, fire toward the nearest crawler, and earn overdrive every third wave.</span>
+        <div class="snake-modes" aria-label="Survival game mode">
+          <button class="snake-mode-button active" type="button" data-survival-mode="solo">Solo</button>
+          <button class="snake-mode-button" type="button" data-survival-mode="coop">Couch co-op</button>
+        </div>
+      </div>
+      <div class="paddle-scorebar">
+        <div class="paddle-score-player"><i class="paddle-score-swatch" aria-hidden="true"></i><div><span>Mint score</span><b id="survivalMintScore">0</b><span id="survivalMintHealth" class="survival-health">100 HP</span></div></div>
+        <div class="paddle-score-goal">Wave <strong id="survivalWave">0</strong></div>
+        <div class="paddle-score-player coral"><i class="paddle-score-swatch" aria-hidden="true"></i><div><span>Coral score</span><b id="survivalCoralScore">0</b><span id="survivalCoralHealth" class="survival-health">Solo</span></div></div>
+      </div>
+      <div class="survival-arena"><canvas id="survivalCanvas" width="900" height="600" aria-label="Neon survival arena"></canvas></div>
+      <div class="paddle-statusbar" aria-live="polite">
+        <span id="survivalStatus">Start a solo run. Your blaster locks onto the nearest crawler.</span>
+        <button id="survivalStartButton" class="paddle-serve" type="button">Start run</button>
+      </div>
+      <footer class="paddle-footer">
+        <div class="paddle-key-guide">Mint: <kbd>WASD</kbd> + <kbd>F</kbd></div>
+        <button id="survivalRestartButton" class="paddle-restart" type="button">Reset run</button>
+        <div class="paddle-key-guide coral">Coral: <kbd>Arrows</kbd> + <kbd>Enter</kbd></div>
+      </footer>
+      <div class="tanks-touch-controls survival-touch-controls" aria-label="Touch survival controls">
+        <div class="tank-touch-team">
+          <strong>Mint</strong>
+          <button class="tank-touch-button up" type="button" data-survival-player="1" data-survival-action="up">↑</button>
+          <button class="tank-touch-button left" type="button" data-survival-player="1" data-survival-action="left">←</button>
+          <button class="tank-touch-button down" type="button" data-survival-player="1" data-survival-action="down">↓</button>
+          <button class="tank-touch-button right" type="button" data-survival-player="1" data-survival-action="right">→</button>
+          <button class="tank-touch-button fire" type="button" data-survival-player="1" data-survival-action="fire">Fire</button>
+        </div>
+        <div id="survivalCoralControls" class="tank-touch-team coral solo-hidden">
+          <strong>Coral</strong>
+          <button class="tank-touch-button up" type="button" data-survival-player="2" data-survival-action="up">↑</button>
+          <button class="tank-touch-button left" type="button" data-survival-player="2" data-survival-action="left">←</button>
+          <button class="tank-touch-button down" type="button" data-survival-player="2" data-survival-action="down">↓</button>
+          <button class="tank-touch-button right" type="button" data-survival-player="2" data-survival-action="right">→</button>
+          <button class="tank-touch-button fire" type="button" data-survival-player="2" data-survival-action="fire">Fire</button>
+        </div>
+      </div>
     </section>
   </main>
 
