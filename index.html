@@ -506,6 +506,228 @@
       white-space: nowrap;
     }
 
+    .circuit-panel {
+      margin-top: 18px;
+      padding: 22px;
+      border: 1px solid rgba(176, 118, 255, 0.22);
+      border-radius: 22px;
+      background:
+        radial-gradient(circle at 92% 0%, rgba(176, 118, 255, 0.14), transparent 34%),
+        linear-gradient(120deg, rgba(255, 200, 87, 0.05), transparent 38%),
+        rgba(20, 27, 39, 0.9);
+      box-shadow: 0 16px 44px rgba(0, 0, 0, 0.2);
+    }
+
+    .circuit-heading {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 17px;
+    }
+
+    .circuit-heading h2 {
+      margin: 5px 0 0;
+      font-size: 1.25rem;
+      letter-spacing: -0.035em;
+    }
+
+    .circuit-heading p {
+      margin: 0;
+      color: #d4c1f1;
+      font-size: 0.68rem;
+      font-weight: 800;
+      text-align: right;
+    }
+
+    .circuit-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 250px;
+      gap: 16px;
+    }
+
+    .circuit-lineup {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 9px;
+    }
+
+    .circuit-stage {
+      display: grid;
+      min-width: 0;
+      min-height: 76px;
+      padding: 11px;
+      grid-template-columns: 25px 36px minmax(0, 1fr);
+      align-items: center;
+      gap: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.065);
+      border-radius: 14px;
+      background: rgba(5, 9, 15, 0.24);
+    }
+
+    .circuit-stage.current {
+      border-color: rgba(176, 118, 255, 0.42);
+      background: rgba(176, 118, 255, 0.09);
+      box-shadow: inset 0 0 0 1px rgba(176, 118, 255, 0.08);
+    }
+
+    .circuit-stage.complete {
+      border-color: rgba(84, 227, 142, 0.2);
+      background: rgba(84, 227, 142, 0.06);
+    }
+
+    .circuit-stage.pending {
+      opacity: 0.58;
+    }
+
+    .circuit-stage-number {
+      display: grid;
+      width: 25px;
+      height: 25px;
+      place-items: center;
+      border-radius: 8px;
+      color: #d9c7f4;
+      background: rgba(176, 118, 255, 0.12);
+      font-size: 0.62rem;
+      font-weight: 950;
+    }
+
+    .circuit-stage.complete .circuit-stage-number {
+      color: #07120c;
+      background: var(--p1);
+    }
+
+    .circuit-stage-icon {
+      display: grid;
+      width: 36px;
+      height: 36px;
+      place-items: center;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.065);
+      font-size: 0.78rem;
+      font-weight: 950;
+    }
+
+    .circuit-stage strong,
+    .circuit-stage small {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .circuit-stage strong {
+      font-size: 0.7rem;
+    }
+
+    .circuit-stage small {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 0.57rem;
+    }
+
+    .circuit-stage.current small { color: #d4b8ff; }
+    .circuit-stage.complete small { color: var(--p1); }
+
+    .circuit-sidebar {
+      display: grid;
+      gap: 10px;
+    }
+
+    .circuit-score-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 7px;
+    }
+
+    .circuit-score-grid div {
+      min-width: 0;
+      padding: 10px 6px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 11px;
+      background: rgba(255, 255, 255, 0.03);
+      text-align: center;
+    }
+
+    .circuit-score-grid strong,
+    .circuit-score-grid span {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .circuit-score-grid strong {
+      color: var(--gold);
+      font-size: 0.84rem;
+    }
+
+    .circuit-score-grid span {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 0.51rem;
+      font-weight: 850;
+      text-transform: uppercase;
+    }
+
+    .circuit-actions {
+      display: flex;
+      gap: 7px;
+    }
+
+    .circuit-launch,
+    .circuit-shuffle {
+      min-height: 43px;
+      border-radius: 12px;
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.65rem;
+      font-weight: 950;
+    }
+
+    .circuit-launch {
+      min-width: 0;
+      padding: 0 13px;
+      flex: 1;
+      overflow: hidden;
+      border: 0;
+      color: #160824;
+      background: linear-gradient(135deg, #dab8ff, #b076ff);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .circuit-shuffle {
+      width: 43px;
+      padding: 0;
+      border: 1px solid rgba(255, 255, 255, 0.11);
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.05);
+      font-size: 0.95rem;
+    }
+
+    .circuit-launch:focus-visible,
+    .circuit-shuffle:focus-visible {
+      outline: 3px solid rgba(73, 226, 255, 0.55);
+      outline-offset: 2px;
+    }
+
+    .circuit-toast {
+      position: fixed;
+      z-index: 49;
+      right: max(18px, env(safe-area-inset-right));
+      bottom: max(76px, calc(env(safe-area-inset-bottom) + 76px));
+      max-width: min(390px, calc(100vw - 36px));
+      padding: 14px 17px;
+      border: 1px solid rgba(176, 118, 255, 0.38);
+      border-radius: 14px;
+      color: #180b26;
+      background: linear-gradient(135deg, #e2c7ff, #b076ff);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.42);
+      font-size: 0.75rem;
+      font-weight: 950;
+    }
+
     .profile-panel {
       display: grid;
       grid-template-columns: minmax(250px, 0.72fr) minmax(220px, 0.55fr) minmax(360px, 1.25fr);
@@ -1891,6 +2113,7 @@
 
     html.high-contrast .catalog-card,
     html.high-contrast .quick-play-panel,
+    html.high-contrast .circuit-panel,
     html.high-contrast .profile-panel,
     html.high-contrast .activity-panel,
     html.high-contrast .leaderboard-panel,
@@ -2981,6 +3204,35 @@
       .quick-play-launch {
         max-width: none;
         flex: 1;
+      }
+
+      .circuit-panel {
+        padding: 18px;
+      }
+
+      .circuit-heading {
+        display: block;
+      }
+
+      .circuit-heading p {
+        margin-top: 7px;
+        text-align: left;
+      }
+
+      .circuit-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .circuit-lineup {
+        grid-template-columns: 1fr;
+      }
+
+      .circuit-stage {
+        min-height: 64px;
+      }
+
+      .circuit-sidebar {
+        grid-row: 1;
       }
 
       .profile-game-stats {
@@ -4289,6 +4541,35 @@
       </div>
     </section>
 
+    <section id="circuitPanel" class="circuit-panel" aria-labelledby="circuitTitle">
+      <div class="circuit-heading">
+        <div>
+          <span class="catalog-kicker">Three-game challenge</span>
+          <h2 id="circuitTitle">Arcade Circuit</h2>
+        </div>
+        <p id="circuitStatus" aria-live="polite">Ready for a new three-game run</p>
+      </div>
+      <div class="circuit-layout">
+        <div id="circuitLineup" class="circuit-lineup" aria-label="Circuit game lineup">
+          <div class="circuit-stage pending"><span class="circuit-stage-number">1</span><span class="circuit-stage-icon">?</span><div><strong>Mystery game</strong><small>Revealed when you start</small></div></div>
+          <div class="circuit-stage pending"><span class="circuit-stage-number">2</span><span class="circuit-stage-icon">?</span><div><strong>Mystery game</strong><small>Revealed when you start</small></div></div>
+          <div class="circuit-stage pending"><span class="circuit-stage-number">3</span><span class="circuit-stage-icon">?</span><div><strong>Mystery game</strong><small>Revealed when you start</small></div></div>
+        </div>
+        <div class="circuit-sidebar">
+          <div class="circuit-score-grid" aria-label="Circuit record">
+            <div><strong id="circuitTotal">0</strong><span>Points</span></div>
+            <div><strong id="circuitWins">0</strong><span>Wins</span></div>
+            <div><strong id="circuitBest">0</strong><span>Best</span></div>
+            <div><strong id="circuitRuns">0</strong><span>Runs</span></div>
+          </div>
+          <div class="circuit-actions">
+            <button id="circuitLaunchButton" class="circuit-launch" type="button" data-launch-game="bomberman">Start a new circuit</button>
+            <button id="circuitShuffleButton" class="circuit-shuffle" type="button" aria-label="Replace this circuit with a new lineup" title="New lineup" hidden>↻</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section id="profilePanel" class="profile-panel" aria-labelledby="profileTitle">
       <div class="profile-identity">
         <div id="profileAvatar" class="profile-avatar" aria-hidden="true">AP</div>
@@ -4402,6 +4683,7 @@
     </section>
 
     <div id="progressionToast" class="progression-toast" role="status" aria-live="polite" hidden></div>
+    <div id="circuitToast" class="circuit-toast" role="status" aria-live="polite" hidden></div>
     <div id="pwaToast" class="pwa-toast" role="status" aria-live="polite" hidden></div>
 
     <section id="games" class="catalog-section" aria-labelledby="gamesTitle">
