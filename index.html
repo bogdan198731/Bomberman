@@ -2748,6 +2748,12 @@
       background: #3a465a;
     }
 
+    .lobby-button.quick-match-button {
+      color: #130822;
+      background: linear-gradient(135deg, #dab8ff, #a064ff);
+      box-shadow: 0 9px 24px rgba(160, 100, 255, 0.18);
+    }
+
     .bot-heading {
       margin: 0 0 9px;
       color: #dce5ef;
@@ -4431,6 +4437,12 @@
       background: var(--p1);
     }
 
+    .game-room-actions .game-room-matchmake {
+      border-color: rgba(176,118,255,.38);
+      color: #170a25;
+      background: linear-gradient(135deg, #dab8ff, #a064ff);
+    }
+
     .game-room-join { display: flex; gap: 6px; }
 
     .game-room-join input {
@@ -4467,7 +4479,7 @@
         gap: 10px;
       }
 
-      .game-room-actions { justify-content: stretch; }
+      .game-room-actions { justify-content: stretch; flex-wrap: wrap; }
       .game-room-actions > button,
       .game-room-join,
       .game-room-join button { flex: 1; }
@@ -4951,6 +4963,8 @@
                 <button class="bot-button" type="button" data-bot-difficulty="hard">Hard</button>
               </div>
               <div class="lobby-divider">or play online</div>
+              <button id="quickMatchButton" class="lobby-button quick-match-button" type="button">Quick Match</button>
+              <div class="lobby-divider">or create a private room</div>
               <button id="createRoomButton" class="lobby-button" type="button">Create a room</button>
               <div class="lobby-divider">or join a friend</div>
               <div class="join-row">
