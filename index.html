@@ -351,6 +351,14 @@
       background-size: auto, auto, 32px 32px, 32px 32px, auto;
     }
 
+    .tanks-cover::before {
+      background:
+        linear-gradient(30deg, transparent 43%, rgba(255,200,87,.4) 44% 47%, transparent 48%),
+        radial-gradient(circle at 28% 64%, rgba(84,227,142,.42), transparent 18%),
+        radial-gradient(circle at 74% 32%, rgba(255,107,120,.38), transparent 18%),
+        #17232d;
+    }
+
     .game-glyph {
       font-size: 4.4rem;
       filter: drop-shadow(0 12px 15px rgba(0,0,0,.4));
@@ -1997,6 +2005,102 @@
         display: grid;
       }
     }
+
+    .tanks-brand-mark {
+      position: relative;
+      width: 45px;
+      height: 43px;
+      flex: 0 0 auto;
+      border: 3px solid var(--p1);
+      border-radius: 11px;
+      background: #153427;
+      box-shadow: 0 0 15px rgba(84,227,142,.25);
+    }
+
+    .tanks-brand-mark::before {
+      position: absolute;
+      top: 15px;
+      left: 19px;
+      width: 28px;
+      height: 7px;
+      border-radius: 6px;
+      content: "";
+      background: var(--gold);
+      transform: rotate(-18deg);
+      transform-origin: left center;
+    }
+
+    .tanks-brand-mark::after {
+      position: absolute;
+      top: 11px;
+      left: 12px;
+      width: 17px;
+      height: 17px;
+      border-radius: 50%;
+      content: "";
+      background: var(--p1-dark);
+      box-shadow: inset 0 0 0 4px var(--p1);
+    }
+
+    .tanks-arena {
+      padding: clamp(10px, 2.2vw, 22px);
+      background: #0c111a;
+    }
+
+    #tanksCanvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 17px;
+      background: #101722;
+      box-shadow: 0 18px 42px rgba(0,0,0,.34);
+    }
+
+    .tanks-touch-controls {
+      display: none;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      padding: 12px 14px 16px;
+      border-top: 1px solid var(--panel-border);
+    }
+
+    .tank-touch-team {
+      display: grid;
+      grid-template-columns: repeat(3, 42px);
+      grid-template-rows: auto repeat(3, 42px);
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .tank-touch-team strong {
+      grid-column: 1 / -1;
+      color: var(--muted);
+      font-size: .65rem;
+      letter-spacing: .08em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .tank-touch-button {
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 10px;
+      color: var(--ink);
+      background: rgba(84,227,142,.16);
+      touch-action: none;
+      font-weight: 950;
+    }
+
+    .tank-touch-team.coral .tank-touch-button { background: rgba(255,107,120,.16); }
+    .tank-touch-button.up { grid-column: 2; }
+    .tank-touch-button.left { grid-column: 1; grid-row: 3; }
+    .tank-touch-button.down { grid-column: 2; grid-row: 3; }
+    .tank-touch-button.right { grid-column: 3; grid-row: 3; }
+    .tank-touch-button.fire { grid-column: 1 / -1; grid-row: 4; background: rgba(255,200,87,.2); }
+
+    @media (max-width: 760px) {
+      .tanks-touch-controls { display: grid; }
+    }
   </style>
 </head>
 <body>
@@ -2010,7 +2114,7 @@
         </div>
       </div>
       <div class="hub-actions">
-        <span class="live-chip">4 games live</span>
+        <span class="live-chip">5 games live</span>
       </div>
     </header>
 
@@ -2100,6 +2204,21 @@
             <div class="catalog-card-footer">
               <span class="mode-label">Solo · Local 2P</span>
               <button class="card-play-button" type="button" data-launch-game="snake">Play now</button>
+            </div>
+          </div>
+        </article>
+
+        <article class="catalog-card featured">
+          <div class="game-cover tanks-cover">
+            <span class="cover-label">Live now</span>
+            <span class="game-glyph" aria-hidden="true">▰</span>
+          </div>
+          <div class="catalog-card-body">
+            <h3>Mini Tanks</h3>
+            <p>Break cover, bank one-bounce shots, and battle a bot or a friend to five rounds.</p>
+            <div class="catalog-card-footer">
+              <span class="mode-label">Bot · Local 2P</span>
+              <button class="card-play-button" type="button" data-launch-game="tanks">Play now</button>
             </div>
           </div>
         </article>
@@ -2422,6 +2541,59 @@
           <button class="snake-touch-button left" type="button" data-snake-player="2" data-snake-direction="left">←</button>
           <button class="snake-touch-button down" type="button" data-snake-player="2" data-snake-direction="down">↓</button>
           <button class="snake-touch-button right" type="button" data-snake-player="2" data-snake-direction="right">→</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <main id="tanksView" class="paddle-app view-hidden">
+    <header class="topbar">
+      <div class="brand">
+        <div class="tanks-brand-mark" aria-hidden="true"></div>
+        <div><h1>Mini Tanks</h1><p>Ricochet arena · Bot or local duel</p></div>
+      </div>
+      <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub>← Arcade</button></div>
+    </header>
+
+    <section class="paddle-shell" aria-label="Mini Tanks match">
+      <div class="snake-toolbar">
+        <span>Destructible orange cover, solid steel walls, and one-bounce bank shots.</span>
+        <div class="snake-modes" aria-label="Tank game mode">
+          <button class="snake-mode-button active" type="button" data-tanks-mode="bot">Vs bot</button>
+          <button class="snake-mode-button" type="button" data-tanks-mode="duel">Local duel</button>
+        </div>
+      </div>
+      <div class="paddle-scorebar">
+        <div class="paddle-score-player"><i class="paddle-score-swatch" aria-hidden="true"></i><div><span>Mint</span><b id="tanksMintScore">0</b></div></div>
+        <div class="paddle-score-goal">First to 5</div>
+        <div class="paddle-score-player coral"><i class="paddle-score-swatch" aria-hidden="true"></i><div><span>Coral</span><b id="tanksCoralScore">0</b></div></div>
+      </div>
+      <div class="tanks-arena"><canvas id="tanksCanvas" width="900" height="600" aria-label="Mini Tanks ricochet arena"></canvas></div>
+      <div class="paddle-statusbar" aria-live="polite">
+        <span id="tanksStatus">Start a duel against the Coral bot.</span>
+        <button id="tanksLaunchButton" class="paddle-serve" type="button">Start duel</button>
+      </div>
+      <footer class="paddle-footer">
+        <div class="paddle-key-guide">Mint: <kbd>WASD</kbd> + <kbd>F</kbd></div>
+        <button id="tanksRestartButton" class="paddle-restart" type="button">Reset match</button>
+        <div class="paddle-key-guide coral">Coral: <kbd>Arrows</kbd> + <kbd>Enter</kbd></div>
+      </footer>
+      <div class="tanks-touch-controls" aria-label="Touch tank controls">
+        <div class="tank-touch-team">
+          <strong>Mint</strong>
+          <button class="tank-touch-button up" type="button" data-tank-player="1" data-tank-action="up">↑</button>
+          <button class="tank-touch-button left" type="button" data-tank-player="1" data-tank-action="left">←</button>
+          <button class="tank-touch-button down" type="button" data-tank-player="1" data-tank-action="down">↓</button>
+          <button class="tank-touch-button right" type="button" data-tank-player="1" data-tank-action="right">→</button>
+          <button class="tank-touch-button fire" type="button" data-tank-player="1" data-tank-action="fire">Fire</button>
+        </div>
+        <div class="tank-touch-team coral">
+          <strong>Coral</strong>
+          <button class="tank-touch-button up" type="button" data-tank-player="2" data-tank-action="up">↑</button>
+          <button class="tank-touch-button left" type="button" data-tank-player="2" data-tank-action="left">←</button>
+          <button class="tank-touch-button down" type="button" data-tank-player="2" data-tank-action="down">↓</button>
+          <button class="tank-touch-button right" type="button" data-tank-player="2" data-tank-action="right">→</button>
+          <button class="tank-touch-button fire" type="button" data-tank-player="2" data-tank-action="fire">Fire</button>
         </div>
       </div>
     </section>
