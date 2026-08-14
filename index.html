@@ -4,15 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#10151f">
-  <meta name="description" content="Blast Arcade is a mobile-friendly hub with nine instant browser games for solo, co-op, local, and online play.">
+  <meta name="description" content="Blast Arcade is a mobile-friendly hub with ten instant browser games for solo, co-op, local, and online play.">
   <meta property="og:title" content="Blast Arcade">
-  <meta property="og:description" content="Nine games. One hub. Play solo, co-op, local, or online instantly in your browser.">
-  <meta property="og:image" content="/public/og-v2.png">
+  <meta property="og:description" content="Ten games. One hub. Play solo, co-op, local, or online instantly in your browser.">
+  <meta property="og:image" content="/public/og-v3.png">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Blast Arcade">
-  <meta name="twitter:description" content="Nine games. One hub. Play. Compete. Repeat.">
-  <meta name="twitter:image" content="/public/og-v2.png">
+  <meta name="twitter:description" content="Ten games. One hub. Play. Compete. Repeat.">
+  <meta name="twitter:image" content="/public/og-v3.png">
   <title>Blast Arcade — Browser Gaming Hub</title>
   <style>
     :root {
@@ -364,6 +364,17 @@
         repeating-linear-gradient(90deg, transparent 0 38px, rgba(255,255,255,.13) 39px 43px, transparent 44px 82px),
         radial-gradient(ellipse at 50% 50%, transparent 0 25%, #2d3542 26% 60%, transparent 61%),
         linear-gradient(145deg, #174732, #10251f);
+    }
+
+    .blocks-cover::before {
+      background:
+        linear-gradient(90deg, transparent 48%, rgba(255,255,255,.12) 49% 51%, transparent 52%),
+        linear-gradient(rgba(255,255,255,.055) 2px, transparent 2px),
+        linear-gradient(90deg, rgba(255,255,255,.055) 2px, transparent 2px),
+        radial-gradient(circle at 28% 68%, rgba(84,227,142,.46), transparent 22%),
+        radial-gradient(circle at 72% 35%, rgba(255,107,120,.42), transparent 22%),
+        #12192b;
+      background-size: auto, 28px 28px, 28px 28px, auto, auto, auto;
     }
 
     .septica-cover::before {
@@ -2213,6 +2224,59 @@
     .racing-team .racing-brake { grid-column: 1; grid-row: 3; background: rgba(255,255,255,.1); }
     .racing-team .racing-accelerate { grid-column: 2; grid-row: 3; background: rgba(255,200,87,.24); }
 
+    .blocks-brand-mark {
+      display: grid;
+      width: 47px;
+      height: 43px;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 2px;
+      padding: 3px;
+      flex: 0 0 auto;
+      border-radius: 10px;
+      background: rgba(255,255,255,.07);
+      box-shadow: 0 0 18px rgba(85,217,255,.2);
+    }
+
+    .blocks-brand-mark i {
+      border-radius: 3px;
+      background: #55d9ff;
+      box-shadow: inset 0 2px rgba(255,255,255,.25);
+    }
+
+    .blocks-brand-mark i:nth-child(1) { grid-column: 2; background: #ffc857; }
+    .blocks-brand-mark i:nth-child(2) { grid-column: 1; grid-row: 2; background: #a56bff; }
+    .blocks-brand-mark i:nth-child(3) { grid-column: 2; grid-row: 2; background: #54e38e; }
+    .blocks-brand-mark i:nth-child(4) { grid-column: 3; grid-row: 2; background: #ff6b78; }
+    .blocks-brand-mark i:nth-child(5) { grid-column: 3; grid-row: 3; background: #ff9b54; }
+
+    .blocks-arena {
+      padding: clamp(10px, 2.2vw, 22px);
+      background: #080d16;
+    }
+
+    #blocksCanvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 17px;
+      background: #0d1422;
+      box-shadow: 0 18px 42px rgba(0,0,0,.34);
+      touch-action: none;
+    }
+
+    .block-team {
+      grid-template-columns: repeat(3, minmax(40px, 58px));
+      grid-template-rows: auto repeat(2, 46px);
+    }
+
+    .block-team .block-left { grid-column: 1; grid-row: 2; }
+    .block-team .block-rotate { grid-column: 2; grid-row: 2; background: rgba(165,107,255,.22); }
+    .block-team .block-right { grid-column: 3; grid-row: 2; }
+    .block-team .block-down { grid-column: 1; grid-row: 3; background: rgba(255,255,255,.1); }
+    .block-team .block-drop { grid-column: 2 / 4; grid-row: 3; background: rgba(255,200,87,.24); }
+
     .septica-brand-mark {
       position: relative;
       width: 48px;
@@ -2555,7 +2619,7 @@
         </div>
       </div>
       <div class="hub-actions">
-        <span class="live-chip">9 games live</span>
+        <span class="live-chip">10 games live</span>
       </div>
     </header>
 
@@ -2575,7 +2639,7 @@
         </div>
       </div>
       <div class="hub-visual">
-        <img src="/public/og-v2.png" alt="Blast Arcade heroes surrounded by nine game arenas">
+        <img src="/public/og-v3.png" alt="Blast Arcade heroes surrounded by ten game arenas">
       </div>
     </section>
 
@@ -2585,7 +2649,7 @@
           <span class="catalog-kicker">Game library</span>
           <h2 id="gamesTitle">Choose your next round</h2>
         </div>
-        <p>Nine instant games, from explosive duels and Romanian classics to neon racing, co-op survival, and a star-fighter mission.</p>
+        <p>Ten instant games, from explosive duels and Romanian classics to block battles, neon racing, co-op survival, and star-fighter missions.</p>
       </div>
 
       <div class="game-grid">
@@ -2680,6 +2744,21 @@
         </article>
 
         <article class="catalog-card featured">
+          <div class="game-cover blocks-cover">
+            <span class="cover-label">New battle</span>
+            <span class="game-glyph" aria-hidden="true">▦</span>
+          </div>
+          <div class="catalog-card-body">
+            <h3>Block Drop Duel</h3>
+            <p>Build clean stacks, clear lines, and bury a bot or friend under incoming garbage blocks.</p>
+            <div class="catalog-card-footer">
+              <span class="mode-label">Bot · Local · Online</span>
+              <button class="card-play-button" type="button" data-launch-game="blocks">Play now</button>
+            </div>
+          </div>
+        </article>
+
+        <article class="catalog-card featured">
           <div class="game-cover septica-cover">
             <span class="cover-label">Live now</span>
             <span class="game-glyph" aria-hidden="true">7♥</span>
@@ -2728,7 +2807,7 @@
 
     <footer class="hub-footer">
       <span>Blast Arcade · Play instantly in your browser</span>
-      <span>Nine live games · Keyboard, touch, bots, and online rooms</span>
+      <span>Ten live games · Keyboard, touch, bots, and online rooms</span>
     </footer>
   </main>
 
@@ -3334,6 +3413,67 @@
           <button class="tank-touch-button racing-right" type="button" data-racing-player="2" data-racing-action="right" aria-label="Steer Coral right">→</button>
           <button class="tank-touch-button racing-brake" type="button" data-racing-player="2" data-racing-action="brake" aria-label="Brake Coral">Brake</button>
           <button class="tank-touch-button racing-accelerate" type="button" data-racing-player="2" data-racing-action="accelerate" aria-label="Accelerate Coral">Go</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <main id="blocksView" class="paddle-app view-hidden">
+    <header class="topbar">
+      <div class="brand">
+        <div class="blocks-brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+        <div><h1>Block Drop Duel</h1><p>Line attack battle · Bot, local, or online</p></div>
+      </div>
+      <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub>← Arcade</button></div>
+    </header>
+
+    <div data-game-room="blocks"></div>
+
+    <section class="paddle-shell" aria-label="Block Drop Duel match">
+      <div class="snake-toolbar">
+        <span>Clear lines to queue garbage. Counter-clear before it lands, and never let your stack reach the top.</span>
+        <div class="snake-modes" aria-label="Block Drop game mode">
+          <button class="snake-mode-button active" type="button" data-blocks-mode="bot">Vs bot</button>
+          <button class="snake-mode-button" type="button" data-blocks-mode="duel">Local duel</button>
+        </div>
+      </div>
+      <div class="paddle-scorebar">
+        <div class="paddle-score-player">
+          <i class="paddle-score-swatch" aria-hidden="true"></i>
+          <div><span>Mint score</span><b id="blocksMintScore">0</b><span id="blocksMintLines" class="racing-speed">0 lines</span></div>
+        </div>
+        <div class="paddle-score-goal">Send garbage · Top out loses</div>
+        <div class="paddle-score-player coral">
+          <i class="paddle-score-swatch" aria-hidden="true"></i>
+          <div><span>Coral score</span><b id="blocksCoralScore">0</b><span id="blocksCoralLines" class="racing-speed">0 lines</span></div>
+        </div>
+      </div>
+      <div class="blocks-arena"><canvas id="blocksCanvas" width="900" height="600" aria-label="Two Block Drop battle boards"></canvas></div>
+      <div class="paddle-statusbar" aria-live="polite">
+        <span id="blocksStatus">Clear lines and bury the Coral bot under garbage blocks.</span>
+        <button id="blocksStartButton" class="paddle-serve" type="button">Start duel</button>
+      </div>
+      <footer class="paddle-footer">
+        <div class="paddle-key-guide">Mint: <kbd>WASD</kbd> · drop <kbd>F</kbd></div>
+        <button id="blocksRestartButton" class="paddle-restart" type="button">Reset duel</button>
+        <div class="paddle-key-guide coral">Coral: <kbd>Arrows</kbd> · drop <kbd>Enter</kbd></div>
+      </footer>
+      <div class="tanks-touch-controls block-touch-controls" aria-label="Touch Block Drop controls">
+        <div class="tank-touch-team block-team">
+          <strong>Mint</strong>
+          <button class="tank-touch-button block-left" type="button" data-blocks-player="1" data-blocks-action="left" aria-label="Move Mint piece left">←</button>
+          <button class="tank-touch-button block-rotate" type="button" data-blocks-player="1" data-blocks-action="rotate" aria-label="Rotate Mint piece">↻</button>
+          <button class="tank-touch-button block-right" type="button" data-blocks-player="1" data-blocks-action="right" aria-label="Move Mint piece right">→</button>
+          <button class="tank-touch-button block-down" type="button" data-blocks-player="1" data-blocks-action="down" aria-label="Soft drop Mint piece">↓</button>
+          <button class="tank-touch-button block-drop" type="button" data-blocks-player="1" data-blocks-action="drop" aria-label="Hard drop Mint piece">Drop</button>
+        </div>
+        <div class="tank-touch-team block-team coral">
+          <strong>Coral</strong>
+          <button class="tank-touch-button block-left" type="button" data-blocks-player="2" data-blocks-action="left" aria-label="Move Coral piece left">←</button>
+          <button class="tank-touch-button block-rotate" type="button" data-blocks-player="2" data-blocks-action="rotate" aria-label="Rotate Coral piece">↻</button>
+          <button class="tank-touch-button block-right" type="button" data-blocks-player="2" data-blocks-action="right" aria-label="Move Coral piece right">→</button>
+          <button class="tank-touch-button block-down" type="button" data-blocks-player="2" data-blocks-action="down" aria-label="Soft drop Coral piece">↓</button>
+          <button class="tank-touch-button block-drop" type="button" data-blocks-player="2" data-blocks-action="drop" aria-label="Hard drop Coral piece">Drop</button>
         </div>
       </div>
     </section>
