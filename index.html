@@ -2429,6 +2429,13 @@
       font-weight: 850;
     }
 
+    .room-invite-actions {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
     .bonus-legend {
       display: flex;
       align-items: center;
@@ -4395,7 +4402,10 @@
             <div id="roomReady" class="hidden">
               <div class="lobby-divider">room code</div>
               <div id="roomCode" class="room-code">-----</div>
-              <button id="copyRoomButton" class="copy-button" type="button">Copy invite</button>
+              <div class="room-invite-actions">
+                <button id="copyRoomButton" class="copy-button" type="button">Copy link</button>
+                <button id="shareRoomButton" class="copy-button" type="button">Share invite</button>
+              </div>
             </div>
             <p id="connectionMessage" class="connection-message">Create a room or enter an invitation code.</p>
           </div>

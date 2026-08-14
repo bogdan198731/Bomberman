@@ -12,6 +12,13 @@ import { initGameCatalog } from './catalog.js';
 import { initArcadeSettings } from './settings.js';
 import { initQuickPlay } from './quick-play.js';
 import { initArcadePwa } from './pwa.js';
+import {
+  arcadeInviteShareData,
+  clearArcadeInviteUrl,
+  createArcadeInviteUrl,
+  parseArcadeInvite,
+  shareOrCopyInvite,
+} from './invite.js';
 import type { OnlineRoom, PlayerAction } from './multiplayer.js';
 
 export const CELL_SIZE = 64;
@@ -1196,6 +1203,7 @@ export function initGame(): void {
     playLocalButton: document.getElementById('playLocalButton'),
     joinRoomButton: document.getElementById('joinRoomButton'),
     copyRoomButton: document.getElementById('copyRoomButton'),
+    shareRoomButton: document.getElementById('shareRoomButton'),
     botButtons: document.querySelectorAll<HTMLButtonElement>('[data-bot-difficulty]'),
     mobileControls: document.getElementById('mobileControls'),
     mobilePlayerLabel: document.getElementById('mobilePlayerLabel'),
@@ -1366,8 +1374,8 @@ export function initGame(): void {
         localPlayerId = response.playerId;
         activeRoomCode = response.roomCode;
         activeBotDifficulty = response.botDifficulty;
-        if (activeBotDifficulty) history.replaceState(null, '', location.pathname);
-        else history.replaceState(null, '', `?room=${activeRoomCode}`);
+        if (activeBotDifficulty) history.replaceState(null, '', clearArcadeInviteUrl(location.href));
+        else history.replaceState(null, '', createArcadeInviteUrl(location.href, 'bomberman', activeRoomCode));
         syncUi();
         return;
       }
@@ -1417,7 +1425,7 @@ export function initGame(): void {
     activeBotDifficulty = undefined;
     onlineState = localRoom.snapshot(now);
     mergePlayers(onlineState.players, onlineState.round);
-    history.replaceState(null, '', location.pathname);
+    history.replaceState(null, '', clearArcadeInviteUrl(location.href));
     syncUi();
   }
 
@@ -1438,7 +1446,7 @@ export function initGame(): void {
       localPlayerId = undefined;
       activeRoomCode = '';
       activeBotDifficulty = undefined;
-      history.replaceState(null, '', location.pathname);
+      history.replaceState(null, '', clearArcadeInviteUrl(location.href));
       elements.lobbyOverlay?.classList.remove('hidden');
       elements.lobbyActions?.classList.remove('hidden');
       elements.roomReady?.classList.add('hidden');
@@ -1470,14 +1478,38 @@ export function initGame(): void {
   elements.roomCodeInput?.addEventListener('keydown', event => {
     if (event.key === 'Enter') elements.joinRoomButton?.click();
   });
-  elements.copyRoomButton?.addEventListener('click', async () => {
-    if (!activeRoomCode) return;
-    await navigator.clipboard.writeText(`${location.origin}/?room=${activeRoomCode}`);
-    if (elements.copyRoomButton) elements.copyRoomButton.textContent = 'Copied!';
-    window.setTimeout(() => {
-      if (elements.copyRoomButton) elements.copyRoomButton.textContent = 'Copy invite';
-    }, 1_200);
-  });
+  async function copyText(text: string): Promise<void> {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+    const copyField = document.createElement('textarea');
+    copyField.value = text;
+    copyField.setAttribute('readonly', '');
+    copyField.style.position = 'fixed';
+    copyField.style.opacity = '0';
+    document.body.append(copyField);
+    copyField.select();
+    const copied = document.execCommand('copy');
+    copyField.remove();
+    if (!copied) throw new Error('Copy unavailable');
+  }
+
+  async function deliverBombermanInvite(button: HTMLElement | null, preferShare: boolean): Promise<void> {
+    if (!activeRoomCode || !button) return;
+    const data = arcadeInviteShareData(location.href, 'bomberman', activeRoomCode);
+    const result = await shareOrCopyInvite(data, {
+      share: preferShare && navigator.share ? value => navigator.share(value) : undefined,
+      copy: value => copyText(value),
+    });
+    if (result === 'cancelled') return;
+    const previous = button.textContent;
+    button.textContent = result === 'shared' ? 'Shared!' : result === 'copied' ? 'Link copied!' : 'Try again';
+    window.setTimeout(() => { button.textContent = previous; }, 1_400);
+  }
+
+  elements.copyRoomButton?.addEventListener('click', () => { void deliverBombermanInvite(elements.copyRoomButton, false); });
+  elements.shareRoomButton?.addEventListener('click', () => { void deliverBombermanInvite(elements.shareRoomButton, true); });
   elements.restartButton?.addEventListener('click', () => sendPlayerAction(1, { type: 'restart' }));
   elements.mobileRestartButton?.addEventListener('click', () => sendPlayerAction(1, { type: 'restart' }));
   elements.localMobileRestartButton?.addEventListener('click', () => sendPlayerAction(1, { type: 'restart' }));
@@ -1566,9 +1598,12 @@ export function initGame(): void {
     }
   });
 
-  const roomFromUrl = new URLSearchParams(location.search).get('room')?.toUpperCase();
-  if (roomFromUrl && elements.roomCodeInput) elements.roomCodeInput.value = roomFromUrl;
-  setActiveView(roomFromUrl ? 'bomberman' : 'hub');
+  const inviteFromUrl = parseArcadeInvite(location.search);
+  if (inviteFromUrl?.game === 'bomberman' && elements.roomCodeInput) {
+    elements.roomCodeInput.value = inviteFromUrl.roomCode;
+    connectAndSend({ type: 'join', roomCode: inviteFromUrl.roomCode });
+  }
+  setActiveView(inviteFromUrl?.game ?? 'hub');
 
   function gameLoop(): void {
     if (localRoom) {

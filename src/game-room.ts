@@ -1,4 +1,10 @@
 import type { OnlineGameId, RelayPlayerId } from './relay.js';
+import {
+  arcadeInviteShareData,
+  clearArcadeInviteUrl,
+  parseArcadeInvite,
+  shareOrCopyInvite,
+} from './invite.js';
 
 export interface GameRoomSession {
   online: boolean;
@@ -48,7 +54,8 @@ export class GameRoomClient {
       </div>
       <div class="game-room-actions" data-room-joined hidden>
         <span class="game-room-code">Code <b data-room-code>-----</b></span>
-        <button type="button" data-room-copy>Copy code</button>
+        <button type="button" data-room-copy>Copy link</button>
+        <button type="button" data-room-share>Share</button>
         <button type="button" data-room-leave>Leave</button>
       </div>`;
     this.statusElement = this.mount.querySelector<HTMLElement>('[data-room-status]')!;
@@ -58,8 +65,13 @@ export class GameRoomClient {
     this.codeElement = this.mount.querySelector<HTMLElement>('[data-room-code]')!;
     this.bindUi();
     this.mount.closest('main')?.querySelector('[data-back-to-hub]')?.addEventListener('click', () => {
-      if (this.playerId) this.leave();
+      this.leave();
     });
+    const invite = parseArcadeInvite(location.search);
+    if (invite?.game === this.game) {
+      this.input.value = invite.roomCode;
+      this.joinFromInput();
+    }
   }
 
   session(): GameRoomSession {
@@ -98,6 +110,7 @@ export class GameRoomClient {
     this.localActions.hidden = false;
     this.joinedActions.hidden = true;
     this.statusElement.textContent = 'Play locally, or create an invite code for a friend.';
+    history.replaceState(null, '', clearArcadeInviteUrl(location.href));
     this.options.onSessionChange(this.session());
   }
 
@@ -112,26 +125,50 @@ export class GameRoomClient {
       this.localActions.hidden = false;
       this.joinedActions.hidden = true;
       this.statusElement.textContent = 'Local two-player mode ready on this device.';
+      history.replaceState(null, '', clearArcadeInviteUrl(location.href));
       this.options.onPlayLocal();
     });
     this.mount.querySelector('[data-room-create]')?.addEventListener('click', () => this.connect({ type: 'createGameRoom', game: this.game }));
     this.mount.querySelector('[data-room-join]')?.addEventListener('click', () => this.joinFromInput());
     this.input.addEventListener('input', () => { this.input.value = this.input.value.toUpperCase().replace(/[^A-Z2-9]/g, ''); });
     this.input.addEventListener('keydown', event => { if (event.key === 'Enter') this.joinFromInput(); });
-    this.mount.querySelector('[data-room-copy]')?.addEventListener('click', async event => {
-      if (!this.roomCode) return;
-      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(this.roomCode);
-      else {
-        this.input.value = this.roomCode;
-        this.input.select();
-        document.execCommand('copy');
-      }
-      const button = event.currentTarget as HTMLButtonElement;
-      const previous = button.textContent;
-      button.textContent = 'Copied!';
-      window.setTimeout(() => { button.textContent = previous; }, 1_200);
+    this.mount.querySelector('[data-room-copy]')?.addEventListener('click', event => {
+      void this.deliverInvite(event.currentTarget as HTMLButtonElement, false);
+    });
+    this.mount.querySelector('[data-room-share]')?.addEventListener('click', event => {
+      void this.deliverInvite(event.currentTarget as HTMLButtonElement, true);
     });
     this.mount.querySelector('[data-room-leave]')?.addEventListener('click', () => this.leave());
+  }
+
+  private async copyText(text: string): Promise<void> {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+    const copyField = document.createElement('textarea');
+    copyField.value = text;
+    copyField.setAttribute('readonly', '');
+    copyField.style.position = 'fixed';
+    copyField.style.opacity = '0';
+    document.body.append(copyField);
+    copyField.select();
+    const copied = document.execCommand('copy');
+    copyField.remove();
+    if (!copied) throw new Error('Copy unavailable');
+  }
+
+  private async deliverInvite(button: HTMLButtonElement, preferShare: boolean): Promise<void> {
+    if (!this.roomCode) return;
+    const data = arcadeInviteShareData(location.href, this.game, this.roomCode);
+    const result = await shareOrCopyInvite(data, {
+      share: preferShare && navigator.share ? value => navigator.share(value) : undefined,
+      copy: value => this.copyText(value),
+    });
+    if (result === 'cancelled') return;
+    const previous = button.textContent;
+    button.textContent = result === 'shared' ? 'Shared!' : result === 'copied' ? 'Link copied!' : 'Try again';
+    window.setTimeout(() => { button.textContent = previous; }, 1_400);
   }
 
   private joinFromInput(): void {
@@ -180,6 +217,7 @@ export class GameRoomClient {
       this.playerId = data.playerId;
       this.ready = false;
       this.codeElement.textContent = this.roomCode;
+      history.replaceState(null, '', arcadeInviteShareData(location.href, this.game, this.roomCode).url);
       this.localActions.hidden = true;
       this.joinedActions.hidden = false;
       this.statusElement.textContent = this.playerId === 1 ? 'Invite Coral with this code.' : 'Joined as Coral. Waiting for Mint…';
