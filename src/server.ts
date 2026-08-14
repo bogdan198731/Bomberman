@@ -9,12 +9,17 @@ import {
   type BotDifficulty,
   type PlayerId,
 } from './multiplayer.js';
+import { InviteRoom, isOnlineGameId, isRelayPayload, type OnlineGameId, type RelayPlayerId } from './relay.js';
 
 const PORT = Number(process.env.PORT || 4173);
 const HOST = process.env.HOST || '0.0.0.0';
 const root = process.cwd();
 const rooms = new Map<string, OnlineRoom>();
-const clients = new Map<WebSocket, { roomCode: string; playerId: PlayerId }>();
+const inviteRooms = new Map<string, InviteRoom>();
+type ClientSession =
+  | { kind: 'bomberman'; roomCode: string; playerId: PlayerId }
+  | { kind: 'invite'; roomCode: string; playerId: RelayPlayerId; game: OnlineGameId };
+const clients = new Map<WebSocket, ClientSession>();
 
 const mimeTypes: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -62,7 +67,7 @@ function createRoomCode(): string {
   let code = '';
   do {
     code = Array.from({ length: 5 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
-  } while (rooms.has(code));
+  } while (rooms.has(code) || inviteRooms.has(code));
   return code;
 }
 
@@ -75,7 +80,7 @@ function broadcastRoom(roomCode: string): void {
   if (!room) return;
   const message = JSON.stringify({ type: 'state', state: room.snapshot() });
   for (const [socket, client] of clients) {
-    if (client.roomCode === roomCode && socket.readyState === socket.OPEN) socket.send(message);
+    if (client.kind === 'bomberman' && client.roomCode === roomCode && socket.readyState === socket.OPEN) socket.send(message);
   }
 }
 
@@ -92,10 +97,45 @@ function joinRoom(socket: WebSocket, roomCode: string, create: boolean): void {
   }
 
   const playerId: PlayerId = room.connectedPlayers.has(1) ? 2 : 1;
-  clients.set(socket, { roomCode: code, playerId });
+  clients.set(socket, { kind: 'bomberman', roomCode: code, playerId });
   room.connectPlayer(playerId);
   send(socket, { type: 'joined', roomCode: code, playerId, created: create });
   broadcastRoom(code);
+}
+
+function broadcastInviteStatus(roomCode: string): void {
+  const room = inviteRooms.get(roomCode);
+  if (!room) return;
+  const message = JSON.stringify({ type: 'gameRoomStatus', ...room.snapshot() });
+  for (const [socket, client] of clients) {
+    if (client.kind === 'invite' && client.roomCode === roomCode && socket.readyState === socket.OPEN) socket.send(message);
+  }
+}
+
+function sendToInviteRoom(roomCode: string, message: unknown, exclude?: WebSocket): void {
+  const encoded = JSON.stringify(message);
+  for (const [socket, client] of clients) {
+    if (socket !== exclude && client.kind === 'invite' && client.roomCode === roomCode && socket.readyState === socket.OPEN) {
+      socket.send(encoded);
+    }
+  }
+}
+
+function joinInviteRoom(socket: WebSocket, roomCode: string, game: OnlineGameId, created: boolean): void {
+  const code = roomCode.toUpperCase();
+  const room = inviteRooms.get(code);
+  if (!room || room.game !== game) {
+    send(socket, { type: 'gameRoomError', message: 'Room not found for this game. Check the code and try again.' });
+    return;
+  }
+  const playerId = room.join();
+  if (!playerId) {
+    send(socket, { type: 'gameRoomError', message: 'That room is already full.' });
+    return;
+  }
+  clients.set(socket, { kind: 'invite', roomCode: code, playerId, game });
+  send(socket, { type: 'gameRoomJoined', roomCode: code, game, playerId, created });
+  broadcastInviteStatus(code);
 }
 
 webSocketServer.on('connection', socket => {
@@ -126,7 +166,7 @@ webSocketServer.on('connection', socket => {
       const code = createRoomCode();
       const room = new OnlineRoom(code);
       rooms.set(code, room);
-      clients.set(socket, { roomCode: code, playerId: 1 });
+      clients.set(socket, { kind: 'bomberman', roomCode: code, playerId: 1 });
       room.connectPlayer(1);
       room.connectBot(difficulty);
       send(socket, { type: 'joined', roomCode: code, playerId: 1, botDifficulty: difficulty });
@@ -138,9 +178,37 @@ webSocketServer.on('connection', socket => {
       joinRoom(socket, data.roomCode.trim(), false);
       return;
     }
+    if (data.type === 'createGameRoom' && isOnlineGameId(data.game)) {
+      if (clients.has(socket)) return;
+      const code = createRoomCode();
+      inviteRooms.set(code, new InviteRoom(code, data.game));
+      joinInviteRoom(socket, code, data.game, true);
+      return;
+    }
+    if (data.type === 'joinGameRoom' && isOnlineGameId(data.game) && typeof data.roomCode === 'string') {
+      if (clients.has(socket)) return;
+      joinInviteRoom(socket, data.roomCode.trim(), data.game, false);
+      return;
+    }
+    if (data.type === 'gameAction' && isRelayPayload(data.action, 16_384)) {
+      const client = clients.get(socket);
+      if (!client || client.kind !== 'invite') return;
+      sendToInviteRoom(client.roomCode, {
+        type: 'gameAction', game: client.game, roomCode: client.roomCode, from: client.playerId, action: data.action,
+      }, socket);
+      return;
+    }
+    if (data.type === 'gameState' && isRelayPayload(data.state)) {
+      const client = clients.get(socket);
+      if (!client || client.kind !== 'invite' || client.playerId !== 1) return;
+      sendToInviteRoom(client.roomCode, {
+        type: 'gameState', game: client.game, roomCode: client.roomCode, state: data.state,
+      }, socket);
+      return;
+    }
     if (data.type === 'action' && isPlayerAction(data.action)) {
       const client = clients.get(socket);
-      if (!client) return;
+      if (!client || client.kind !== 'bomberman') return;
       rooms.get(client.roomCode)?.handleAction(client.playerId, data.action);
       broadcastRoom(client.roomCode);
     }
@@ -150,11 +218,18 @@ webSocketServer.on('connection', socket => {
     const client = clients.get(socket);
     if (!client) return;
     clients.delete(socket);
-    const room = rooms.get(client.roomCode);
-    room?.disconnectPlayer(client.playerId);
-    const hasHumanClients = [...clients.values()].some(other => other.roomCode === client.roomCode);
-    if (!hasHumanClients) rooms.delete(client.roomCode);
-    else broadcastRoom(client.roomCode);
+    if (client.kind === 'bomberman') {
+      const room = rooms.get(client.roomCode);
+      room?.disconnectPlayer(client.playerId);
+      const hasHumanClients = [...clients.values()].some(other => other.kind === 'bomberman' && other.roomCode === client.roomCode);
+      if (!hasHumanClients) rooms.delete(client.roomCode);
+      else broadcastRoom(client.roomCode);
+    } else {
+      const room = inviteRooms.get(client.roomCode);
+      room?.leave(client.playerId);
+      if (!room?.connectedPlayers.size) inviteRooms.delete(client.roomCode);
+      else broadcastInviteStatus(client.roomCode);
+    }
   });
 });
 
@@ -166,7 +241,7 @@ setInterval(() => {
 }, 50);
 
 server.listen(PORT, HOST, () => {
-  console.log(`Blast Buddies online server: http://localhost:${PORT}`);
+  console.log(`Blast Arcade online server: http://localhost:${PORT}`);
   for (const addresses of Object.values(networkInterfaces())) {
     for (const address of addresses || []) {
       if (address.family === 'IPv4' && !address.internal) {

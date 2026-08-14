@@ -1,3 +1,5 @@
+import { GameRoomClient } from './game-room.js';
+
 export type TintarPlayer = 1 | 2;
 export type TintarPhase = 'placing' | 'moving' | 'removing' | 'finished';
 
@@ -202,6 +204,38 @@ export function initTintar(): void {
   const coralBoardElement = document.getElementById('tintarCoralBoard');
   const turnMarker = document.getElementById('tintarTurnMarker');
   const pointButtons: HTMLButtonElement[] = [];
+  const roomMount = document.querySelector<HTMLElement>('[data-game-room="tintar"]');
+  let room: GameRoomClient | null = null;
+
+  function snapshot(): Record<string, unknown> {
+    return {
+      board: game.board, currentPlayer: game.currentPlayer, phase: game.phase,
+      piecesToPlace: game.piecesToPlace, selectedPoint: game.selectedPoint,
+      winner: game.winner, noCaptureTurns: game.noCaptureTurns,
+    };
+  }
+
+  function restore(state: Record<string, unknown>): void {
+    if (!Array.isArray(state.board) || !state.piecesToPlace) return;
+    game.board = state.board as Array<0 | TintarPlayer>;
+    game.currentPlayer = state.currentPlayer as TintarPlayer;
+    game.phase = state.phase as TintarPhase;
+    game.piecesToPlace = state.piecesToPlace as Record<TintarPlayer, number>;
+    game.selectedPoint = state.selectedPoint as number | null;
+    game.winner = state.winner as TintarPlayer | 0 | null;
+    game.noCaptureTurns = Number(state.noCaptureTurns) || 0;
+  }
+
+  function playPoint(point: number): void {
+    const session = room?.session();
+    if (!session?.online) {
+      if (game.click(point)) render();
+      return;
+    }
+    if (!session.ready || !room?.canControl(game.currentPlayer)) return;
+    if (room.isGuest()) room.sendAction({ type: 'point', point });
+    else if (game.click(point)) { render(); room.broadcastState(snapshot(), true); }
+  }
 
   TINTAR_POINTS.forEach(([left, top], point) => {
     const button = document.createElement('button');
@@ -211,9 +245,7 @@ export function initTintar(): void {
     button.style.top = `${top}%`;
     button.dataset.point = String(point);
     button.setAttribute('role', 'gridcell');
-    button.addEventListener('click', () => {
-      if (game.click(point)) render();
-    });
+    button.addEventListener('click', () => playPoint(point));
     boardElement.append(button);
     pointButtons.push(button);
   });
@@ -250,9 +282,35 @@ export function initTintar(): void {
   }
 
   document.getElementById('tintarRestartButton')?.addEventListener('click', () => {
-    game.reset();
-    render();
+    if (room?.isGuest()) room.sendAction({ type: 'restart' });
+    else {
+      game.reset(); render();
+      room?.broadcastState(snapshot(), true);
+    }
   });
+
+  if (roomMount) {
+    room = new GameRoomClient({
+      game: 'tintar',
+      mount: roomMount,
+      onSessionChange: session => {
+        if (session.ready && session.playerId === 1) {
+          game.reset();
+          room?.broadcastState(snapshot(), true);
+        }
+        render();
+      },
+      onRemoteAction: (action, from) => {
+        if (!room?.isHost()) return;
+        if (action.type === 'point' && from === game.currentPlayer && Number.isInteger(action.point)) {
+          if (game.click(Number(action.point))) { render(); room.broadcastState(snapshot(), true); }
+        } else if (action.type === 'restart') {
+          game.reset(); render(); room.broadcastState(snapshot(), true);
+        }
+      },
+      onState: state => { if (room?.isGuest()) { restore(state); render(); } },
+    });
+  }
 
   render();
 }

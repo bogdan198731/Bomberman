@@ -1,3 +1,5 @@
+import { GameRoomClient } from './game-room.js';
+
 export type PaddlePlayer = 1 | 2;
 export type PaddleDirection = 'up' | 'down';
 export type PaddlePhase = 'ready' | 'playing' | 'finished';
@@ -173,6 +175,44 @@ export function initPaddleClash(): void {
   const coralScore = document.getElementById('paddleCoralScore');
   const serveButton = document.getElementById('paddleServeButton') as HTMLButtonElement | null;
   const restartButton = document.getElementById('paddleRestartButton');
+  const roomMount = document.querySelector<HTMLElement>('[data-game-room="paddle"]');
+  let room: GameRoomClient | null = null;
+
+  function snapshot(): Record<string, unknown> {
+    return {
+      players: game.players, ball: game.ball, phase: game.phase,
+      winner: game.winner, rallyHits: game.rallyHits,
+    };
+  }
+
+  function restore(state: Record<string, unknown>): void {
+    if (!state.players || !state.ball) return;
+    game.players = state.players as Record<PaddlePlayer, PaddleBat>;
+    game.ball = state.ball as PaddleBall;
+    game.phase = state.phase as PaddlePhase;
+    game.winner = state.winner as PaddlePlayer | null;
+    game.rallyHits = Number(state.rallyHits) || 0;
+  }
+
+  function setPlayerInput(player: PaddlePlayer, direction: PaddleDirection, pressed: boolean): void {
+    const session = room?.session();
+    if (!session?.online) game.setInput(player, direction, pressed);
+    else if (session.ready && room?.canControl(player)) {
+      if (room.isGuest()) room.sendAction({ type: 'input', direction, pressed });
+      else game.setInput(player, direction, pressed);
+    }
+  }
+
+  function serve(): void {
+    const session = room?.session();
+    if (session?.online && !session.ready) return;
+    if (room?.isGuest()) room.sendAction({ type: 'serve' });
+    else {
+      game.serve();
+      room?.broadcastState(snapshot(), true);
+    }
+    syncUi();
+  }
 
   function syncUi(): void {
     if (status) status.textContent = game.statusText();
@@ -266,54 +306,82 @@ export function initPaddleClash(): void {
     const input = keyMap[event.code];
     if (input) {
       event.preventDefault();
-      game.setInput(input[0], input[1], true);
+      setPlayerInput(input[0], input[1], true);
     } else if (event.code === 'Space' && !event.repeat) {
       event.preventDefault();
-      game.serve();
-      syncUi();
+      serve();
     }
   });
   window.addEventListener('keyup', event => {
     const input = keyMap[event.code];
-    if (input) game.setInput(input[0], input[1], false);
+    if (input) setPlayerInput(input[0], input[1], false);
   });
 
   document.querySelectorAll<HTMLButtonElement>('[data-paddle-player][data-paddle-direction]').forEach(button => {
     const player = Number(button.dataset.paddlePlayer) as PaddlePlayer;
     const direction = button.dataset.paddleDirection as PaddleDirection;
     const release = (): void => {
-      game.setInput(player, direction, false);
+      setPlayerInput(player, direction, false);
       button.classList.remove('pressed');
     };
     button.addEventListener('pointerdown', event => {
       event.preventDefault();
       button.setPointerCapture?.(event.pointerId);
       button.classList.add('pressed');
-      game.setInput(player, direction, true);
+      setPlayerInput(player, direction, true);
     });
     button.addEventListener('pointerup', release);
     button.addEventListener('pointercancel', release);
     button.addEventListener('lostpointercapture', release);
   });
 
-  serveButton?.addEventListener('click', () => {
-    game.serve();
-    syncUi();
-  });
+  serveButton?.addEventListener('click', serve);
   restartButton?.addEventListener('click', () => {
-    game.restart();
-    syncUi();
+    if (room?.isGuest()) room.sendAction({ type: 'restart' });
+    else {
+      game.restart(); syncUi();
+      room?.broadcastState(snapshot(), true);
+    }
   });
+
+  if (roomMount) {
+    room = new GameRoomClient({
+      game: 'paddle',
+      mount: roomMount,
+      onSessionChange: session => {
+        if (session.online && !session.ready && session.playerId === 1) {
+          game.setInput(2, 'up', false); game.setInput(2, 'down', false);
+        }
+        if (session.ready && session.playerId === 1) {
+          game.restart();
+          room?.broadcastState(snapshot(), true);
+        }
+        syncUi(); render();
+      },
+      onRemoteAction: (action, from) => {
+        if (!room?.isHost() || from !== 2) return;
+        if (action.type === 'input' && (action.direction === 'up' || action.direction === 'down') && typeof action.pressed === 'boolean') {
+          game.setInput(2, action.direction, action.pressed);
+        } else if (action.type === 'serve') game.serve();
+        else if (action.type === 'restart') game.restart();
+        room.broadcastState(snapshot(), true); syncUi();
+      },
+      onState: state => { if (room?.isGuest()) { restore(state); syncUi(); render(); } },
+    });
+  }
 
   let lastFrame = performance.now();
   function loop(now: number): void {
     const seconds = (now - lastFrame) / 1000;
     lastFrame = now;
     if (isVisible()) {
-      const previousPhase = game.phase;
-      const previousScore = game.players[1].score + game.players[2].score;
-      game.update(seconds);
-      if (game.phase !== previousPhase || game.players[1].score + game.players[2].score !== previousScore) syncUi();
+      if (!room?.isGuest()) {
+        const previousPhase = game.phase;
+        const previousScore = game.players[1].score + game.players[2].score;
+        game.update(seconds);
+        if (game.phase !== previousPhase || game.players[1].score + game.players[2].score !== previousScore) syncUi();
+        room?.broadcastState(snapshot());
+      }
       render();
     }
     requestAnimationFrame(loop);
