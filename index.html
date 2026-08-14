@@ -634,7 +634,14 @@
       margin-top: 18px;
     }
 
+    .progression-missions {
+      display: grid;
+      align-content: start;
+      gap: 18px;
+    }
+
     .daily-challenge-card,
+    .weekly-quest-card,
     .achievement-cabinet {
       min-width: 0;
       padding: 22px;
@@ -683,6 +690,87 @@
       box-shadow: 0 10px 28px rgba(255, 200, 87, 0.16);
       font-size: 1.45rem;
       font-weight: 950;
+    }
+
+    .weekly-quest-list {
+      display: grid;
+      gap: 7px;
+    }
+
+    .weekly-quest-item {
+      display: grid;
+      min-width: 0;
+      padding: 9px;
+      grid-template-columns: 34px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 9px;
+      border: 1px solid rgba(255, 255, 255, 0.055);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .weekly-quest-item.complete {
+      border-color: rgba(73, 226, 255, 0.2);
+      background: rgba(73, 226, 255, 0.055);
+    }
+
+    .weekly-quest-icon {
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      border-radius: 10px;
+      color: #071219;
+      background: linear-gradient(135deg, #9af2ff, #49e2ff);
+      font-size: 0.74rem;
+      font-weight: 950;
+    }
+
+    .weekly-quest-copy {
+      min-width: 0;
+    }
+
+    .weekly-quest-copy strong,
+    .weekly-quest-copy span {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .weekly-quest-copy strong {
+      font-size: 0.68rem;
+    }
+
+    .weekly-quest-copy span {
+      margin-top: 1px;
+      color: var(--muted);
+      font-size: 0.56rem;
+    }
+
+    .weekly-quest-bar {
+      width: 100%;
+      height: 4px;
+      margin-top: 6px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .weekly-quest-bar i {
+      display: block;
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #49e2ff, var(--p1));
+      transition: width 320ms ease;
+    }
+
+    .weekly-quest-item small {
+      color: #9eefff;
+      font-size: 0.56rem;
+      font-weight: 900;
+      white-space: nowrap;
     }
 
     .daily-challenge-body h3 {
@@ -1534,6 +1622,7 @@
     html.high-contrast .profile-panel,
     html.high-contrast .activity-panel,
     html.high-contrast .daily-challenge-card,
+    html.high-contrast .weekly-quest-card,
     html.high-contrast .achievement-cabinet,
     html.high-contrast .game-card,
     html.high-contrast .paddle-shell {
@@ -3873,26 +3962,39 @@
       <div id="profileGameStats" class="profile-game-stats" aria-label="Records by game"></div>
     </section>
 
-    <section class="progression-panel" aria-label="Daily challenge and achievements">
-      <article class="daily-challenge-card" aria-labelledby="dailyChallengeTitle">
-        <div class="progression-heading">
-          <div>
-            <span class="catalog-kicker">Today in the arcade</span>
-            <h2 id="dailyChallengeTitle">Daily challenge</h2>
+    <section class="progression-panel" aria-label="Daily challenge, weekly quests, and achievements">
+      <div class="progression-missions">
+        <article class="daily-challenge-card" aria-labelledby="dailyChallengeTitle">
+          <div class="progression-heading">
+            <div>
+              <span class="catalog-kicker">Today in the arcade</span>
+              <h2 id="dailyChallengeTitle">Daily challenge</h2>
+            </div>
+            <small>Resets daily</small>
           </div>
-          <small>Resets daily</small>
-        </div>
-        <div class="daily-challenge-body">
-          <span id="dailyChallengeIcon" class="daily-challenge-icon" aria-hidden="true">💣</span>
-          <div>
-            <h3 id="dailyChallengeName">Blast Buddies</h3>
-            <p id="dailyChallengeDescription">Finish 2 matches today to earn +100 XP.</p>
+          <div class="daily-challenge-body">
+            <span id="dailyChallengeIcon" class="daily-challenge-icon" aria-hidden="true">💣</span>
+            <div>
+              <h3 id="dailyChallengeName">Blast Buddies</h3>
+              <p id="dailyChallengeDescription">Finish 2 matches today to earn +100 XP.</p>
+            </div>
           </div>
-        </div>
-        <div class="daily-progress-copy"><span>Daily progress</span><span id="dailyChallengeProgress">0/2 matches</span></div>
-        <div class="daily-progress-bar" role="progressbar" aria-label="Daily challenge progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="dailyChallengeProgressBar"></i></div>
-        <button id="dailyChallengeLaunch" class="daily-challenge-launch" type="button" data-launch-game="bomberman">Play Blast Buddies</button>
-      </article>
+          <div class="daily-progress-copy"><span>Daily progress</span><span id="dailyChallengeProgress">0/2 matches</span></div>
+          <div class="daily-progress-bar" role="progressbar" aria-label="Daily challenge progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="dailyChallengeProgressBar"></i></div>
+          <button id="dailyChallengeLaunch" class="daily-challenge-launch" type="button" data-launch-game="bomberman">Play Blast Buddies</button>
+        </article>
+        <article class="weekly-quest-card" aria-labelledby="weeklyQuestTitle">
+          <div class="progression-heading">
+            <div>
+              <span class="catalog-kicker">Longer goals</span>
+              <h2 id="weeklyQuestTitle">Weekly quests</h2>
+            </div>
+            <small id="weeklyQuestReset">Ends Sunday</small>
+          </div>
+          <div class="daily-progress-copy"><span>Quest board</span><span id="weeklyQuestCount">0/3 complete</span></div>
+          <div id="weeklyQuestList" class="weekly-quest-list" aria-label="Weekly quest progress"></div>
+        </article>
+      </div>
       <article class="achievement-cabinet" aria-labelledby="achievementTitle">
         <div class="progression-heading">
           <div>

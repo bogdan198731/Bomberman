@@ -7,7 +7,9 @@ import {
   createDefaultProfile,
   dailyGameForDate,
   ensureDailyChallenge,
+  ensureWeeklyQuests,
   loadArcadeProfile,
+  localWeekKey,
   MAX_MATCH_HISTORY,
   normalizeArcadeProfile,
   PROFILE_STORAGE_KEY,
@@ -17,6 +19,9 @@ import {
   sanitizeProfileName,
   saveArcadeProfile,
   unlockEligibleAchievements,
+  WEEKLY_QUEST_IDS,
+  WEEKLY_QUESTS,
+  weeklyQuestProgress,
 } from './stats.js';
 
 test('a new arcade profile starts empty at level one', () => {
@@ -25,6 +30,7 @@ test('a new arcade profile starts empty at level one', () => {
   assert.equal(profile.totalPlays, 0);
   assert.equal(profileLevel(profile), 1);
   assert.equal(profileLevelProgress(profile), 0);
+  assert.equal(profile.weeklyQuests, null);
 });
 
 test('profile names are trimmed, collapsed, and length limited', () => {
@@ -65,13 +71,76 @@ test('profile normalization repairs malformed stored values', () => {
 
 test('version one profiles migrate without losing their arcade record', () => {
   const profile = normalizeArcadeProfile({ version: 1, name: 'Veteran', totalPlays: 12, totalWins: 4, totalScore: 900 });
-  assert.equal(profile.version, 3);
+  assert.equal(profile.version, 4);
   assert.equal(profile.name, 'Veteran');
   assert.equal(profile.totalPlays, 12);
   assert.equal(profile.totalWins, 4);
   assert.deepEqual(profile.unlockedAchievements, []);
   assert.equal(profile.dailyChallenge, null);
+  assert.equal(profile.weeklyQuests, null);
   assert.deepEqual(profile.recentMatches, []);
+});
+
+test('weekly quests use the local Monday and reset for a new week', () => {
+  const monday = new Date(2026, 7, 10, 12).getTime();
+  const sunday = new Date(2026, 7, 16, 12).getTime();
+  const nextMonday = new Date(2026, 7, 17, 12).getTime();
+  assert.equal(localWeekKey(monday), '2026-08-10');
+  assert.equal(localWeekKey(sunday), '2026-08-10');
+  let profile = ensureWeeklyQuests(createDefaultProfile(), '2026-08-10');
+  profile.weeklyQuests!.plays = 5;
+  profile = ensureWeeklyQuests(profile, '2026-08-10');
+  assert.equal(profile.weeklyQuests?.plays, 5);
+  profile = ensureWeeklyQuests(profile, localWeekKey(nextMonday));
+  assert.deepEqual(profile.weeklyQuests, { week: '2026-08-17', plays: 0, wins: 0, games: [], completed: [] });
+});
+
+test('weekly quest progress tracks matches, wins, and different games', () => {
+  let profile = createDefaultProfile();
+  const completed = new Set<string>();
+  const games = ['bomberman', 'paddle', 'snake', 'tanks'] as const;
+  for (let index = 0; index < 8; index += 1) {
+    const result = applyProgressionResult(
+      profile,
+      games[index % games.length],
+      { outcome: index < 3 ? 'win' : 'loss' },
+      '2026-08-12',
+      new Date(2026, 7, 12, 12, index).getTime(),
+    );
+    profile = result.profile;
+    result.weeklyCompleted.forEach(id => completed.add(id));
+  }
+  assert.deepEqual([...completed].sort(), [...WEEKLY_QUEST_IDS].sort());
+  assert.equal(profile.weeklyQuests?.plays, 8);
+  assert.equal(profile.weeklyQuests?.wins, 3);
+  assert.deepEqual(profile.weeklyQuests?.games, ['bomberman', 'paddle', 'snake', 'tanks']);
+  assert.deepEqual(profile.weeklyQuests?.completed, [...WEEKLY_QUEST_IDS]);
+  const extra = applyProgressionResult(profile, 'star', { outcome: 'win' }, '2026-08-12', new Date(2026, 7, 12, 13).getTime());
+  assert.deepEqual(extra.weeklyCompleted, []);
+});
+
+test('weekly quest progress reads each quest metric', () => {
+  const state = { week: '2026-08-10', plays: 6, wins: 2, games: ['snake', 'star'] as const, completed: [] };
+  assert.deepEqual(WEEKLY_QUESTS.map(quest => weeklyQuestProgress({ ...state, games: [...state.games] }, quest)), [6, 2, 2]);
+});
+
+test('weekly quest normalization repairs stored progress safely', () => {
+  const profile = normalizeArcadeProfile({
+    weeklyQuests: {
+      week: '2026-08-10',
+      plays: 5.9,
+      wins: -2,
+      games: ['star', 'fake', 'star', 'snake'],
+      completed: ['weekly-explorer', 'fake'],
+    },
+  });
+  assert.deepEqual(profile.weeklyQuests, {
+    week: '2026-08-10',
+    plays: 5,
+    wins: 0,
+    games: ['snake', 'star'],
+    completed: ['weekly-explorer'],
+  });
 });
 
 test('profile normalization keeps only valid, repaired recent matches', () => {
