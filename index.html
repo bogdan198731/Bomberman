@@ -473,6 +473,209 @@
       font-size: 0.6rem;
     }
 
+    .progression-panel {
+      display: grid;
+      grid-template-columns: minmax(270px, 0.7fr) minmax(0, 1.3fr);
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .daily-challenge-card,
+    .achievement-cabinet {
+      min-width: 0;
+      padding: 22px;
+      border: 1px solid var(--panel-border);
+      border-radius: 22px;
+      background: rgba(23, 30, 43, 0.78);
+    }
+
+    .progression-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 17px;
+    }
+
+    .progression-heading h2 {
+      margin: 5px 0 0;
+      font-size: 1.2rem;
+      letter-spacing: -0.035em;
+    }
+
+    .progression-heading small {
+      color: var(--muted);
+      font-size: 0.64rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .daily-challenge-body {
+      display: grid;
+      grid-template-columns: 54px minmax(0, 1fr);
+      align-items: center;
+      gap: 14px;
+    }
+
+    .daily-challenge-icon {
+      display: grid;
+      width: 54px;
+      height: 54px;
+      place-items: center;
+      border: 1px solid rgba(255, 200, 87, 0.3);
+      border-radius: 17px;
+      color: #241704;
+      background: linear-gradient(135deg, #ffe08d, var(--gold));
+      box-shadow: 0 10px 28px rgba(255, 200, 87, 0.16);
+      font-size: 1.45rem;
+      font-weight: 950;
+    }
+
+    .daily-challenge-body h3 {
+      margin: 0;
+      font-size: 1.04rem;
+    }
+
+    .daily-challenge-body p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 0.74rem;
+      line-height: 1.45;
+    }
+
+    .daily-progress-copy {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 18px 0 7px;
+      color: #cbd5e4;
+      font-size: 0.68rem;
+      font-weight: 850;
+    }
+
+    .daily-progress-copy span:last-child {
+      color: var(--gold);
+    }
+
+    .daily-progress-bar {
+      width: 100%;
+      height: 8px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .daily-progress-bar i {
+      display: block;
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--gold), #ff8f70);
+      transition: width 320ms ease;
+    }
+
+    .daily-challenge-launch {
+      width: 100%;
+      min-height: 42px;
+      margin-top: 15px;
+      border: 1px solid rgba(255, 200, 87, 0.24);
+      border-radius: 12px;
+      color: #211403;
+      background: linear-gradient(135deg, #ffe08d, var(--gold));
+      cursor: pointer;
+      font-weight: 950;
+    }
+
+    .daily-challenge-launch.completed {
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.07);
+    }
+
+    .achievement-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .achievement-item {
+      display: grid;
+      min-width: 0;
+      padding: 10px;
+      grid-template-columns: 34px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 9px;
+      border: 1px solid rgba(255, 255, 255, 0.055);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .achievement-item.locked {
+      opacity: 0.52;
+    }
+
+    .achievement-item.unlocked {
+      border-color: rgba(84, 227, 142, 0.22);
+      background: rgba(84, 227, 142, 0.06);
+    }
+
+    .achievement-icon {
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      border-radius: 10px;
+      color: #1d1404;
+      background: linear-gradient(135deg, #ffe08d, var(--gold));
+      font-size: 0.75rem;
+      font-weight: 950;
+    }
+
+    .achievement-item.locked .achievement-icon {
+      color: #9aa8bd;
+      background: rgba(255, 255, 255, 0.09);
+    }
+
+    .achievement-item strong,
+    .achievement-item span:not(.achievement-icon) {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .achievement-item strong {
+      font-size: 0.7rem;
+    }
+
+    .achievement-item span:not(.achievement-icon) {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 0.58rem;
+    }
+
+    .achievement-item small {
+      color: var(--p1);
+      font-size: 0.56rem;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .progression-toast {
+      position: fixed;
+      z-index: 50;
+      right: max(18px, env(safe-area-inset-right));
+      bottom: max(18px, env(safe-area-inset-bottom));
+      max-width: min(390px, calc(100vw - 36px));
+      padding: 14px 17px;
+      border: 1px solid rgba(255, 200, 87, 0.34);
+      border-radius: 14px;
+      color: #251804;
+      background: linear-gradient(135deg, #ffe59c, var(--gold));
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.42);
+      font-size: 0.78rem;
+      font-weight: 950;
+    }
+
     .catalog-section {
       padding: 72px 0 16px;
     }
@@ -1712,6 +1915,14 @@
         grid-template-columns: 1fr;
       }
 
+      .progression-panel {
+        grid-template-columns: 1fr;
+      }
+
+      .achievement-grid {
+        grid-template-columns: 1fr;
+      }
+
       .catalog-heading {
         display: block;
       }
@@ -2916,6 +3127,40 @@
       </div>
       <div id="profileGameStats" class="profile-game-stats" aria-label="Records by game"></div>
     </section>
+
+    <section class="progression-panel" aria-label="Daily challenge and achievements">
+      <article class="daily-challenge-card" aria-labelledby="dailyChallengeTitle">
+        <div class="progression-heading">
+          <div>
+            <span class="catalog-kicker">Today in the arcade</span>
+            <h2 id="dailyChallengeTitle">Daily challenge</h2>
+          </div>
+          <small>Resets daily</small>
+        </div>
+        <div class="daily-challenge-body">
+          <span id="dailyChallengeIcon" class="daily-challenge-icon" aria-hidden="true">💣</span>
+          <div>
+            <h3 id="dailyChallengeName">Blast Buddies</h3>
+            <p id="dailyChallengeDescription">Finish 2 matches today to earn +100 XP.</p>
+          </div>
+        </div>
+        <div class="daily-progress-copy"><span>Daily progress</span><span id="dailyChallengeProgress">0/2 matches</span></div>
+        <div class="daily-progress-bar" role="progressbar" aria-label="Daily challenge progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="dailyChallengeProgressBar"></i></div>
+        <button id="dailyChallengeLaunch" class="daily-challenge-launch" type="button" data-launch-game="bomberman">Play Blast Buddies</button>
+      </article>
+      <article class="achievement-cabinet" aria-labelledby="achievementTitle">
+        <div class="progression-heading">
+          <div>
+            <span class="catalog-kicker">Milestones</span>
+            <h2 id="achievementTitle">Achievement cabinet</h2>
+          </div>
+          <small id="achievementCount">0/7 unlocked</small>
+        </div>
+        <div id="achievementGrid" class="achievement-grid" aria-label="Player achievements"></div>
+      </article>
+    </section>
+
+    <div id="progressionToast" class="progression-toast" role="status" aria-live="polite" hidden></div>
 
     <section id="games" class="catalog-section" aria-labelledby="gamesTitle">
       <div class="catalog-heading">
