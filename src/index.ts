@@ -10,6 +10,7 @@ import { initBlockDrop } from './blocks.js';
 import { ArcadeResultReporter, initArcadeProfile } from './stats.js';
 import { initGameCatalog } from './catalog.js';
 import { initArcadeSettings } from './settings.js';
+import { initQuickPlay } from './quick-play.js';
 import type { OnlineRoom, PlayerAction } from './multiplayer.js';
 
 export const CELL_SIZE = 64;
@@ -1595,6 +1596,7 @@ if (typeof window !== 'undefined') {
     initArcadeSettings();
     initArcadeProfile();
     initGameCatalog();
+    initQuickPlay();
     initGame();
     initTintar();
     initPaddleClash();

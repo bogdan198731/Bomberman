@@ -310,6 +310,135 @@
       text-transform: uppercase;
     }
 
+    .quick-play-panel {
+      display: grid;
+      min-width: 0;
+      margin-top: 24px;
+      padding: 18px;
+      grid-template-columns: 72px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 18px;
+      border: 1px solid rgba(73, 226, 255, 0.2);
+      border-radius: 22px;
+      background:
+        linear-gradient(105deg, rgba(73, 226, 255, 0.1), transparent 42%),
+        rgba(20, 27, 39, 0.9);
+      box-shadow: 0 16px 44px rgba(0, 0, 0, 0.2);
+    }
+
+    .quick-play-icon {
+      display: grid;
+      width: 72px;
+      height: 72px;
+      place-items: center;
+      border: 1px solid rgba(73, 226, 255, 0.3);
+      border-radius: 20px;
+      color: #071219;
+      background: linear-gradient(135deg, #9af2ff, #49e2ff);
+      box-shadow: 0 12px 30px rgba(73, 226, 255, 0.16);
+      font-size: 1.7rem;
+      font-weight: 950;
+    }
+
+    .quick-play-copy {
+      min-width: 0;
+    }
+
+    .quick-play-title-row {
+      display: flex;
+      align-items: baseline;
+      gap: 9px;
+    }
+
+    .quick-play-title-row h2 {
+      margin: 4px 0 0;
+      overflow: hidden;
+      font-size: 1.25rem;
+      letter-spacing: -0.035em;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .quick-play-title-row small {
+      color: var(--p2);
+      font-size: 0.6rem;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .quick-play-copy p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 0.69rem;
+      line-height: 1.45;
+    }
+
+    .quick-play-copy p span {
+      color: #c6d4e7;
+      font-weight: 850;
+    }
+
+    .quick-play-filters {
+      display: flex;
+      gap: 6px;
+      margin-top: 11px;
+      flex-wrap: wrap;
+    }
+
+    .quick-play-filter {
+      min-height: 29px;
+      padding: 0 10px;
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      border-radius: 999px;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.035);
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.6rem;
+      font-weight: 850;
+    }
+
+    .quick-play-filter.active {
+      border-color: rgba(73, 226, 255, 0.32);
+      color: #dffbff;
+      background: rgba(73, 226, 255, 0.1);
+    }
+
+    .quick-play-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .quick-play-shuffle,
+    .quick-play-launch {
+      min-height: 42px;
+      border-radius: 12px;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 950;
+    }
+
+    .quick-play-shuffle {
+      width: 42px;
+      padding: 0;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.06);
+      font-size: 1rem;
+    }
+
+    .quick-play-launch {
+      max-width: 210px;
+      padding: 0 16px;
+      overflow: hidden;
+      border: 0;
+      color: #071219;
+      background: linear-gradient(135deg, #9af2ff, #49e2ff);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     .profile-panel {
       display: grid;
       grid-template-columns: minmax(250px, 0.72fr) minmax(220px, 0.55fr) minmax(360px, 1.25fr);
@@ -1401,6 +1530,7 @@
     }
 
     html.high-contrast .catalog-card,
+    html.high-contrast .quick-play-panel,
     html.high-contrast .profile-panel,
     html.high-contrast .activity-panel,
     html.high-contrast .daily-challenge-card,
@@ -2439,6 +2569,32 @@
         grid-template-columns: 1fr;
         padding: 18px;
         border-radius: 20px;
+      }
+
+      .quick-play-panel {
+        padding: 15px;
+        grid-template-columns: 58px minmax(0, 1fr);
+        gap: 13px;
+      }
+
+      .quick-play-icon {
+        width: 58px;
+        height: 58px;
+        border-radius: 17px;
+        font-size: 1.35rem;
+      }
+
+      .quick-play-title-row {
+        display: block;
+      }
+
+      .quick-play-actions {
+        grid-column: 1 / -1;
+      }
+
+      .quick-play-launch {
+        max-width: none;
+        flex: 1;
       }
 
       .profile-game-stats {
@@ -3666,6 +3822,28 @@
       </div>
       <div class="hub-visual">
         <img src="/public/og-v3.png" alt="Blast Arcade heroes surrounded by ten game arenas">
+      </div>
+    </section>
+
+    <section id="quickPlayPanel" class="quick-play-panel" aria-label="Quick Play recommendation" data-quick-play-game="bomberman">
+      <div id="quickPlayIcon" class="quick-play-icon" aria-hidden="true">💣</div>
+      <div class="quick-play-copy">
+        <span class="catalog-kicker">Quick Play pick</span>
+        <div class="quick-play-title-row">
+          <h2 id="quickPlayTitle">Blast Buddies</h2>
+          <small id="quickPlayCount">10 available</small>
+        </div>
+        <p><span id="quickPlayModes">Solo · Local 2P · Online</span> — <span id="quickPlayReason">A fresh cabinet pick — no recorded rounds yet.</span></p>
+        <div class="quick-play-filters" role="group" aria-label="Choose a Quick Play mode">
+          <button class="quick-play-filter active" type="button" data-quick-play-mode="all" aria-pressed="true">Any mode</button>
+          <button class="quick-play-filter" type="button" data-quick-play-mode="solo" aria-pressed="false">Solo</button>
+          <button class="quick-play-filter" type="button" data-quick-play-mode="local" aria-pressed="false">Local 2P</button>
+          <button class="quick-play-filter" type="button" data-quick-play-mode="online" aria-pressed="false">Online</button>
+        </div>
+      </div>
+      <div class="quick-play-actions">
+        <button id="quickPlayShuffle" class="quick-play-shuffle" type="button" aria-label="Shuffle Quick Play recommendation">↻</button>
+        <button id="quickPlayLaunch" class="quick-play-launch" type="button" data-launch-game="bomberman">Play Blast Buddies</button>
       </div>
     </section>
 
