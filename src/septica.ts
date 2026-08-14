@@ -1,3 +1,5 @@
+import { GameRoomClient } from './game-room.js';
+
 export type SepticaPlayer = 1 | 2;
 export type SepticaRank = '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | 'A';
 export type SepticaSuit = 'clubs' | 'diamonds' | 'hearts' | 'spades';
@@ -7,6 +9,21 @@ export interface SepticaCard {
   rank: SepticaRank;
   suit: SepticaSuit;
   id: string;
+}
+
+export interface SepticaOnlineState {
+  localPlayer: SepticaPlayer;
+  hand: SepticaCard[];
+  opponentHandCount: number;
+  deckCount: number;
+  table: Array<{ player: SepticaPlayer; card: SepticaCard }>;
+  points: Record<SepticaPlayer, number>;
+  currentPlayer: SepticaPlayer;
+  leader: SepticaPlayer;
+  lastCutter: SepticaPlayer;
+  leadRank: SepticaRank | null;
+  phase: SepticaPhase;
+  winner: SepticaPlayer | 0 | null;
 }
 
 const RANKS: SepticaRank[] = ['7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
@@ -145,6 +162,40 @@ export class SepticaGame {
   }
 }
 
+export function createSepticaOnlineState(game: SepticaGame, localPlayer: SepticaPlayer): SepticaOnlineState {
+  const opponent = otherPlayer(localPlayer);
+  return {
+    localPlayer,
+    hand: game.hands[localPlayer],
+    opponentHandCount: game.hands[opponent].length,
+    deckCount: game.deck.length,
+    table: game.table,
+    points: game.points,
+    currentPlayer: game.currentPlayer,
+    leader: game.leader,
+    lastCutter: game.lastCutter,
+    leadRank: game.leadRank,
+    phase: game.phase,
+    winner: game.winner,
+  };
+}
+
+export function applySepticaOnlineState(game: SepticaGame, state: SepticaOnlineState): void {
+  const opponent = otherPlayer(state.localPlayer);
+  const hiddenCard = (index: number): SepticaCard => ({ rank: '8', suit: 'clubs', id: `hidden-${index}` });
+  game.hands[state.localPlayer] = state.hand;
+  game.hands[opponent] = Array.from({ length: state.opponentHandCount }, (_, index) => hiddenCard(index));
+  game.deck = Array.from({ length: state.deckCount }, (_, index) => hiddenCard(index));
+  game.table = state.table;
+  game.points = state.points;
+  game.currentPlayer = state.currentPlayer;
+  game.leader = state.leader;
+  game.lastCutter = state.lastCutter;
+  game.leadRank = state.leadRank;
+  game.phase = state.phase;
+  game.winner = state.winner;
+}
+
 const SUIT_SYMBOLS: Record<SepticaSuit, string> = { clubs: '♣', diamonds: '♦', hearts: '♥', spades: '♠' };
 
 export function initSeptica(): void {
@@ -160,7 +211,37 @@ export function initSeptica(): void {
   const coralPoints = document.getElementById('septicaCoralPoints');
   const deckCount = document.getElementById('septicaDeckCount');
   const passButton = document.getElementById('septicaPassButton') as HTMLButtonElement | null;
+  const roomMount = document.querySelector<HTMLElement>('[data-game-room="septica"]');
   let botTimer = 0;
+  let room: GameRoomClient | null = null;
+
+  function localPlayer(): SepticaPlayer {
+    return (room?.session().playerId as SepticaPlayer | null) ?? 1;
+  }
+
+  function onlineStatus(player: SepticaPlayer): string {
+    if (game.phase === 'finished') return game.statusText();
+    if (game.currentPlayer !== player) return `${game.currentPlayer === 1 ? 'Mint' : 'Coral'} își alege cartea…`;
+    if (game.phase === 'continue-choice') return 'Ai fost tăiat. Continuă cu un 7 sau aceeași figură, ori cedează masa.';
+    if (game.table.length === 0) return 'Rândul tău: deschide o mână nouă.';
+    return 'Rândul tău: un 7 sau aceeași figură taie.';
+  }
+
+  function broadcastState(): void {
+    room?.broadcastState(createSepticaOnlineState(game, 2) as unknown as Record<string, unknown>, true);
+  }
+
+  function playLocalCard(index: number): void {
+    const player = localPlayer();
+    const session = room?.session();
+    if (!session?.online) {
+      if (game.playCard(1, index)) { render(); scheduleBot(); }
+      return;
+    }
+    if (!session.ready || game.currentPlayer !== player) return;
+    if (room?.isGuest()) room.sendAction({ type: 'play', index });
+    else if (game.playCard(1, index)) { render(); broadcastState(); }
+  }
 
   function cardButton(card: SepticaCard, index: number, playable: boolean): HTMLButtonElement {
     const button = document.createElement('button');
@@ -169,16 +250,16 @@ export function initSeptica(): void {
     button.disabled = !playable;
     button.innerHTML = `<b>${card.rank}</b><span>${SUIT_SYMBOLS[card.suit]}</span>`;
     button.setAttribute('aria-label', `${card.rank} of ${card.suit}`);
-    button.addEventListener('click', () => {
-      if (game.playCard(1, index)) { render(); scheduleBot(); }
-    });
+    button.addEventListener('click', () => playLocalCard(index));
     return button;
   }
 
   function render(): void {
-    const legal = new Set(game.legalCardIndexes(1));
-    hand!.replaceChildren(...game.hands[1].map((card, index) => cardButton(card, index, legal.has(index))));
-    botHand!.replaceChildren(...game.hands[2].map(() => {
+    const player = localPlayer();
+    const opponent = otherPlayer(player);
+    const legal = new Set(game.legalCardIndexes(player));
+    hand!.replaceChildren(...game.hands[player].map((card, index) => cardButton(card, index, legal.has(index))));
+    botHand!.replaceChildren(...game.hands[opponent].map(() => {
       const back = document.createElement('span'); back.className = 'septica-card card-back'; back.textContent = 'BA'; return back;
     }));
     table!.replaceChildren(...game.table.map(entry => {
@@ -186,15 +267,16 @@ export function initSeptica(): void {
       card.classList.add(entry.player === 1 ? 'played-mint' : 'played-coral');
       return card;
     }));
-    if (status) status.textContent = game.statusText();
+    if (status) status.textContent = room?.session().online ? onlineStatus(player) : game.statusText();
     if (mintPoints) mintPoints.textContent = String(game.points[1]);
     if (coralPoints) coralPoints.textContent = String(game.points[2]);
     if (deckCount) deckCount.textContent = String(game.deck.length);
-    if (passButton) passButton.hidden = !(game.currentPlayer === 1 && game.phase === 'continue-choice');
+    if (passButton) passButton.hidden = !(game.currentPlayer === player && game.phase === 'continue-choice');
   }
 
   function scheduleBot(): void {
     window.clearTimeout(botTimer);
+    if (room?.session().online) return;
     if (game.currentPlayer !== 2 || game.phase === 'finished') return;
     botTimer = window.setTimeout(() => {
       game.botMove();
@@ -203,7 +285,52 @@ export function initSeptica(): void {
     }, 520);
   }
 
-  passButton?.addEventListener('click', () => { if (game.pass(1)) { render(); scheduleBot(); } });
-  document.getElementById('septicaRestartButton')?.addEventListener('click', () => { game.restart(); render(); scheduleBot(); });
+  passButton?.addEventListener('click', () => {
+    const player = localPlayer();
+    if (room?.isGuest()) room.sendAction({ type: 'pass' });
+    else if (game.pass(player)) {
+      render();
+      if (room?.session().online) broadcastState(); else scheduleBot();
+    }
+  });
+  document.getElementById('septicaRestartButton')?.addEventListener('click', () => {
+    if (room?.isGuest()) room.sendAction({ type: 'restart' });
+    else {
+      game.restart(); render();
+      if (room?.session().online) broadcastState(); else scheduleBot();
+    }
+  });
+
+  if (roomMount) {
+    room = new GameRoomClient({
+      game: 'septica',
+      mount: roomMount,
+      onSessionChange: session => {
+        window.clearTimeout(botTimer);
+        if (!session.online) {
+          game.restart();
+          scheduleBot();
+        } else if (session.ready && session.playerId === 1) {
+          game.restart();
+          broadcastState();
+        }
+        render();
+      },
+      onRemoteAction: (action, from) => {
+        if (!room?.isHost() || from !== 2) return;
+        let changed = false;
+        if (action.type === 'play' && typeof action.index === 'number' && Number.isInteger(action.index) && game.currentPlayer === 2) {
+          changed = game.playCard(2, action.index);
+        } else if (action.type === 'pass' && game.currentPlayer === 2) changed = game.pass(2);
+        else if (action.type === 'restart') { game.restart(); changed = true; }
+        if (changed) { render(); broadcastState(); }
+      },
+      onState: state => {
+        if (!room?.isGuest()) return;
+        applySepticaOnlineState(game, state as unknown as SepticaOnlineState);
+        render();
+      },
+    });
+  }
   render();
 }
