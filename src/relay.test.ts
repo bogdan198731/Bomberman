@@ -7,6 +7,7 @@ test('only multiplayer arcade games can create invite rooms', () => {
   assert.equal(isOnlineGameId('septica'), true);
   assert.equal(isOnlineGameId('survival'), true);
   assert.equal(isOnlineGameId('racing'), true);
+  assert.equal(isOnlineGameId('blocks'), true);
   assert.equal(isOnlineGameId('star'), false);
   assert.equal(isOnlineGameId('bomberman'), false);
 });
