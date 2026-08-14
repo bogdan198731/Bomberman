@@ -105,7 +105,7 @@ export class SepticaGame {
     if (cut) {
       this.lastCutter = player;
       this.currentPlayer = otherPlayer(player);
-      this.phase = 'continue-choice';
+      this.phase = this.currentPlayer === this.leader ? 'continue-choice' : 'playing';
     } else this.collectTrick();
     return true;
   }
@@ -230,7 +230,7 @@ export function initSeptica(): void {
     if (game.currentPlayer !== player) return `${game.currentPlayer === 1 ? 'Mint' : 'Coral'} își alege cartea…`;
     if (game.phase === 'continue-choice') return 'Ai fost tăiat. Continuă cu un 7 sau aceeași figură, ori cedează masa.';
     if (game.table.length === 0) return 'Rândul tău: deschide o mână nouă.';
-    return 'Rândul tău: un 7 sau aceeași figură taie.';
+    return 'Rândul tău: joacă orice carte. Un 7 sau aceeași figură taie.';
   }
 
   function broadcastState(): void {
