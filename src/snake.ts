@@ -1,4 +1,5 @@
 import { GameRoomClient } from './game-room.js';
+import { ArcadeResultReporter } from './stats.js';
 
 export type SnakePlayer = 1 | 2;
 export type SnakeMode = 'solo' | 'duel';
@@ -189,6 +190,7 @@ export function initNeonSnake(): void {
   const modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-snake-mode]');
   const roomMount = document.querySelector<HTMLElement>('[data-game-room="snake"]');
   let room: GameRoomClient | null = null;
+  const resultReporter = new ArcadeResultReporter('snake');
 
   function snapshot(): Record<string, unknown> {
     return {
@@ -240,6 +242,11 @@ export function initNeonSnake(): void {
     modeButtons.forEach(button => {
       button.classList.toggle('active', button.dataset.snakeMode === game.mode);
       button.disabled = Boolean(room?.session().online);
+    });
+    const trackedPlayer = (room?.session().online ? room.session().playerId : 1) ?? 1;
+    resultReporter.report(game.phase === 'finished', {
+      outcome: game.mode === 'solo' ? 'complete' : game.winner === 0 ? 'draw' : game.winner === trackedPlayer ? 'win' : 'loss',
+      score: game.riders[trackedPlayer].score,
     });
   }
 

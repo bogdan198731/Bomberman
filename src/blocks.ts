@@ -1,4 +1,5 @@
 import { GameRoomClient } from './game-room.js';
+import { ArcadeResultReporter } from './stats.js';
 
 export type BlockPlayer = 1 | 2;
 export type BlockMode = 'bot' | 'duel';
@@ -380,6 +381,7 @@ export function initBlockDrop(): void {
   const modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-blocks-mode]');
   const roomMount = document.querySelector<HTMLElement>('[data-game-room="blocks"]');
   let room: GameRoomClient | null = null;
+  const resultReporter = new ArcadeResultReporter('blocks');
 
   function snapshot(): Record<string, unknown> {
     return createBlockDropSnapshot(game) as unknown as Record<string, unknown>;
@@ -428,6 +430,11 @@ export function initBlockDrop(): void {
     modeButtons.forEach(button => {
       button.classList.toggle('active', button.dataset.blocksMode === game.mode);
       button.disabled = Boolean(room?.session().online) || game.phase === 'playing';
+    });
+    const trackedPlayer = (room?.session().online ? room.session().playerId : 1) ?? 1;
+    resultReporter.report(game.phase === 'finished', {
+      outcome: game.winner === trackedPlayer ? 'win' : 'loss',
+      score: game.scores[trackedPlayer],
     });
   }
 

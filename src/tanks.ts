@@ -1,4 +1,5 @@
 import { GameRoomClient } from './game-room.js';
+import { ArcadeResultReporter } from './stats.js';
 
 export type TankPlayer = 1 | 2;
 export type TankMode = 'bot' | 'duel';
@@ -253,6 +254,7 @@ export function initMiniTanks(): void {
   const modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-tanks-mode]');
   const roomMount = document.querySelector<HTMLElement>('[data-game-room="tanks"]');
   let room: GameRoomClient | null = null;
+  const resultReporter = new ArcadeResultReporter('tanks');
 
   function snapshot(): Record<string, unknown> {
     return {
@@ -302,6 +304,11 @@ export function initMiniTanks(): void {
     modeButtons.forEach(button => {
       button.classList.toggle('active', button.dataset.tanksMode === game.mode);
       button.disabled = Boolean(room?.session().online);
+    });
+    const trackedPlayer = (room?.session().online ? room.session().playerId : 1) ?? 1;
+    resultReporter.report(game.phase === 'finished', {
+      outcome: game.matchWinner === trackedPlayer ? 'win' : 'loss',
+      score: game.tanks[trackedPlayer].score,
     });
   }
 

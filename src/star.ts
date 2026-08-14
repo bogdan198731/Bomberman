@@ -1,3 +1,5 @@
+import { ArcadeResultReporter } from './stats.js';
+
 export type StarPhase = 'ready' | 'playing' | 'finished';
 export type StarMode = 'solo' | 'coop';
 export type StarPlayerId = 1 | 2;
@@ -358,6 +360,7 @@ export function initStarDefender(): void {
   const modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-star-mode]');
   const coralControls = document.getElementById('starCoralControls');
   const startButton = document.getElementById('starStartButton') as HTMLButtonElement | null;
+  const resultReporter = new ArcadeResultReporter('star');
 
   function visible(): boolean { return !view.classList.contains('view-hidden'); }
   function syncUi(): void {
@@ -370,6 +373,8 @@ export function initStarDefender(): void {
     if (startButton) startButton.textContent = game.phase === 'ready' ? 'Launch' : game.phase === 'finished' ? 'Fly again' : 'Mission live';
     modeButtons.forEach(button => button.classList.toggle('active', button.dataset.starMode === game.mode));
     coralControls?.classList.toggle('solo-hidden', game.mode === 'solo');
+    const totalScore = game.players[1].score + (game.mode === 'coop' ? game.players[2].score : 0);
+    resultReporter.report(game.phase === 'finished', { outcome: 'complete', score: totalScore });
   }
 
   function drawShip(playerId: StarPlayerId): void {

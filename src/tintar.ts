@@ -1,4 +1,5 @@
 import { GameRoomClient } from './game-room.js';
+import { ArcadeResultReporter } from './stats.js';
 
 export type TintarPlayer = 1 | 2;
 export type TintarPhase = 'placing' | 'moving' | 'removing' | 'finished';
@@ -206,6 +207,7 @@ export function initTintar(): void {
   const pointButtons: HTMLButtonElement[] = [];
   const roomMount = document.querySelector<HTMLElement>('[data-game-room="tintar"]');
   let room: GameRoomClient | null = null;
+  const resultReporter = new ArcadeResultReporter('tintar');
 
   function snapshot(): Record<string, unknown> {
     return {
@@ -279,6 +281,11 @@ export function initTintar(): void {
     if (coralHandElement) coralHandElement.textContent = String(game.piecesToPlace[2]);
     if (coralBoardElement) coralBoardElement.textContent = String(game.pieceCount(2));
     turnMarker?.classList.toggle('coral', game.currentPlayer === 2);
+    const trackedPlayer = (room?.session().online ? room.session().playerId : 1) ?? 1;
+    resultReporter.report(game.phase === 'finished', {
+      outcome: game.winner === 0 ? 'draw' : game.winner === trackedPlayer ? 'win' : 'loss',
+      score: game.pieceCount(trackedPlayer),
+    });
   }
 
   document.getElementById('tintarRestartButton')?.addEventListener('click', () => {
