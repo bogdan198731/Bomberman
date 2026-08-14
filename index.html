@@ -702,6 +702,93 @@
       line-height: 1.6;
     }
 
+    .catalog-tools {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+
+    .catalog-search {
+      position: relative;
+      width: min(310px, 100%);
+      flex: 0 1 310px;
+    }
+
+    .catalog-search input {
+      width: 100%;
+      min-height: 44px;
+      padding: 0 42px 0 14px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 13px;
+      color: var(--ink);
+      background: rgba(23, 30, 43, 0.8);
+      font: inherit;
+      font-size: 0.82rem;
+      font-weight: 750;
+    }
+
+    .catalog-search input:focus {
+      border-color: rgba(84, 227, 142, 0.52);
+      outline: 3px solid rgba(84, 227, 142, 0.12);
+    }
+
+    .catalog-search-clear {
+      position: absolute;
+      top: 50%;
+      right: 8px;
+      display: grid;
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      place-items: center;
+      border: 0;
+      border-radius: 9px;
+      color: var(--muted);
+      background: transparent;
+      cursor: pointer;
+      transform: translateY(-50%);
+    }
+
+    .catalog-filters {
+      display: flex;
+      min-width: 0;
+      gap: 7px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .catalog-filters::-webkit-scrollbar {
+      display: none;
+    }
+
+    .catalog-filter {
+      min-height: 38px;
+      padding: 0 13px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+      color: #bdc8d8;
+      background: rgba(255, 255, 255, 0.035);
+      cursor: pointer;
+      font-size: 0.7rem;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
+    .catalog-filter.active {
+      border-color: rgba(84, 227, 142, 0.3);
+      color: #07120c;
+      background: var(--p1);
+    }
+
+    .catalog-result-count {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 0.68rem;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+
     .game-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -734,6 +821,63 @@
       overflow: hidden;
       border-radius: 15px;
       isolation: isolate;
+    }
+
+    .favorite-button {
+      position: absolute;
+      z-index: 2;
+      top: 10px;
+      right: 10px;
+      display: grid;
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 12px;
+      color: #d4deea;
+      background: rgba(8, 13, 21, 0.7);
+      cursor: pointer;
+      font-size: 1.1rem;
+      line-height: 1;
+      backdrop-filter: blur(8px);
+    }
+
+    .favorite-button.active {
+      border-color: rgba(255, 200, 87, 0.4);
+      color: var(--gold);
+      background: rgba(42, 30, 9, 0.78);
+    }
+
+    .catalog-empty-state {
+      padding: 48px 20px;
+      border: 1px dashed rgba(255, 255, 255, 0.13);
+      border-radius: 20px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .catalog-empty-state strong {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--ink);
+      font-size: 1.05rem;
+    }
+
+    .catalog-empty-state p {
+      margin: 0 0 15px;
+      font-size: 0.78rem;
+    }
+
+    .catalog-empty-state button {
+      min-height: 38px;
+      padding: 0 14px;
+      border: 0;
+      border-radius: 11px;
+      color: #07120c;
+      background: var(--p1);
+      cursor: pointer;
+      font-weight: 900;
     }
 
     .game-cover::before {
@@ -1929,6 +2073,22 @@
 
       .catalog-heading p {
         margin-top: 12px;
+      }
+
+      .catalog-tools {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+      }
+
+      .catalog-search {
+        width: 100%;
+        max-width: none;
+        grid-column: 1 / -1;
+      }
+
+      .catalog-filters {
+        margin-right: -14px;
+        padding-right: 14px;
       }
 
       .game-grid {
@@ -3171,10 +3331,27 @@
         <p>Ten instant games, from explosive duels and Romanian classics to block battles, neon racing, co-op survival, and star-fighter missions.</p>
       </div>
 
+      <div class="catalog-tools">
+        <label class="catalog-search">
+          <span class="sr-only">Search games</span>
+          <input id="catalogSearch" type="search" placeholder="Search games" autocomplete="off" aria-label="Search games">
+          <button id="catalogSearchClear" class="catalog-search-clear" type="button" aria-label="Clear game search" hidden>×</button>
+        </label>
+        <div class="catalog-filters" role="group" aria-label="Filter games by play mode">
+          <button class="catalog-filter active" type="button" data-catalog-filter="all" aria-pressed="true">All games</button>
+          <button class="catalog-filter" type="button" data-catalog-filter="solo" aria-pressed="false">Solo</button>
+          <button class="catalog-filter" type="button" data-catalog-filter="local" aria-pressed="false">Local 2P</button>
+          <button class="catalog-filter" type="button" data-catalog-filter="online" aria-pressed="false">Online</button>
+          <button class="catalog-filter" type="button" data-catalog-filter="favorites" aria-pressed="false">★ Favorites</button>
+        </div>
+        <span id="catalogResultCount" class="catalog-result-count" aria-live="polite">10 games</span>
+      </div>
+
       <div class="game-grid">
-        <article class="catalog-card featured">
+        <article class="catalog-card featured" data-catalog-game="bomberman" data-catalog-modes="solo local online">
           <div class="game-cover bomber-cover">
             <span class="cover-label">Live now</span>
+            <button class="favorite-button" type="button" data-favorite-game aria-label="Add Blast Buddies to favorites" aria-pressed="false">☆</button>
             <span class="game-glyph" aria-hidden="true">💣</span>
           </div>
           <div class="catalog-card-body">
@@ -3187,9 +3364,10 @@
           </div>
         </article>
 
-        <article class="catalog-card featured">
+        <article class="catalog-card featured" data-catalog-game="tintar" data-catalog-modes="local online">
           <div class="game-cover tintar-cover">
             <span class="cover-label">Live now</span>
+            <button class="favorite-button" type="button" data-favorite-game aria-label="Add Țintar to favorites" aria-pressed="false">☆</button>
             <span class="game-glyph" aria-hidden="true">◎</span>
           </div>
           <div class="catalog-card-body">
@@ -3202,9 +3380,10 @@
           </div>
         </article>
 
-        <article class="catalog-card featured">
+        <article class="catalog-card featured" data-catalog-game="paddle" data-catalog-modes="local online">
           <div class="game-cover paddle-cover">
             <span class="cover-label">Live now</span>
+            <button class="favorite-button" type="button" data-favorite-game aria-label="Add Paddle Clash to favorites" aria-pressed="false">☆</button>
             <span class="game-glyph" aria-hidden="true">⚡</span>
           </div>
           <div class="catalog-card-body">
@@ -3217,9 +3396,10 @@
           </div>
         </article>
 
-        <article class="catalog-card featured">
+        <article class="catalog-card featured" data-catalog-game="snake" data-catalog-modes="solo local online">
           <div class="game-cover snake-cover">
             <span class="cover-label">Live now</span>
+            <button class="favorite-button" type="button" data-favorite-game aria-label="Add Neon Snake Arena to favorites" aria-pressed="false">☆</button>
             <span class="game-glyph" aria-hidden="true">〰</span>
           </div>
           <div class="catalog-card-body">
@@ -3232,9 +3412,10 @@
           </div>
         </article>
 
-        <article class="catalog-card featured">
+        <article class="catalog-card featured" data-catalog-game="tanks" data-catalog-modes="solo local online">
           <div class="game-cover tanks-cover">
             <span class="cover-label">Live now</span>
+            <button class="favorite-button" type="button" data-favorite-game aria-label="Add Mini Tanks to favorites" aria-pressed="false">☆</button>
             <span class="game-glyph" aria-hidden="true">▰</span>
           </div>
           <div class="catalog-card-body">
@@ -3247,9 +3428,10 @@
           </div>
         </article>
 
-        <article class="catalog-card featured">
+        <article class="catalog-card featured" data-catalog-game="racing" data-catalog-modes="solo local online">
           <div class="game-cover racing-cover">
             <span class="cover-label">New race</span>
+            <button class="favorite-button" type="button" data-favorite-game aria-label="Add Micro Racers to favorites" aria-pressed="false">☆</button>
             <span class="game-glyph" aria-hidden="true">🏁</span>
           </div>
           <div class="catalog-card-body">
@@ -3262,9 +3444,10 @@
           </div>
         </article>
 
-        <article class="catalog-card featured">
+        <article class="catalog-card featured" data-catalog-game="blocks" data-catalog-modes="solo local online">
           <div class="game-cover blocks-cover">
             <span class="cover-label">New battle</span>
+            <button class="favorite-button" type="button" data-favorite-game aria-label="Add Block Drop Duel to favorites" aria-pressed="false">☆</button>
             <span class="game-glyph" aria-hidden="true">▦</span>
           </div>
           <div class="catalog-card-body">
@@ -3277,9 +3460,10 @@
           </div>
         </article>
 
-        <article class="catalog-card featured">
+        <article class="catalog-card featured" data-catalog-game="septica" data-catalog-modes="solo local online">
           <div class="game-cover septica-cover">
             <span class="cover-label">Live now</span>
+            <button class="favorite-button" type="button" data-favorite-game aria-label="Add Șeptică to favorites" aria-pressed="false">☆</button>
             <span class="game-glyph" aria-hidden="true">7♥</span>
           </div>
           <div class="catalog-card-body">
@@ -3292,9 +3476,10 @@
           </div>
         </article>
 
-        <article class="catalog-card featured">
+        <article class="catalog-card featured" data-catalog-game="survival" data-catalog-modes="solo local online">
           <div class="game-cover survival-cover">
             <span class="cover-label">Live now</span>
+            <button class="favorite-button" type="button" data-favorite-game aria-label="Add Survival Arena to favorites" aria-pressed="false">☆</button>
             <span class="game-glyph" aria-hidden="true">✦</span>
           </div>
           <div class="catalog-card-body">
@@ -3307,9 +3492,10 @@
           </div>
         </article>
 
-        <article class="catalog-card featured">
+        <article class="catalog-card featured" data-catalog-game="star" data-catalog-modes="solo local">
           <div class="game-cover star-cover">
             <span class="cover-label">New mission</span>
+            <button class="favorite-button" type="button" data-favorite-game aria-label="Add Star Defender to favorites" aria-pressed="false">☆</button>
             <span class="game-glyph" aria-hidden="true">▲</span>
           </div>
           <div class="catalog-card-body">
@@ -3321,6 +3507,11 @@
             </div>
           </div>
         </article>
+      </div>
+      <div id="catalogEmptyState" class="catalog-empty-state" hidden>
+        <strong>No games found</strong>
+        <p>Try another search or show the complete arcade.</p>
+        <button id="catalogResetButton" type="button">Show all games</button>
       </div>
     </section>
 
