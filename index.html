@@ -7,12 +7,12 @@
   <meta name="description" content="Blast Arcade is a mobile-friendly browser gaming hub for quick solo and online matches.">
   <meta property="og:title" content="Blast Arcade">
   <meta property="og:description" content="Pick a game, challenge a bot or a friend, and play instantly in your browser.">
-  <meta property="og:image" content="/public/og-v2.png">
+  <meta property="og:image" content="/public/og-v3.png">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Blast Arcade">
   <meta name="twitter:description" content="Play. Compete. Repeat.">
-  <meta name="twitter:image" content="/public/og-v2.png">
+  <meta name="twitter:image" content="/public/og-v3.png">
   <title>Blast Arcade — Browser Gaming Hub</title>
   <style>
     :root {
@@ -1590,6 +1590,273 @@
         border-radius: 13px;
       }
     }
+
+    .paddle-app {
+      position: relative;
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      padding: 28px 24px 42px;
+    }
+
+    .paddle-brand-mark {
+      position: relative;
+      width: 45px;
+      height: 43px;
+      flex: 0 0 auto;
+    }
+
+    .paddle-brand-mark::before,
+    .paddle-brand-mark::after {
+      position: absolute;
+      top: 5px;
+      width: 7px;
+      height: 33px;
+      border-radius: 6px;
+      content: "";
+      box-shadow: 0 0 13px currentColor;
+    }
+
+    .paddle-brand-mark::before {
+      left: 4px;
+      color: var(--p1);
+      background: var(--p1);
+    }
+
+    .paddle-brand-mark::after {
+      right: 4px;
+      color: var(--p2);
+      background: var(--p2);
+    }
+
+    .paddle-brand-ball {
+      position: absolute;
+      top: 16px;
+      left: 17px;
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: var(--gold);
+      box-shadow: 0 0 14px rgba(255,200,87,.8);
+    }
+
+    .paddle-shell {
+      overflow: hidden;
+      border: 1px solid var(--panel-border);
+      border-radius: 25px;
+      background: rgba(23, 30, 43, .94);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, .36);
+    }
+
+    .paddle-scorebar {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 18px;
+      padding: 17px 22px;
+      border-bottom: 1px solid var(--panel-border);
+    }
+
+    .paddle-score-player {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      font-weight: 900;
+    }
+
+    .paddle-score-player.coral {
+      flex-direction: row-reverse;
+      text-align: right;
+    }
+
+    .paddle-score-swatch {
+      width: 13px;
+      height: 36px;
+      border-radius: 8px;
+      background: var(--p1);
+      box-shadow: 0 0 14px rgba(84,227,142,.35);
+    }
+
+    .paddle-score-player.coral .paddle-score-swatch {
+      background: var(--p2);
+      box-shadow: 0 0 14px rgba(255,107,120,.35);
+    }
+
+    .paddle-score-player span {
+      display: block;
+      color: var(--muted);
+      font-size: .68rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .paddle-score-player b {
+      font-size: 1.75rem;
+      line-height: 1;
+    }
+
+    .paddle-score-goal {
+      color: var(--gold);
+      font-size: .68rem;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .paddle-arena {
+      padding: clamp(10px, 2.2vw, 22px);
+      background: #0c111a;
+    }
+
+    #paddleCanvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 17px;
+      background: #101722;
+      box-shadow: 0 18px 42px rgba(0,0,0,.34);
+    }
+
+    .paddle-statusbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 22px;
+      border-top: 1px solid var(--panel-border);
+      border-bottom: 1px solid var(--panel-border);
+      color: #c9d2df;
+      background: rgba(255,255,255,.018);
+      font-size: .82rem;
+      font-weight: 750;
+    }
+
+    .paddle-serve,
+    .paddle-restart {
+      min-height: 40px;
+      padding: 0 16px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 900;
+    }
+
+    .paddle-serve {
+      border: 0;
+      color: #1d1302;
+      background: var(--gold);
+    }
+
+    .paddle-serve:disabled {
+      cursor: default;
+      filter: grayscale(.7);
+      opacity: .52;
+    }
+
+    .paddle-footer {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 22px;
+    }
+
+    .paddle-key-guide {
+      color: var(--muted);
+      font-size: .76rem;
+      font-weight: 800;
+    }
+
+    .paddle-key-guide.coral {
+      text-align: right;
+    }
+
+    .paddle-restart {
+      border: 1px solid rgba(255,255,255,.12);
+      color: var(--ink);
+      background: rgba(255,255,255,.045);
+    }
+
+    .paddle-touch-controls {
+      display: none;
+    }
+
+    .paddle-touch-team {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .paddle-touch-team strong {
+      grid-column: 1 / -1;
+      color: var(--muted);
+      font-size: .68rem;
+      letter-spacing: .08em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .paddle-touch-button {
+      min-height: 54px;
+      border: 1px solid rgba(255,255,255,.16);
+      border-bottom-width: 5px;
+      border-radius: 14px;
+      color: var(--ink);
+      background: rgba(84,227,142,.16);
+      touch-action: none;
+      font-size: 1.25rem;
+      font-weight: 950;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .paddle-touch-team.coral .paddle-touch-button {
+      background: rgba(255,107,120,.16);
+    }
+
+    .paddle-touch-button.pressed,
+    .paddle-touch-button:active {
+      border-bottom-width: 1px;
+      filter: brightness(1.2);
+      transform: translateY(4px);
+    }
+
+    @media (max-width: 760px) {
+      .paddle-app {
+        padding: 18px 12px 28px;
+      }
+
+      .paddle-shell {
+        border-radius: 18px;
+      }
+
+      .paddle-scorebar {
+        padding: 12px 14px;
+      }
+
+      .paddle-statusbar {
+        align-items: stretch;
+        flex-direction: column;
+        padding: 11px 14px;
+        text-align: center;
+      }
+
+      .paddle-footer {
+        grid-template-columns: 1fr;
+        padding: 10px 14px 14px;
+      }
+
+      .paddle-key-guide {
+        display: none;
+      }
+
+      .paddle-touch-controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        padding: 12px 14px 16px;
+        border-top: 1px solid var(--panel-border);
+      }
+    }
   </style>
 </head>
 <body>
@@ -1603,7 +1870,7 @@
         </div>
       </div>
       <div class="hub-actions">
-        <span class="live-chip">2 games live</span>
+        <span class="live-chip">3 games live</span>
       </div>
     </header>
 
@@ -1623,7 +1890,7 @@
         </div>
       </div>
       <div class="hub-visual">
-        <img src="/public/og-v2.png" alt="Mint and coral arcade heroes between Blast Buddies and a traditional Țintar board">
+        <img src="/public/og-v3.png" alt="Blast Arcade heroes with Blast Buddies, Țintar, and Paddle Clash game arenas">
       </div>
     </section>
 
@@ -1633,7 +1900,7 @@
           <span class="catalog-kicker">Game library</span>
           <h2 id="gamesTitle">Choose your next round</h2>
         </div>
-        <p>Choose an explosive arena match or slow things down with a classic Romanian strategy game.</p>
+        <p>Choose an explosive arena, a classic Romanian strategy match, or a lightning-fast paddle duel.</p>
       </div>
 
       <div class="game-grid">
@@ -1667,17 +1934,17 @@
           </div>
         </article>
 
-        <article class="catalog-card">
+        <article class="catalog-card featured">
           <div class="game-cover paddle-cover">
-            <span class="cover-label">On the roadmap</span>
+            <span class="cover-label">Live now</span>
             <span class="game-glyph" aria-hidden="true">⚡</span>
           </div>
           <div class="catalog-card-body">
             <h3>Paddle Clash</h3>
-            <p>A quick-fire paddle duel with power shots, tight angles, and local rivalry.</p>
+            <p>A quick-fire paddle duel with accelerating rallies, sharp angles, and local rivalry.</p>
             <div class="catalog-card-footer">
-              <span class="mode-label">Local 2P</span>
-              <span class="coming-soon">Coming soon</span>
+              <span class="mode-label">Local 2P · Arcade</span>
+              <button class="card-play-button" type="button" data-launch-game="paddle">Play now</button>
             </div>
           </div>
         </article>
@@ -1686,7 +1953,7 @@
 
     <footer class="hub-footer">
       <span>Blast Arcade · Play instantly in your browser</span>
-      <span>Keyboard, touch, bots, and online rooms</span>
+      <span>Three live games · Keyboard, touch, bots, and online rooms</span>
     </footer>
   </main>
 
@@ -1874,6 +2141,63 @@
           <span class="tintar-connector right" aria-hidden="true"></span>
           <span class="tintar-connector bottom" aria-hidden="true"></span>
           <span class="tintar-connector left" aria-hidden="true"></span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <main id="paddleView" class="paddle-app view-hidden">
+    <header class="topbar">
+      <div class="brand">
+        <div class="paddle-brand-mark" aria-hidden="true"><i class="paddle-brand-ball"></i></div>
+        <div>
+          <h1>Paddle Clash</h1>
+          <p>Local two-player arcade duel</p>
+        </div>
+      </div>
+      <div class="game-nav-actions">
+        <button class="back-to-hub" type="button" data-back-to-hub>← Arcade</button>
+      </div>
+    </header>
+
+    <section class="paddle-shell" aria-label="Paddle Clash match">
+      <div class="paddle-scorebar">
+        <div class="paddle-score-player">
+          <i class="paddle-score-swatch" aria-hidden="true"></i>
+          <div><span>Mint</span><b id="paddleMintScore">0</b></div>
+        </div>
+        <div class="paddle-score-goal">First to 7</div>
+        <div class="paddle-score-player coral">
+          <i class="paddle-score-swatch" aria-hidden="true"></i>
+          <div><span>Coral</span><b id="paddleCoralScore">0</b></div>
+        </div>
+      </div>
+
+      <div class="paddle-arena">
+        <canvas id="paddleCanvas" width="900" height="540" aria-label="Two-player Paddle Clash arena"></canvas>
+      </div>
+
+      <div class="paddle-statusbar" aria-live="polite">
+        <span id="paddleStatus">Press Serve or Space to start the rally.</span>
+        <button id="paddleServeButton" class="paddle-serve" type="button">Serve ball</button>
+      </div>
+
+      <footer class="paddle-footer">
+        <div class="paddle-key-guide">Mint moves with <kbd>W</kbd> / <kbd>S</kbd></div>
+        <button id="paddleRestartButton" class="paddle-restart" type="button">New match</button>
+        <div class="paddle-key-guide coral">Coral moves with <kbd>↑</kbd> / <kbd>↓</kbd></div>
+      </footer>
+
+      <div class="paddle-touch-controls" aria-label="Touch paddle controls">
+        <div class="paddle-touch-team">
+          <strong>Mint</strong>
+          <button class="paddle-touch-button" type="button" data-paddle-player="1" data-paddle-direction="up" aria-label="Move Mint up">↑</button>
+          <button class="paddle-touch-button" type="button" data-paddle-player="1" data-paddle-direction="down" aria-label="Move Mint down">↓</button>
+        </div>
+        <div class="paddle-touch-team coral">
+          <strong>Coral</strong>
+          <button class="paddle-touch-button" type="button" data-paddle-player="2" data-paddle-direction="up" aria-label="Move Coral up">↑</button>
+          <button class="paddle-touch-button" type="button" data-paddle-player="2" data-paddle-direction="down" aria-label="Move Coral down">↓</button>
         </div>
       </div>
     </section>
