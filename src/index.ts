@@ -1,6 +1,7 @@
 import { initTintar } from './tintar.js';
 import { initPaddleClash } from './paddle.js';
 import { initNeonSnake } from './snake.js';
+import { initMiniTanks } from './tanks.js';
 
 export const CELL_SIZE = 64;
 export const BOMB_TIMER = 3000;
@@ -1155,6 +1156,7 @@ export function initGame(): void {
     tintarView: document.getElementById('tintarView'),
     paddleView: document.getElementById('paddleView'),
     snakeView: document.getElementById('snakeView'),
+    tanksView: document.getElementById('tanksView'),
     launchGameButtons: document.querySelectorAll<HTMLButtonElement>('[data-launch-game]'),
     backToHubButtons: document.querySelectorAll<HTMLButtonElement>('[data-back-to-hub]'),
     statusText: document.getElementById('gameStatusText'),
@@ -1206,12 +1208,13 @@ export function initGame(): void {
   let activeRoomCode = '';
   let activeBotDifficulty: 'easy' | 'normal' | 'hard' | undefined;
 
-  function setActiveView(view: 'hub' | 'bomberman' | 'tintar' | 'paddle' | 'snake'): void {
+  function setActiveView(view: 'hub' | 'bomberman' | 'tintar' | 'paddle' | 'snake' | 'tanks'): void {
     elements.hubView?.classList.toggle('view-hidden', view !== 'hub');
     elements.gameView?.classList.toggle('view-hidden', view !== 'bomberman');
     elements.tintarView?.classList.toggle('view-hidden', view !== 'tintar');
     elements.paddleView?.classList.toggle('view-hidden', view !== 'paddle');
     elements.snakeView?.classList.toggle('view-hidden', view !== 'snake');
+    elements.tanksView?.classList.toggle('view-hidden', view !== 'tanks');
     document.body.dataset.view = view;
     if (view !== 'hub') window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -1358,7 +1361,7 @@ export function initGame(): void {
   elements.launchGameButtons.forEach(button => {
     button.addEventListener('click', () => {
       const game = button.dataset.launchGame;
-      if (game === 'bomberman' || game === 'tintar' || game === 'paddle' || game === 'snake') setActiveView(game);
+      if (game === 'bomberman' || game === 'tintar' || game === 'paddle' || game === 'snake' || game === 'tanks') setActiveView(game);
     });
   });
   elements.backToHubButtons.forEach(button => {
@@ -1505,5 +1508,6 @@ if (typeof window !== 'undefined') {
     initTintar();
     initPaddleClash();
     initNeonSnake();
+    initMiniTanks();
   });
 }
