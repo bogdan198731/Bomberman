@@ -1,6 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createSepticaDeck, SepticaGame, type SepticaCard } from './septica.js';
+import {
+  applySepticaOnlineState,
+  createSepticaDeck,
+  createSepticaOnlineState,
+  SepticaGame,
+  type SepticaCard,
+} from './septica.js';
 
 function card(rank: SepticaCard['rank'], suit: SepticaCard['suit'] = 'clubs'): SepticaCard {
   return { rank, suit, id: `${rank}-${suit}` };
@@ -60,4 +66,26 @@ test('only sevens or matching ranks can continue a cut battle', () => {
   game.playCard(1, 0);
   game.playCard(2, 0);
   assert.deepEqual(game.legalCardIndexes(1), [1]);
+});
+
+test('online snapshots reveal only the receiving player hand', () => {
+  const hostGame = new SepticaGame(() => .5);
+  hostGame.hands = {
+    1: [card('A', 'spades'), card('10', 'hearts')],
+    2: [card('7', 'clubs'), card('K', 'diamonds')],
+  };
+  hostGame.deck = [card('8'), card('9')];
+
+  const guestState = createSepticaOnlineState(hostGame, 2);
+  assert.deepEqual(guestState.hand, hostGame.hands[2]);
+  assert.equal(guestState.opponentHandCount, 2);
+  assert.equal(guestState.deckCount, 2);
+  assert.equal(JSON.stringify(guestState).includes('A-spades'), false);
+  assert.equal(JSON.stringify(guestState).includes('10-hearts'), false);
+
+  const guestGame = new SepticaGame(() => .5);
+  applySepticaOnlineState(guestGame, guestState);
+  assert.deepEqual(guestGame.hands[2], hostGame.hands[2]);
+  assert.equal(guestGame.hands[1].length, 2);
+  assert.equal(guestGame.deck.length, 2);
 });
