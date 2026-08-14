@@ -68,6 +68,47 @@ test('only sevens or matching ranks can continue a cut battle', () => {
   assert.deepEqual(game.legalCardIndexes(1), [1]);
 });
 
+test('the responder must discard a card after the leader cuts back', () => {
+  const game = new SepticaGame(() => .5);
+  game.hands = {
+    1: [card('A', 'spades'), card('A', 'clubs')],
+    2: [card('A', 'hearts'), card('K', 'diamonds')],
+  };
+  game.deck = [];
+
+  game.playCard(1, 0);
+  game.playCard(2, 0);
+  game.playCard(1, 0);
+
+  assert.equal(game.currentPlayer, 2);
+  assert.equal(game.phase, 'playing');
+  assert.deepEqual(game.legalCardIndexes(2), [0]);
+  assert.equal(game.pass(2), false);
+  assert.equal(game.playCard(2, 0), true);
+  assert.equal(game.table.length, 0);
+  assert.equal(game.points[1], 3);
+});
+
+test('a forced response can cut and return the choice to the opening player', () => {
+  const game = new SepticaGame(() => .5);
+  game.hands = {
+    1: [card('A', 'spades'), card('7', 'clubs'), card('9')],
+    2: [card('A', 'hearts'), card('7', 'diamonds')],
+  };
+  game.deck = [];
+
+  game.playCard(1, 0);
+  game.playCard(2, 0);
+  game.playCard(1, 0);
+  game.playCard(2, 0);
+
+  assert.equal(game.currentPlayer, 1);
+  assert.equal(game.phase, 'continue-choice');
+  assert.deepEqual(game.legalCardIndexes(1), []);
+  assert.equal(game.pass(1), true);
+  assert.equal(game.points[2], 2);
+});
+
 test('online snapshots reveal only the receiving player hand', () => {
   const hostGame = new SepticaGame(() => .5);
   hostGame.hands = {
