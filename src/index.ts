@@ -11,6 +11,7 @@ import { ArcadeResultReporter, initArcadeProfile } from './stats.js';
 import { initGameCatalog } from './catalog.js';
 import { initArcadeSettings } from './settings.js';
 import { initQuickPlay } from './quick-play.js';
+import { initArcadePwa } from './pwa.js';
 import type { OnlineRoom, PlayerAction } from './multiplayer.js';
 
 export const CELL_SIZE = 64;
@@ -1594,6 +1595,7 @@ export function initGame(): void {
 if (typeof window !== 'undefined') {
   window.addEventListener('DOMContentLoaded', () => {
     initArcadeSettings();
+    initArcadePwa();
     initArcadeProfile();
     initGameCatalog();
     initQuickPlay();
