@@ -29,3 +29,11 @@ test('Țintar board includes native fullscreen styling and a mobile fallback', (
   assert.match(html, /width:\s*min\(100vw, 100dvh, 1200px\)/);
   assert.match(html, /\.tintar-board-frame\.is-fullscreen-layout \.tintar-point\s*\{[^}]*width:\s*clamp\(29px, 7\.5vw, 56px\)/s);
 });
+
+test('Țintar board includes a non-blocking reduced-motion winner celebration', () => {
+  assert.match(html, /id="tintarVictoryOverlay" class="tintar-victory-overlay"[^>]*aria-live="polite"[^>]*hidden/);
+  assert.match(html, /\.tintar-victory-overlay\s*\{[^}]*pointer-events:\s*none;/s);
+  assert.match(html, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.tintar-victory-overlay\.is-celebrating/);
+  assert.match(html, /html\.reduce-motion \.tintar-victory-overlay\.is-celebrating/);
+  assert.equal((html.match(/<i><\/i>/g) ?? []).length >= 14, true);
+});
