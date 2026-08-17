@@ -204,10 +204,70 @@ export function initTintar(): void {
   const coralHandElement = document.getElementById('tintarCoralHand');
   const coralBoardElement = document.getElementById('tintarCoralBoard');
   const turnMarker = document.getElementById('tintarTurnMarker');
+  const boardFrame = document.getElementById('tintarBoardFrame') as HTMLElement | null;
+  const boardActions = document.getElementById('tintarBoardActions');
+  const fullscreenButton = document.getElementById('tintarFullscreenButton') as HTMLButtonElement | null;
+  const fullscreenLabel = document.getElementById('tintarFullscreenLabel');
   const pointButtons: HTMLButtonElement[] = [];
   const roomMount = document.querySelector<HTMLElement>('[data-game-room="tintar"]');
   let room: GameRoomClient | null = null;
+  let matchStarted = false;
+  let fallbackFullscreen = false;
+  let fullscreenPending = false;
   const resultReporter = new ArcadeResultReporter('tintar');
+
+  function boardIsFullscreen(): boolean {
+    return fallbackFullscreen || document.fullscreenElement === boardFrame;
+  }
+
+  function updateFullscreenUi(): void {
+    const active = boardIsFullscreen();
+    boardFrame?.classList.toggle('is-fullscreen-layout', active);
+    fullscreenButton?.setAttribute('aria-pressed', active ? 'true' : 'false');
+    fullscreenButton?.setAttribute('aria-label', active ? 'Exit full screen board' : 'Full screen board');
+    if (fullscreenLabel) fullscreenLabel.textContent = active ? 'Exit full screen' : 'Full screen board';
+  }
+
+  function setFallbackFullscreen(active: boolean): void {
+    fallbackFullscreen = active;
+    boardFrame?.classList.toggle('is-fullscreen-fallback', active);
+    document.body.classList.toggle('tintar-board-fullscreen-open', active);
+    updateFullscreenUi();
+  }
+
+  async function closeBoardFullscreen(): Promise<void> {
+    if (document.fullscreenElement === boardFrame && typeof document.exitFullscreen === 'function') {
+      try { await document.exitFullscreen(); }
+      catch { /* The browser may already be leaving fullscreen. */ }
+    }
+    setFallbackFullscreen(false);
+    updateFullscreenUi();
+  }
+
+  async function toggleBoardFullscreen(): Promise<void> {
+    if (!boardFrame || fullscreenPending) return;
+    fullscreenPending = true;
+    if (fullscreenButton) fullscreenButton.disabled = true;
+    try {
+      if (boardIsFullscreen()) {
+        await closeBoardFullscreen();
+        return;
+      }
+      if (typeof boardFrame.requestFullscreen === 'function') {
+        try {
+          await boardFrame.requestFullscreen();
+          updateFullscreenUi();
+          return;
+        } catch {
+          // iPhone and embedded browsers can expose the API but reject non-video elements.
+        }
+      }
+      setFallbackFullscreen(true);
+    } finally {
+      fullscreenPending = false;
+      if (fullscreenButton) fullscreenButton.disabled = false;
+    }
+  }
 
   function snapshot(): Record<string, unknown> {
     return {
@@ -231,7 +291,10 @@ export function initTintar(): void {
   function playPoint(point: number): void {
     const session = room?.session();
     if (!session?.online) {
-      if (game.click(point)) render();
+      if (game.click(point)) {
+        matchStarted = true;
+        render();
+      }
       return;
     }
     if (!session.ready || !room?.canControl(game.currentPlayer)) return;
@@ -281,6 +344,7 @@ export function initTintar(): void {
     if (coralHandElement) coralHandElement.textContent = String(game.piecesToPlace[2]);
     if (coralBoardElement) coralBoardElement.textContent = String(game.pieceCount(2));
     turnMarker?.classList.toggle('coral', game.currentPlayer === 2);
+    if (boardActions) boardActions.hidden = !matchStarted;
     const trackedPlayer = (room?.session().online ? room.session().playerId : 1) ?? 1;
     resultReporter.report(game.phase === 'finished', {
       outcome: game.winner === 0 ? 'draw' : game.winner === trackedPlayer ? 'win' : 'loss',
@@ -289,6 +353,7 @@ export function initTintar(): void {
   }
 
   document.getElementById('tintarRestartButton')?.addEventListener('click', () => {
+    matchStarted = true;
     if (room?.isGuest()) room.sendAction({ type: 'restart' });
     else {
       game.reset(); render();
@@ -296,12 +361,25 @@ export function initTintar(): void {
     }
   });
 
+  fullscreenButton?.addEventListener('click', () => { void toggleBoardFullscreen(); });
+  document.addEventListener('fullscreenchange', updateFullscreenUi);
+  window.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && fallbackFullscreen) {
+      event.preventDefault();
+      void closeBoardFullscreen();
+    }
+  });
+  document.querySelector('#tintarView [data-back-to-hub]')?.addEventListener('click', () => {
+    void closeBoardFullscreen();
+  });
+
   if (roomMount) {
     room = new GameRoomClient({
       game: 'tintar',
       mount: roomMount,
-      onPlayLocal: () => { game.reset(); render(); },
+      onPlayLocal: () => { matchStarted = true; game.reset(); render(); },
       onSessionChange: session => {
+        if (session.ready) matchStarted = true;
         if (session.ready && session.playerId === 1) {
           game.reset();
           room?.broadcastState(snapshot(), true);
@@ -311,12 +389,12 @@ export function initTintar(): void {
       onRemoteAction: (action, from) => {
         if (!room?.isHost()) return;
         if (action.type === 'point' && from === game.currentPlayer && Number.isInteger(action.point)) {
-          if (game.click(Number(action.point))) { render(); room.broadcastState(snapshot(), true); }
+          if (game.click(Number(action.point))) { matchStarted = true; render(); room.broadcastState(snapshot(), true); }
         } else if (action.type === 'restart') {
-          game.reset(); render(); room.broadcastState(snapshot(), true);
+          matchStarted = true; game.reset(); render(); room.broadcastState(snapshot(), true);
         }
       },
-      onState: state => { if (room?.isGuest()) { restore(state); render(); } },
+      onState: state => { if (room?.isGuest()) { matchStarted = true; restore(state); render(); } },
     });
   }
 

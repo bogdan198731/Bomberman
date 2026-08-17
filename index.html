@@ -2312,15 +2312,103 @@
     }
 
     .tintar-board-frame {
-      display: grid;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       min-width: 0;
-      place-items: center;
       padding: clamp(14px, 3vw, 32px);
       border: 1px solid rgba(255,255,255,.08);
       border-radius: 20px;
       background:
         radial-gradient(circle at 50% 45%, rgba(255,200,87,.09), transparent 55%),
         #101722;
+    }
+
+    .tintar-board-actions {
+      display: flex;
+      width: min(100%, 620px);
+      justify-content: flex-end;
+      margin-bottom: 10px;
+    }
+
+    .tintar-board-actions[hidden] {
+      display: none;
+    }
+
+    .tintar-fullscreen-button {
+      display: inline-flex;
+      min-height: 42px;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 13px;
+      border: 1px solid rgba(255,255,255,.13);
+      border-radius: 11px;
+      color: var(--ink);
+      background: rgba(255,255,255,.07);
+      box-shadow: 0 8px 24px rgba(0,0,0,.2);
+      cursor: pointer;
+      font-size: .75rem;
+      font-weight: 900;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .tintar-fullscreen-button:hover,
+    .tintar-fullscreen-button:focus-visible {
+      border-color: rgba(255,200,87,.58);
+      outline: none;
+      background: rgba(255,200,87,.12);
+    }
+
+    .tintar-fullscreen-button:disabled {
+      cursor: wait;
+      opacity: .65;
+    }
+
+    .tintar-fullscreen-icon {
+      font-size: 1.15rem;
+      line-height: 1;
+    }
+
+    body.tintar-board-fullscreen-open {
+      overflow: hidden;
+    }
+
+    .tintar-board-frame:fullscreen,
+    .tintar-board-frame.is-fullscreen-layout {
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      padding:
+        max(10px, env(safe-area-inset-top))
+        max(12px, env(safe-area-inset-right))
+        max(10px, env(safe-area-inset-bottom))
+        max(12px, env(safe-area-inset-left));
+      border: 0;
+      border-radius: 0;
+      background:
+        radial-gradient(circle at 50% 45%, rgba(255,200,87,.12), transparent 58%),
+        #0b111a;
+    }
+
+    .tintar-board-frame.is-fullscreen-fallback {
+      position: fixed;
+      z-index: 10000;
+      inset: 0;
+    }
+
+    .tintar-board-frame:fullscreen::backdrop {
+      background: #0b111a;
+    }
+
+    .tintar-board-frame:fullscreen .tintar-board-actions,
+    .tintar-board-frame.is-fullscreen-layout .tintar-board-actions,
+    .tintar-board-frame:fullscreen .tintar-board,
+    .tintar-board-frame.is-fullscreen-layout .tintar-board {
+      width: min(calc(100vw - 32px), calc(100vh - 96px), 900px);
+      width: min(calc(100vw - 32px), calc(100dvh - 96px), 900px);
+      max-width: none;
     }
 
     .tintar-board {
@@ -5144,7 +5232,18 @@
         <button id="tintarRestartButton" class="tintar-restart" type="button">Start a new match</button>
       </aside>
 
-      <div class="tintar-board-frame">
+      <div id="tintarBoardFrame" class="tintar-board-frame">
+        <div id="tintarBoardActions" class="tintar-board-actions" hidden>
+          <button
+            id="tintarFullscreenButton"
+            class="tintar-fullscreen-button"
+            type="button"
+            aria-pressed="false"
+          >
+            <span class="tintar-fullscreen-icon" aria-hidden="true">⛶</span>
+            <span id="tintarFullscreenLabel">Full screen board</span>
+          </button>
+        </div>
         <div id="tintarBoard" class="tintar-board" role="grid" aria-label="Țintar board with 24 playable points">
           <span class="tintar-square outer" aria-hidden="true"></span>
           <span class="tintar-square middle" aria-hidden="true"></span>
