@@ -2838,6 +2838,10 @@
       background: rgba(255, 255, 255, 0.09);
     }
 
+    .lobby-scroll-hint {
+      display: none;
+    }
+
     .connection-message {
       min-height: 20px;
       margin: 15px 0 0 !important;
@@ -3421,11 +3425,49 @@
       }
 
       .lobby-overlay {
-        padding: 12px;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        overflow-x: hidden;
+        overflow-y: auto;
+        padding: 12px 12px max(18px, env(safe-area-inset-bottom));
+        overscroll-behavior-y: contain;
+        scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+        scrollbar-width: thin;
+        touch-action: pan-y;
+        -webkit-overflow-scrolling: touch;
       }
 
       .lobby-panel {
-        padding: 20px 16px;
+        flex: 0 0 auto;
+        padding: 14px 16px 18px;
+      }
+
+      .lobby-panel > p {
+        margin: 6px 0 14px;
+      }
+
+      .lobby-divider {
+        margin: 10px 0;
+      }
+
+      .lobby-scroll-hint {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        margin: 8px 0 -2px;
+        color: #91a0b7;
+        font-size: 0.66rem;
+        font-weight: 850;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .lobby-scroll-hint::after {
+        content: "\2193";
+        color: var(--p1);
+        font-size: 0.95rem;
       }
 
       .game-footer {
@@ -4962,10 +5004,11 @@
                 <button class="bot-button" type="button" data-bot-difficulty="normal">Normal</button>
                 <button class="bot-button" type="button" data-bot-difficulty="hard">Hard</button>
               </div>
+              <div class="lobby-scroll-hint" aria-hidden="true">Swipe for online play</div>
               <div class="lobby-divider">or play online</div>
               <button id="quickMatchButton" class="lobby-button quick-match-button" type="button">Quick Match</button>
               <div class="lobby-divider">or create a private room</div>
-              <button id="createRoomButton" class="lobby-button" type="button">Create a room</button>
+              <button id="createRoomButton" class="lobby-button" type="button">Create invite code</button>
               <div class="lobby-divider">or join a friend</div>
               <div class="join-row">
                 <input
