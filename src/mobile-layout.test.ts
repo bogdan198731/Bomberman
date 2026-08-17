@@ -19,3 +19,11 @@ test('mobile Blast Buddies lobby keeps online controls reachable', () => {
   assert.match(mobileStyles, /\.lobby-panel\s*\{[^}]*flex:\s*0 0 auto;/s);
   assert.match(html, /class="lobby-scroll-hint"[^>]*>Swipe for online play<\/div>/);
 });
+
+test('Țintar board includes native fullscreen styling and a mobile fallback', () => {
+  assert.match(html, /id="tintarBoardFrame" class="tintar-board-frame"/);
+  assert.match(html, /id="tintarBoardActions" class="tintar-board-actions" hidden/);
+  assert.match(html, /id="tintarFullscreenButton"[\s\S]*?aria-pressed="false"/);
+  assert.match(html, /\.tintar-board-frame:fullscreen,[\s\S]*?\.tintar-board-frame\.is-fullscreen-layout/);
+  assert.match(html, /\.tintar-board-frame\.is-fullscreen-fallback\s*\{[^}]*position:\s*fixed;[^}]*inset:\s*0;/s);
+});
