@@ -2449,6 +2449,209 @@
       height: clamp(2px, .65vw, 5px);
     }
 
+    .tintar-victory-overlay {
+      position: absolute;
+      z-index: 4;
+      inset: 0;
+      display: grid;
+      overflow: hidden;
+      place-items: center;
+      pointer-events: none;
+      background: radial-gradient(circle, rgba(var(--tintar-victory-rgb), .22), rgba(5, 9, 15, .72) 64%);
+      opacity: 0;
+    }
+
+    .tintar-victory-overlay[hidden] {
+      display: none;
+    }
+
+    .tintar-board-frame.winner-mint {
+      --tintar-victory-color: var(--p1);
+      --tintar-victory-rgb: 84, 227, 142;
+    }
+
+    .tintar-board-frame.winner-coral {
+      --tintar-victory-color: var(--p2);
+      --tintar-victory-rgb: 255, 107, 120;
+    }
+
+    .tintar-victory-overlay.is-celebrating {
+      animation: tintarVictoryVeil 2.8s ease both;
+    }
+
+    .tintar-victory-overlay::before {
+      position: absolute;
+      width: 120vmax;
+      height: 120vmax;
+      border-radius: 50%;
+      content: "";
+      background: repeating-conic-gradient(
+        from 0deg,
+        rgba(var(--tintar-victory-rgb), .12) 0 8deg,
+        transparent 8deg 19deg
+      );
+      opacity: .55;
+      animation: tintarVictoryRays 8s linear infinite;
+    }
+
+    .tintar-victory-card {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      min-width: min(280px, calc(100% - 36px));
+      padding: 20px 24px;
+      border: 1px solid rgba(var(--tintar-victory-rgb), .72);
+      border-radius: 18px;
+      place-items: center;
+      color: #fff;
+      background: rgba(12, 18, 27, .94);
+      box-shadow:
+        0 0 0 5px rgba(var(--tintar-victory-rgb), .12),
+        0 24px 70px rgba(0, 0, 0, .5),
+        0 0 55px rgba(var(--tintar-victory-rgb), .22);
+      text-align: center;
+      transform: scale(.72) translateY(18px);
+    }
+
+    .tintar-victory-overlay.is-celebrating .tintar-victory-card {
+      animation: tintarVictoryCard 2.8s cubic-bezier(.2, .8, .25, 1) both;
+    }
+
+    .tintar-victory-emblem {
+      display: grid;
+      width: 52px;
+      height: 52px;
+      margin-bottom: 9px;
+      border: 2px solid rgba(255,255,255,.72);
+      border-radius: 50%;
+      place-items: center;
+      color: #101722;
+      background: var(--tintar-victory-color);
+      box-shadow: 0 0 30px rgba(var(--tintar-victory-rgb), .48);
+      font-size: 1.65rem;
+      font-style: normal;
+    }
+
+    .tintar-victory-card strong {
+      font-size: clamp(1.6rem, 7vw, 2.6rem);
+      font-weight: 950;
+      letter-spacing: -.045em;
+      line-height: 1;
+      text-shadow: 0 3px 0 rgba(0,0,0,.28);
+    }
+
+    .tintar-victory-card span:last-child {
+      margin-top: 7px;
+      color: #b7c3d5;
+      font-size: .7rem;
+      font-weight: 850;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+
+    .tintar-confetti {
+      position: absolute;
+      z-index: 1;
+      inset: 0;
+    }
+
+    .tintar-confetti i {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 9px;
+      height: 15px;
+      border-radius: 3px;
+      background: var(--gold);
+      opacity: 0;
+    }
+
+    .tintar-victory-overlay.is-celebrating .tintar-confetti i {
+      animation: tintarConfetti 1.65s cubic-bezier(.12, .65, .35, 1) var(--delay, 0ms) both;
+    }
+
+    .tintar-confetti i:nth-child(3n + 1) { background: var(--tintar-victory-color); }
+    .tintar-confetti i:nth-child(3n + 2) { background: #fff; }
+    .tintar-confetti i:nth-child(1) { --x: -43vw; --y: -35vh; --r: -520deg; --delay: 40ms; }
+    .tintar-confetti i:nth-child(2) { --x: -30vw; --y: -16vh; --r: 410deg; --delay: 120ms; }
+    .tintar-confetti i:nth-child(3) { --x: -18vw; --y: -42vh; --r: -360deg; --delay: 20ms; }
+    .tintar-confetti i:nth-child(4) { --x: -7vw; --y: -27vh; --r: 640deg; --delay: 170ms; }
+    .tintar-confetti i:nth-child(5) { --x: 8vw; --y: -40vh; --r: -430deg; --delay: 70ms; }
+    .tintar-confetti i:nth-child(6) { --x: 22vw; --y: -23vh; --r: 550deg; --delay: 140ms; }
+    .tintar-confetti i:nth-child(7) { --x: 39vw; --y: -36vh; --r: -620deg; --delay: 30ms; }
+    .tintar-confetti i:nth-child(8) { --x: -40vw; --y: 4vh; --r: 460deg; --delay: 210ms; }
+    .tintar-confetti i:nth-child(9) { --x: -27vw; --y: 27vh; --r: -540deg; --delay: 90ms; }
+    .tintar-confetti i:nth-child(10) { --x: -12vw; --y: 39vh; --r: 610deg; --delay: 190ms; }
+    .tintar-confetti i:nth-child(11) { --x: 5vw; --y: 34vh; --r: -460deg; --delay: 50ms; }
+    .tintar-confetti i:nth-child(12) { --x: 19vw; --y: 42vh; --r: 530deg; --delay: 150ms; }
+    .tintar-confetti i:nth-child(13) { --x: 34vw; --y: 25vh; --r: -570deg; --delay: 110ms; }
+    .tintar-confetti i:nth-child(14) { --x: 43vw; --y: 3vh; --r: 480deg; --delay: 230ms; }
+
+    .tintar-board-frame.is-celebrating.winner-mint .tintar-point.mint,
+    .tintar-board-frame.is-celebrating.winner-coral .tintar-point.coral {
+      animation: tintarWinnerPiecePulse .7s ease-in-out 3 alternate;
+    }
+
+    @keyframes tintarVictoryVeil {
+      0% { opacity: 0; }
+      10%, 78% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    @keyframes tintarVictoryRays {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes tintarVictoryCard {
+      0% { opacity: 0; transform: scale(.72) translateY(18px); }
+      14%, 78% { opacity: 1; transform: scale(1) translateY(0); }
+      100% { opacity: 0; transform: scale(.96) translateY(-8px); }
+    }
+
+    @keyframes tintarConfetti {
+      0% { opacity: 0; transform: translate(-50%, -50%) scale(.2) rotate(0); }
+      18% { opacity: 1; }
+      100% { opacity: 0; transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) rotate(var(--r)); }
+    }
+
+    @keyframes tintarWinnerPiecePulse {
+      to { filter: brightness(1.34); box-shadow: 0 0 0 8px rgba(var(--tintar-victory-rgb), .2), 0 8px 15px rgba(0,0,0,.4); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .tintar-victory-overlay.is-celebrating,
+      .tintar-victory-overlay.is-celebrating .tintar-victory-card,
+      .tintar-victory-overlay.is-celebrating .tintar-confetti i,
+      .tintar-board-frame.is-celebrating .tintar-point {
+        animation: none;
+      }
+
+      .tintar-victory-overlay.is-celebrating {
+        opacity: 1;
+      }
+
+      .tintar-victory-overlay.is-celebrating .tintar-victory-card {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    html.reduce-motion .tintar-victory-overlay.is-celebrating,
+    html.reduce-motion .tintar-victory-overlay.is-celebrating .tintar-victory-card,
+    html.reduce-motion .tintar-victory-overlay.is-celebrating .tintar-confetti i,
+    html.reduce-motion .tintar-board-frame.is-celebrating .tintar-point {
+      animation: none !important;
+    }
+
+    html.reduce-motion .tintar-victory-overlay.is-celebrating,
+    html.reduce-motion .tintar-victory-overlay.is-celebrating .tintar-victory-card {
+      opacity: 1;
+    }
+
+    html.reduce-motion .tintar-victory-overlay.is-celebrating .tintar-victory-card {
+      transform: none;
+    }
+
     .tintar-board {
       position: relative;
       width: min(100%, 620px);
@@ -5290,6 +5493,17 @@
           <span class="tintar-connector right" aria-hidden="true"></span>
           <span class="tintar-connector bottom" aria-hidden="true"></span>
           <span class="tintar-connector left" aria-hidden="true"></span>
+        </div>
+        <div id="tintarVictoryOverlay" class="tintar-victory-overlay" role="status" aria-live="polite" aria-atomic="true" hidden>
+          <div class="tintar-confetti" aria-hidden="true">
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          </div>
+          <div class="tintar-victory-card">
+            <i class="tintar-victory-emblem" aria-hidden="true">✦</i>
+            <strong id="tintarVictoryTitle">Mint wins!</strong>
+            <span>Match complete</span>
+          </div>
         </div>
       </div>
     </section>

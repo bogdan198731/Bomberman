@@ -208,13 +208,39 @@ export function initTintar(): void {
   const boardActions = document.getElementById('tintarBoardActions');
   const fullscreenButton = document.getElementById('tintarFullscreenButton') as HTMLButtonElement | null;
   const fullscreenLabel = document.getElementById('tintarFullscreenLabel');
+  const victoryOverlay = document.getElementById('tintarVictoryOverlay');
+  const victoryTitle = document.getElementById('tintarVictoryTitle');
   const pointButtons: HTMLButtonElement[] = [];
   const roomMount = document.querySelector<HTMLElement>('[data-game-room="tintar"]');
   let room: GameRoomClient | null = null;
   let matchStarted = false;
   let fallbackFullscreen = false;
   let fullscreenPending = false;
+  let lastRenderedPhase: TintarPhase | null = null;
+  let victoryTimer: number | undefined;
   const resultReporter = new ArcadeResultReporter('tintar');
+
+  function hideVictoryEffect(): void {
+    if (victoryTimer !== undefined) window.clearTimeout(victoryTimer);
+    victoryTimer = undefined;
+    victoryOverlay?.classList.remove('is-celebrating');
+    boardFrame?.classList.remove('is-celebrating', 'winner-mint', 'winner-coral');
+    if (victoryOverlay) victoryOverlay.hidden = true;
+  }
+
+  function showVictoryEffect(winner: TintarPlayer): void {
+    if (!victoryOverlay) return;
+    hideVictoryEffect();
+    const winnerName = PLAYER_NAMES[winner];
+    if (victoryTitle) victoryTitle.textContent = `${winnerName} wins!`;
+    boardFrame?.classList.add('is-celebrating', winner === 1 ? 'winner-mint' : 'winner-coral');
+    victoryOverlay.hidden = false;
+    void victoryOverlay.offsetWidth;
+    victoryOverlay.classList.add('is-celebrating');
+    const reducedMotion = document.documentElement.classList.contains('reduce-motion')
+      || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    victoryTimer = window.setTimeout(hideVictoryEffect, reducedMotion ? 1_500 : 2_850);
+  }
 
   function boardIsFullscreen(): boolean {
     return fallbackFullscreen || document.fullscreenElement === boardFrame;
@@ -345,6 +371,12 @@ export function initTintar(): void {
     if (coralBoardElement) coralBoardElement.textContent = String(game.pieceCount(2));
     turnMarker?.classList.toggle('coral', game.currentPlayer === 2);
     if (boardActions) boardActions.hidden = !matchStarted;
+    if (game.phase === 'finished' && game.winner !== null && game.winner !== 0) {
+      if (lastRenderedPhase !== 'finished') showVictoryEffect(game.winner);
+    } else if (game.phase !== 'finished' && lastRenderedPhase === 'finished') {
+      hideVictoryEffect();
+    }
+    lastRenderedPhase = game.phase;
     const trackedPlayer = (room?.session().online ? room.session().playerId : 1) ?? 1;
     resultReporter.report(game.phase === 'finished', {
       outcome: game.winner === 0 ? 'draw' : game.winner === trackedPlayer ? 'win' : 'loss',
@@ -370,6 +402,7 @@ export function initTintar(): void {
     }
   });
   document.querySelector('#tintarView [data-back-to-hub]')?.addEventListener('click', () => {
+    hideVictoryEffect();
     void closeBoardFullscreen();
   });
 
