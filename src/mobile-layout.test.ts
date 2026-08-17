@@ -26,4 +26,6 @@ test('Țintar board includes native fullscreen styling and a mobile fallback', (
   assert.match(html, /id="tintarFullscreenButton"[\s\S]*?aria-pressed="false"/);
   assert.match(html, /\.tintar-board-frame:fullscreen,[\s\S]*?\.tintar-board-frame\.is-fullscreen-layout/);
   assert.match(html, /\.tintar-board-frame\.is-fullscreen-fallback\s*\{[^}]*position:\s*fixed;[^}]*inset:\s*0;/s);
+  assert.match(html, /width:\s*min\(100vw, 100dvh, 1200px\)/);
+  assert.match(html, /\.tintar-board-frame\.is-fullscreen-layout \.tintar-point\s*\{[^}]*width:\s*clamp\(29px, 7\.5vw, 56px\)/s);
 });
