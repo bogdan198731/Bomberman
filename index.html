@@ -2549,6 +2549,49 @@
       text-transform: uppercase;
     }
 
+    .settings-language-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .settings-language-copy strong,
+    .settings-language-copy span {
+      display: block;
+    }
+
+    .settings-language-copy strong {
+      font-size: .82rem;
+    }
+
+    .settings-language-copy span {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: .7rem;
+      line-height: 1.4;
+    }
+
+    .settings-language-select {
+      min-width: 126px;
+      min-height: 42px;
+      padding: 8px 34px 8px 11px;
+      border: 1px solid rgba(255,255,255,.13);
+      border-radius: 11px;
+      outline: none;
+      color: var(--ink);
+      background: #182231;
+      cursor: pointer;
+      font: inherit;
+      font-size: .78rem;
+      font-weight: 850;
+    }
+
+    .settings-language-select:focus-visible {
+      border-color: var(--p1);
+      box-shadow: 0 0 0 3px rgba(84,227,142,.15);
+    }
+
     .tintar-revenge-button {
       min-height: 44px;
       margin-top: 16px;
@@ -6001,6 +6044,17 @@
         </div>
         <button id="settingsCloseButton" class="settings-close-button" type="button" aria-label="Close arcade settings">×</button>
       </header>
+
+      <div class="settings-group">
+        <span class="settings-group-title">Language</span>
+        <label class="settings-language-row" for="settingsLanguageSelect">
+          <span class="settings-language-copy"><strong>Interface language</strong><span>Choose the language used throughout the arcade.</span></span>
+          <select id="settingsLanguageSelect" class="settings-language-select">
+            <option value="en">English</option>
+            <option value="ro">Română</option>
+          </select>
+        </label>
+      </div>
 
       <div class="settings-group">
         <span class="settings-group-title">Sound</span>

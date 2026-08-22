@@ -39,3 +39,9 @@ test('Țintar board includes a non-blocking reduced-motion winner celebration', 
   assert.match(html, /id="tintarRevengeButton"[^>]*>Play revenge match<\/button>/);
   assert.match(html, /\.tintar-revenge-button\s*\{[^}]*pointer-events:\s*auto;/s);
 });
+
+test('arcade settings expose persistent English and Romanian language choices', () => {
+  assert.match(html, /id="settingsLanguageSelect" class="settings-language-select"/);
+  assert.match(html, /<option value="en">English<\/option>/);
+  assert.match(html, /<option value="ro">Română<\/option>/);
+});
