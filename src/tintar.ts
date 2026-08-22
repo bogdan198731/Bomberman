@@ -210,6 +210,7 @@ export function initTintar(): void {
   const fullscreenLabel = document.getElementById('tintarFullscreenLabel');
   const victoryOverlay = document.getElementById('tintarVictoryOverlay');
   const victoryTitle = document.getElementById('tintarVictoryTitle');
+  const revengeButton = document.getElementById('tintarRevengeButton') as HTMLButtonElement | null;
   const pointButtons: HTMLButtonElement[] = [];
   const roomMount = document.querySelector<HTMLElement>('[data-game-room="tintar"]');
   let room: GameRoomClient | null = null;
@@ -217,14 +218,15 @@ export function initTintar(): void {
   let fallbackFullscreen = false;
   let fullscreenPending = false;
   let lastRenderedPhase: TintarPhase | null = null;
-  let victoryTimer: number | undefined;
   const resultReporter = new ArcadeResultReporter('tintar');
 
   function hideVictoryEffect(): void {
-    if (victoryTimer !== undefined) window.clearTimeout(victoryTimer);
-    victoryTimer = undefined;
     victoryOverlay?.classList.remove('is-celebrating');
     boardFrame?.classList.remove('is-celebrating', 'winner-mint', 'winner-coral');
+    if (revengeButton) {
+      revengeButton.disabled = false;
+      revengeButton.textContent = 'Play revenge match';
+    }
     if (victoryOverlay) victoryOverlay.hidden = true;
   }
 
@@ -237,9 +239,7 @@ export function initTintar(): void {
     victoryOverlay.hidden = false;
     void victoryOverlay.offsetWidth;
     victoryOverlay.classList.add('is-celebrating');
-    const reducedMotion = document.documentElement.classList.contains('reduce-motion')
-      || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    victoryTimer = window.setTimeout(hideVictoryEffect, reducedMotion ? 1_500 : 2_850);
+    revengeButton?.focus({ preventScroll: true });
   }
 
   function boardIsFullscreen(): boolean {
@@ -384,14 +384,21 @@ export function initTintar(): void {
     });
   }
 
-  document.getElementById('tintarRestartButton')?.addEventListener('click', () => {
+  function restartMatch(): void {
     matchStarted = true;
-    if (room?.isGuest()) room.sendAction({ type: 'restart' });
-    else {
-      game.reset(); render();
-      room?.broadcastState(snapshot(), true);
+    if (room?.isGuest()) {
+      if (room.sendAction({ type: 'restart' }) && revengeButton) {
+        revengeButton.disabled = true;
+        revengeButton.textContent = 'Waiting for Mint…';
+      }
+      return;
     }
-  });
+    game.reset(); render();
+    room?.broadcastState(snapshot(), true);
+  }
+
+  document.getElementById('tintarRestartButton')?.addEventListener('click', restartMatch);
+  revengeButton?.addEventListener('click', restartMatch);
 
   fullscreenButton?.addEventListener('click', () => { void toggleBoardFullscreen(); });
   document.addEventListener('fullscreenchange', updateFullscreenUi);

@@ -31,9 +31,11 @@ test('Țintar board includes native fullscreen styling and a mobile fallback', (
 });
 
 test('Țintar board includes a non-blocking reduced-motion winner celebration', () => {
-  assert.match(html, /id="tintarVictoryOverlay" class="tintar-victory-overlay"[^>]*aria-live="polite"[^>]*hidden/);
+  assert.match(html, /id="tintarVictoryOverlay" class="tintar-victory-overlay"[^>]*role="dialog"[^>]*hidden/);
   assert.match(html, /\.tintar-victory-overlay\s*\{[^}]*pointer-events:\s*none;/s);
   assert.match(html, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.tintar-victory-overlay\.is-celebrating/);
   assert.match(html, /html\.reduce-motion \.tintar-victory-overlay\.is-celebrating/);
   assert.equal((html.match(/<i><\/i>/g) ?? []).length >= 14, true);
+  assert.match(html, /id="tintarRevengeButton"[^>]*>Play revenge match<\/button>/);
+  assert.match(html, /\.tintar-revenge-button\s*\{[^}]*pointer-events:\s*auto;/s);
 });
