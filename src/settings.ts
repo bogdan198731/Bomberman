@@ -1,4 +1,5 @@
 import type { ArcadeResult } from './stats.js';
+import { setArcadeLanguage, type ArcadeLanguage } from './i18n.js';
 
 export const SETTINGS_STORAGE_KEY = 'blast-arcade-settings-v1';
 
@@ -7,6 +8,7 @@ export interface ArcadeSettings {
   volume: number;
   reducedMotion: boolean;
   highContrast: boolean;
+  language: ArcadeLanguage;
 }
 
 interface StorageLike {
@@ -27,7 +29,7 @@ const SOUND_PATTERNS: Record<SoundCue, readonly number[]> = {
 };
 
 export function createDefaultSettings(): ArcadeSettings {
-  return { soundEnabled: true, volume: 60, reducedMotion: false, highContrast: false };
+  return { soundEnabled: true, volume: 60, reducedMotion: false, highContrast: false, language: 'en' };
 }
 
 export function normalizeSettings(value: unknown): ArcadeSettings {
@@ -41,6 +43,7 @@ export function normalizeSettings(value: unknown): ArcadeSettings {
       : defaults.volume,
     reducedMotion: typeof candidate.reducedMotion === 'boolean' ? candidate.reducedMotion : defaults.reducedMotion,
     highContrast: typeof candidate.highContrast === 'boolean' ? candidate.highContrast : defaults.highContrast,
+    language: candidate.language === 'ro' ? 'ro' : defaults.language,
   };
 }
 
@@ -118,6 +121,7 @@ export function initArcadeSettings(): void {
   const volumeValue = document.getElementById('settingsVolumeValue');
   const motionToggle = document.getElementById('settingsMotionToggle') as HTMLInputElement | null;
   const contrastToggle = document.getElementById('settingsContrastToggle') as HTMLInputElement | null;
+  const languageSelect = document.getElementById('settingsLanguageSelect') as HTMLSelectElement | null;
   const testButton = document.getElementById('settingsTestSound');
   const fullscreenButton = document.getElementById('settingsFullscreenButton') as HTMLButtonElement | null;
   const resetButton = document.getElementById('settingsResetButton');
@@ -133,11 +137,13 @@ export function initArcadeSettings(): void {
     settings = save ? saveSettings(settings) : normalizeSettings(settings);
     document.documentElement.classList.toggle('reduce-motion', settings.reducedMotion);
     document.documentElement.classList.toggle('high-contrast', settings.highContrast);
+    setArcadeLanguage(settings.language);
     if (soundToggle) soundToggle.checked = settings.soundEnabled;
     if (volumeInput) volumeInput.value = String(settings.volume);
     if (volumeValue) volumeValue.textContent = `${settings.volume}%`;
     if (motionToggle) motionToggle.checked = settings.reducedMotion;
     if (contrastToggle) contrastToggle.checked = settings.highContrast;
+    if (languageSelect) languageSelect.value = settings.language;
   }
 
   function openSettings(): void {
@@ -167,7 +173,7 @@ export function initArcadeSettings(): void {
     if (activeOverlay.hidden) return;
     if (event.key === 'Escape') closeSettings();
     if (event.key !== 'Tab') return;
-    const focusable = Array.from(activePanel.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled)'));
+    const focusable = Array.from(activePanel.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled)'));
     if (!focusable.length) return;
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
@@ -186,6 +192,10 @@ export function initArcadeSettings(): void {
   volumeInput?.addEventListener('change', () => soundPlayer.play('ui', settings));
   motionToggle?.addEventListener('change', () => { settings.reducedMotion = motionToggle.checked; applySettings(); });
   contrastToggle?.addEventListener('change', () => { settings.highContrast = contrastToggle.checked; applySettings(); });
+  languageSelect?.addEventListener('change', () => {
+    settings.language = languageSelect.value === 'ro' ? 'ro' : 'en';
+    applySettings();
+  });
   testButton?.addEventListener('click', () => soundPlayer.play('reward', settings));
   resetButton?.addEventListener('click', () => { settings = createDefaultSettings(); applySettings(); soundPlayer.play('ui', settings); });
   fullscreenButton?.addEventListener('click', () => {
