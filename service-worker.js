@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blast-arcade-shell-v11';
+const CACHE_NAME = 'blast-arcade-shell-v12';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -12,6 +12,7 @@ const APP_SHELL = [
   '/dist/leaderboard.js',
   '/dist/matchmaking.js',
   '/dist/blocks.js',
+  '/dist/twenty48.js',
   '/dist/catalog.js',
   '/dist/circuit.js',
   '/dist/game-room.js',

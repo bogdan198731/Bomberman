@@ -85,8 +85,8 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Finish a match to claim the first spot.': 'Termină un meci pentru a ocupa primul loc.',
   'Game library': 'Bibliotecă de jocuri',
   'Choose your next round': 'Alege următoarea rundă',
-  'Ten instant games, from explosive duels and Romanian classics to block battles, neon racing, co-op survival, and star-fighter missions.':
-    'Zece jocuri instant, de la dueluri explozive și clasice românești la lupte cu blocuri, curse neon, supraviețuire cooperativă și misiuni stelare.',
+  'Eleven instant games, from explosive duels and Romanian classics to number puzzles, neon racing, co-op survival, and star-fighter missions.':
+    'Unsprezece jocuri instant, de la dueluri explozive și clasice românești la puzzle-uri cu numere, curse neon, supraviețuire cooperativă și misiuni stelare.',
   'Search games': 'Caută jocuri',
   'Clear game search': 'Șterge căutarea',
   'Filter games by play mode': 'Filtrează jocurile după modul de joc',
@@ -96,6 +96,7 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'New race': 'Cursă nouă',
   'New battle': 'Luptă nouă',
   'New mission': 'Misiune nouă',
+  'New puzzle': 'Puzzle nou',
   'Play now': 'Joacă acum',
   'Choose how to play': 'Alege cum vrei să joci',
   'Share this device, battle a smart bot, or challenge a friend online.': 'Folosește același dispozitiv, luptă cu un bot inteligent sau provoacă un prieten online.',
@@ -126,6 +127,8 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
     'Derapează pe un circuit neon, colectează turbo și întrece un bot sau un prieten timp de trei ture.',
   'Build clean stacks, clear lines, and bury a bot or friend under incoming garbage blocks.':
     'Construiește stive curate, elimină linii și îngroapă un bot sau un prieten sub blocuri.',
+  'Slide matching numbers together, build clever combos, and create the legendary 2048 tile.':
+    'Glisează numerele identice, creează combinații inteligente și formează legendara piesă 2048.',
   'Cut with sevens, capture aces and tens, and outplay the Coral dealer.':
     'Taie cu șeptari, capturează ași și zecari și învinge dealerul Coral.',
   'Hold the center, auto-aim at neon crawlers, and power up through endless waves.':
@@ -136,12 +139,13 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Try another search or show the complete arcade.': 'Încearcă altă căutare sau afișează întreaga arcadă.',
   'Show all games': 'Arată toate jocurile',
   'Blast Arcade · Play instantly in your browser': 'Blast Arcade · Joacă instant în browser',
-  'Ten live games · Keyboard, touch, bots, and online rooms': 'Zece jocuri active · Tastatură, atingere, boți și camere online',
+  'Eleven live games · Keyboard, touch, bots, and online rooms': 'Unsprezece jocuri active · Tastatură, atingere, boți și camere online',
   'Bot · Local · Online PvP': 'Bot · Local · PvP online',
   'Bot · Local · Online': 'Bot · Local · Online',
   'Solo · Local · Online': 'Solo · Local · Online',
   'Solo · Local · Online co-op': 'Solo · Local · Cooperativ online',
   'Solo · Local co-op': 'Solo · Cooperativ local',
+  'Solo puzzle': 'Puzzle solo',
   'Make it yours': 'Personalizează',
   'Arcade settings': 'Setările arcadei',
   'Sound': 'Sunet',
@@ -215,6 +219,29 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Link copied!': 'Link copiat!',
   'Try again': 'Încearcă din nou',
   'Draw — 50 turns without a capture.': 'Remiză — 50 de ture fără captură.',
+  'Slide, merge, and reach 2048': 'Glisează, combină și ajungi la 2048',
+  '2048 number puzzle': 'Puzzle numeric 2048',
+  'Classic number puzzle': 'Puzzle numeric clasic',
+  'Join equal numbers. Build 2048.': 'Unește numere egale. Construiește 2048.',
+  'Every move slides the whole board. Matching tiles merge once, and a new tile appears after each successful move.':
+    'Fiecare mutare glisează întreaga tablă. Piesele egale se combină o singură dată, iar după fiecare mutare reușită apare o piesă nouă.',
+  'New game': 'Joc nou',
+  '2048 score': 'Scor 2048',
+  '2048 board': 'Tabla 2048',
+  'You made 2048!': 'Ai format 2048!',
+  'Brilliant run. Keep going or start fresh.': 'Serie excelentă. Continuă sau începe din nou.',
+  'Continue playing': 'Continuă jocul',
+  'Keep merging — your next move is ready.': 'Continuă să combini — următoarea mutare este pregătită.',
+  'That direction is blocked. Try another move.': 'Direcția este blocată. Încearcă altă mutare.',
+  '2048 reached — keep building your high score!': 'Ai ajuns la 2048 — continuă să-ți mărești recordul!',
+  '2048 touch controls': 'Comenzi tactile 2048',
+  'Slide tiles up': 'Glisează piesele în sus',
+  'Slide tiles left': 'Glisează piesele la stânga',
+  'Slide tiles down': 'Glisează piesele în jos',
+  'Slide tiles right': 'Glisează piesele la dreapta',
+  'Use arrow keys or WASD. Swipe the board on touch screens.': 'Folosește săgețile sau WASD. Glisează tabla pe ecranele tactile.',
+  'No moves left': 'Nu mai sunt mutări',
+  'Finish a match in all 11 games.': 'Termină un meci în toate cele 11 jocuri.',
 };
 
 let activeLanguage: ArcadeLanguage = 'en';
@@ -256,6 +283,18 @@ function translateRomanianPattern(value: string): string | null {
   if (match) return `${match[1]} câștigă meciul!`;
   match = value.match(/^(Mint|Coral) wins!$/);
   if (match) return `${match[1]} câștigă!`;
+  match = value.match(/^Great move — \+([\d.,]+) points\.$/);
+  if (match) return `Mutare excelentă — +${match[1]} puncte.`;
+  match = value.match(/^No moves left\. Final score: ([\d.,]+)\.$/);
+  if (match) return `Nu mai sunt mutări. Scor final: ${match[1]}.`;
+  match = value.match(/^Final score: ([\d.,]+) points\.$/);
+  if (match) return `Scor final: ${match[1]} puncte.`;
+  match = value.match(/^Brilliant run — ([\d.,]+) points\. Keep going or start fresh\.$/);
+  if (match) return `Serie excelentă — ${match[1]} puncte. Continuă sau începe din nou.`;
+  match = value.match(/^Tile (\d+) at row (\d+), column (\d+)$/);
+  if (match) return `Piesa ${match[1]} pe rândul ${match[2]}, coloana ${match[3]}`;
+  match = value.match(/^Empty tile at row (\d+), column (\d+)$/);
+  if (match) return `Loc liber pe rândul ${match[1]}, coloana ${match[2]}`;
   match = value.match(/^(Empty point|Mint piece|Coral piece), position (\d+)$/);
   if (match) {
     const occupant = match[1] === 'Empty point' ? 'Punct liber' : match[1] === 'Mint piece' ? 'Piesă Mint' : 'Piesă Coral';
