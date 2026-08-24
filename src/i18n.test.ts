@@ -14,3 +14,10 @@ test('Romanian translations preserve whitespace and localize dynamic Țintar mes
   assert.equal(translateArcadeText('Coral wins the match!', 'ro'), 'Coral câștigă meciul!');
   assert.equal(translateArcadeText('Empty point, position 7', 'ro'), 'Punct liber, poziția 7');
 });
+
+test('Romanian translations cover the 2048 interface and dynamic scores', () => {
+  assert.equal(translateArcadeText('Slide, merge, and reach 2048', 'ro'), 'Glisează, combină și ajungi la 2048');
+  assert.equal(translateArcadeText('Great move — +128 points.', 'ro'), 'Mutare excelentă — +128 puncte.');
+  assert.equal(translateArcadeText('Tile 2048 at row 2, column 3', 'ro'), 'Piesa 2048 pe rândul 2, coloana 3');
+  assert.equal(translateArcadeText('No moves left. Final score: 8,192.', 'ro'), 'Nu mai sunt mutări. Scor final: 8,192.');
+});

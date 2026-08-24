@@ -45,3 +45,11 @@ test('arcade settings expose persistent English and Romanian language choices', 
   assert.match(html, /<option value="en">English<\/option>/);
   assert.match(html, /<option value="ro">Română<\/option>/);
 });
+
+test('2048 exposes a responsive swipe board and touch fallback controls', () => {
+  assert.match(html, /id="twenty48View" class="paddle-app twenty48-app view-hidden"/);
+  assert.match(html, /id="twenty48Board" class="twenty48-board"[^>]*role="grid"[^>]*tabindex="0"/);
+  assert.match(html, /\.twenty48-board\s*\{[^}]*aspect-ratio:\s*1;[^}]*touch-action:\s*none;/s);
+  assert.equal((html.match(/data-twenty48-direction=/g) ?? []).length, 4);
+  assert.match(html, /Use arrow keys or WASD\. Swipe the board on touch screens\./);
+});
