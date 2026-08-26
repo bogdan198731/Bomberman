@@ -742,6 +742,14 @@
       box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22);
     }
 
+    .mobile-fold-toggle {
+      display: none;
+    }
+
+    .profile-fold-content {
+      display: contents;
+    }
+
     .profile-identity {
       display: grid;
       grid-template-columns: 58px minmax(0, 1fr);
@@ -3601,13 +3609,165 @@
       }
 
       .catalog-section {
-        padding-top: 48px;
+        padding-top: 36px;
       }
 
       .profile-panel {
-        grid-template-columns: 1fr;
-        padding: 18px;
+        display: block;
+        padding: 0;
         border-radius: 20px;
+      }
+
+      .mobile-fold-toggle {
+        display: grid;
+        width: 100%;
+        min-height: 66px;
+        padding: 11px 14px;
+        grid-template-columns: 40px minmax(0, 1fr) auto 22px;
+        align-items: center;
+        gap: 10px;
+        border: 0;
+        border-radius: inherit;
+        color: var(--ink);
+        background: transparent;
+        cursor: pointer;
+        font: inherit;
+        text-align: left;
+        touch-action: manipulation;
+      }
+
+      .mobile-fold-toggle:focus-visible {
+        outline: 3px solid rgba(73, 226, 255, 0.55);
+        outline-offset: -3px;
+      }
+
+      .mobile-fold-icon {
+        display: grid;
+        width: 40px;
+        height: 40px;
+        place-items: center;
+        border: 1px solid rgba(84, 227, 142, 0.27);
+        border-radius: 12px;
+        color: #08150e;
+        background: linear-gradient(135deg, #8cf5b3, var(--p1));
+        box-shadow: 0 7px 18px rgba(84, 227, 142, 0.13);
+        font-size: 1rem;
+        font-weight: 950;
+      }
+
+      .mobile-fold-icon.daily {
+        border-color: rgba(255, 200, 87, 0.35);
+        color: #261803;
+        background: linear-gradient(135deg, #ffe08d, var(--gold));
+      }
+
+      .mobile-fold-icon.milestones {
+        border-color: rgba(176, 118, 255, 0.4);
+        color: #180924;
+        background: linear-gradient(135deg, #dab8ff, #a064ff);
+      }
+
+      .mobile-fold-icon.insights {
+        border-color: rgba(73, 226, 255, 0.36);
+        color: #06171c;
+        background: linear-gradient(135deg, #a4f5ff, #49e2ff);
+      }
+
+      .mobile-fold-label {
+        min-width: 0;
+      }
+
+      .mobile-fold-label strong,
+      .mobile-fold-label small {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .mobile-fold-label strong {
+        font-size: 0.84rem;
+      }
+
+      .mobile-fold-label small {
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 0.62rem;
+        font-weight: 750;
+      }
+
+      .mobile-fold-notice {
+        display: grid;
+        min-width: 26px;
+        height: 26px;
+        padding: 0 6px;
+        place-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 999px;
+        color: #dce6f2;
+        background: rgba(255, 255, 255, 0.07);
+        font-size: 0.59rem;
+        font-weight: 950;
+      }
+
+      .mobile-fold-notice.alert {
+        border-color: rgba(255, 107, 120, 0.42);
+        color: #fff;
+        background: #e9475a;
+        box-shadow: 0 0 0 4px rgba(233, 71, 90, 0.1);
+      }
+
+      .mobile-fold-notice.complete {
+        border-color: rgba(84, 227, 142, 0.35);
+        color: #07150d;
+        background: var(--p1);
+        box-shadow: none;
+      }
+
+      .mobile-fold-chevron {
+        color: #9ba9bc;
+        font-size: 1.15rem;
+        text-align: center;
+        transition: transform 160ms ease;
+      }
+
+      .mobile-fold-toggle[aria-expanded="true"] .mobile-fold-chevron {
+        transform: rotate(180deg);
+      }
+
+      .mobile-fold-toggle[aria-expanded="false"] ~ .mobile-fold-content {
+        display: none;
+      }
+
+      .mobile-fold-content[hidden] {
+        display: none;
+      }
+
+      .mobile-fold-section.mobile-fold-open {
+        border-color: rgba(84, 227, 142, 0.22);
+      }
+
+      .profile-fold-content {
+        display: grid;
+        padding: 2px 16px 16px;
+        gap: 14px;
+      }
+
+      .mobile-fold-desktop-heading {
+        display: none;
+      }
+
+      .daily-challenge-card,
+      .achievement-cabinet,
+      .activity-panel {
+        padding: 0;
+        overflow: hidden;
+      }
+
+      .daily-fold-content,
+      .achievement-fold-content,
+      .activity-fold-content {
+        padding: 2px 16px 16px;
       }
 
       .quick-play-panel {
@@ -3671,6 +3831,11 @@
 
       .progression-panel {
         grid-template-columns: 1fr;
+        gap: 10px;
+      }
+
+      .progression-missions {
+        gap: 10px;
       }
 
       .achievement-grid {
@@ -3751,11 +3916,75 @@
       }
 
       .game-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .catalog-card {
+        padding: 4px;
+        border-radius: 14px;
       }
 
       .game-cover {
-        min-height: 170px;
+        min-height: 82px;
+        border-radius: 10px;
+      }
+
+      .game-glyph {
+        font-size: 2rem;
+      }
+
+      .twenty48-cover .game-glyph {
+        padding: 8px 9px;
+        border-radius: 10px;
+        font-size: 1.05rem;
+      }
+
+      .cover-label {
+        display: none;
+      }
+
+      .favorite-button {
+        top: 5px;
+        right: 5px;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        font-size: 0.86rem;
+      }
+
+      .catalog-card-body {
+        padding: 7px 2px 3px;
+      }
+
+      .catalog-card-body h3 {
+        display: -webkit-box;
+        min-height: 1.9em;
+        overflow: hidden;
+        font-size: 0.78rem;
+        line-height: 1.08;
+        text-align: center;
+        white-space: normal;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+      }
+
+      .catalog-card-body p,
+      .mode-label {
+        display: none;
+      }
+
+      .catalog-card-footer {
+        display: block;
+        margin-top: 7px;
+      }
+
+      .card-play-button {
+        width: 100%;
+        min-height: 34px;
+        padding: 0 5px;
+        border-radius: 9px;
+        font-size: 0.64rem;
       }
 
       .hub-footer {
@@ -3949,6 +4178,20 @@
       .mobile-bomb-button {
         width: 78px;
         height: 78px;
+      }
+    }
+
+    @media (max-width: 340px) {
+      .game-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .game-cover {
+        min-height: 90px;
+      }
+
+      .catalog-card-body h3 {
+        font-size: 0.84rem;
       }
     }
 
@@ -5289,52 +5532,68 @@
       </div>
     </section>
 
-    <section id="profilePanel" class="profile-panel" aria-labelledby="profileTitle">
-      <div class="profile-identity">
-        <div id="profileAvatar" class="profile-avatar" aria-hidden="true">AP</div>
-        <div class="profile-copy">
-          <span class="catalog-kicker">Player profile</span>
-          <h2 id="profileTitle">Your arcade record</h2>
-          <div class="profile-name-editor">
-            <label class="sr-only" for="profileNameInput">Player name</label>
-            <input id="profileNameInput" type="text" maxlength="24" autocomplete="nickname" aria-label="Player name">
-            <button id="profileSaveButton" type="button">Save</button>
+    <section id="profilePanel" class="profile-panel mobile-fold-section" aria-labelledby="profileTitle">
+      <button class="mobile-fold-toggle" type="button" data-mobile-fold-target="profilePanelBody" aria-expanded="false" aria-controls="profilePanelBody">
+        <span class="mobile-fold-icon" aria-hidden="true">♟</span>
+        <span class="mobile-fold-label"><strong>Player profile</strong><small>Your arcade record</small></span>
+        <span id="profileFoldNotice" class="mobile-fold-notice" aria-hidden="true">L1</span>
+        <span class="mobile-fold-chevron" aria-hidden="true">⌄</span>
+      </button>
+      <div id="profilePanelBody" class="profile-fold-content mobile-fold-content">
+        <div class="profile-identity">
+          <div id="profileAvatar" class="profile-avatar" aria-hidden="true">AP</div>
+          <div class="profile-copy">
+            <span class="catalog-kicker">Player profile</span>
+            <h2 id="profileTitle">Your arcade record</h2>
+            <div class="profile-name-editor">
+              <label class="sr-only" for="profileNameInput">Player name</label>
+              <input id="profileNameInput" type="text" maxlength="24" autocomplete="nickname" aria-label="Player name">
+              <button id="profileSaveButton" type="button">Save</button>
+            </div>
+            <div class="profile-level-row">
+              <strong id="profileLevel">Level 1</strong>
+              <div class="profile-xp-bar" role="progressbar" aria-label="Progress to next level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="profileXpProgress"></i></div>
+            </div>
+            <small class="profile-device-note">Saved privately on this device</small>
           </div>
-          <div class="profile-level-row">
-            <strong id="profileLevel">Level 1</strong>
-            <div class="profile-xp-bar" role="progressbar" aria-label="Progress to next level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="profileXpProgress"></i></div>
-          </div>
-          <small class="profile-device-note">Saved privately on this device</small>
         </div>
+        <div class="profile-summary" aria-label="Player totals">
+          <div><strong id="profileGamesPlayed">0</strong><span>Played</span></div>
+          <div><strong id="profileWins">0</strong><span>Wins</span></div>
+          <div><strong id="profileTotalScore">0</strong><span>Score</span></div>
+        </div>
+        <div id="profileGameStats" class="profile-game-stats" aria-label="Records by game"></div>
       </div>
-      <div class="profile-summary" aria-label="Player totals">
-        <div><strong id="profileGamesPlayed">0</strong><span>Played</span></div>
-        <div><strong id="profileWins">0</strong><span>Wins</span></div>
-        <div><strong id="profileTotalScore">0</strong><span>Score</span></div>
-      </div>
-      <div id="profileGameStats" class="profile-game-stats" aria-label="Records by game"></div>
     </section>
 
     <section class="progression-panel" aria-label="Daily challenge, weekly quests, and achievements">
       <div class="progression-missions">
-        <article class="daily-challenge-card" aria-labelledby="dailyChallengeTitle">
-          <div class="progression-heading">
+        <article class="daily-challenge-card mobile-fold-section" aria-labelledby="dailyChallengeTitle">
+          <button class="mobile-fold-toggle" type="button" data-mobile-fold-target="dailyChallengeFoldBody" aria-expanded="false" aria-controls="dailyChallengeFoldBody">
+            <span class="mobile-fold-icon daily" aria-hidden="true">!</span>
+            <span class="mobile-fold-label"><strong>Daily challenge</strong><small>Resets daily</small></span>
+            <span id="dailyFoldNotice" class="mobile-fold-notice alert" aria-hidden="true">!</span>
+            <span class="mobile-fold-chevron" aria-hidden="true">⌄</span>
+          </button>
+          <div class="progression-heading mobile-fold-desktop-heading">
             <div>
               <span class="catalog-kicker">Today in the arcade</span>
               <h2 id="dailyChallengeTitle">Daily challenge</h2>
             </div>
             <small>Resets daily</small>
           </div>
-          <div class="daily-challenge-body">
-            <span id="dailyChallengeIcon" class="daily-challenge-icon" aria-hidden="true">💣</span>
-            <div>
-              <h3 id="dailyChallengeName">Blast Buddies</h3>
-              <p id="dailyChallengeDescription">Finish 2 matches today to earn +100 XP.</p>
+          <div id="dailyChallengeFoldBody" class="mobile-fold-content daily-fold-content">
+            <div class="daily-challenge-body">
+              <span id="dailyChallengeIcon" class="daily-challenge-icon" aria-hidden="true">💣</span>
+              <div>
+                <h3 id="dailyChallengeName">Blast Buddies</h3>
+                <p id="dailyChallengeDescription">Finish 2 matches today to earn +100 XP.</p>
+              </div>
             </div>
+            <div class="daily-progress-copy"><span>Daily progress</span><span id="dailyChallengeProgress">0/2 matches</span></div>
+            <div class="daily-progress-bar" role="progressbar" aria-label="Daily challenge progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="dailyChallengeProgressBar"></i></div>
+            <button id="dailyChallengeLaunch" class="daily-challenge-launch" type="button" data-launch-game="bomberman">Play Blast Buddies</button>
           </div>
-          <div class="daily-progress-copy"><span>Daily progress</span><span id="dailyChallengeProgress">0/2 matches</span></div>
-          <div class="daily-progress-bar" role="progressbar" aria-label="Daily challenge progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="dailyChallengeProgressBar"></i></div>
-          <button id="dailyChallengeLaunch" class="daily-challenge-launch" type="button" data-launch-game="bomberman">Play Blast Buddies</button>
         </article>
         <article class="weekly-quest-card" aria-labelledby="weeklyQuestTitle">
           <div class="progression-heading">
@@ -5348,37 +5607,53 @@
           <div id="weeklyQuestList" class="weekly-quest-list" aria-label="Weekly quest progress"></div>
         </article>
       </div>
-      <article class="achievement-cabinet" aria-labelledby="achievementTitle">
-        <div class="progression-heading">
+      <article class="achievement-cabinet mobile-fold-section" aria-labelledby="achievementTitle">
+        <button class="mobile-fold-toggle" type="button" data-mobile-fold-target="achievementFoldBody" aria-expanded="false" aria-controls="achievementFoldBody">
+          <span class="mobile-fold-icon milestones" aria-hidden="true">◆</span>
+          <span class="mobile-fold-label"><strong>Milestones</strong><small>Achievement cabinet</small></span>
+          <span id="achievementFoldNotice" class="mobile-fold-notice" aria-hidden="true">0</span>
+          <span class="mobile-fold-chevron" aria-hidden="true">⌄</span>
+        </button>
+        <div class="progression-heading mobile-fold-desktop-heading">
           <div>
             <span class="catalog-kicker">Milestones</span>
             <h2 id="achievementTitle">Achievement cabinet</h2>
           </div>
           <small id="achievementCount">0/7 unlocked</small>
         </div>
-        <div id="achievementGrid" class="achievement-grid" aria-label="Player achievements"></div>
+        <div id="achievementFoldBody" class="mobile-fold-content achievement-fold-content">
+          <div id="achievementGrid" class="achievement-grid" aria-label="Player achievements"></div>
+        </div>
       </article>
     </section>
 
-    <section class="activity-panel" aria-labelledby="activityTitle">
-      <div class="activity-heading">
+    <section class="activity-panel mobile-fold-section" aria-labelledby="activityTitle">
+      <button class="mobile-fold-toggle" type="button" data-mobile-fold-target="activityFoldBody" aria-expanded="false" aria-controls="activityFoldBody">
+        <span class="mobile-fold-icon insights" aria-hidden="true">↗</span>
+        <span class="mobile-fold-label"><strong>Personal insights</strong><small>Your recent arcade form</small></span>
+        <span id="activityFoldNotice" class="mobile-fold-notice" aria-hidden="true">0</span>
+        <span class="mobile-fold-chevron" aria-hidden="true">⌄</span>
+      </button>
+      <div class="activity-heading mobile-fold-desktop-heading">
         <div>
           <span class="catalog-kicker">Personal insights</span>
           <h2 id="activityTitle">Your recent arcade form</h2>
         </div>
         <small id="recentActivityCount">0 saved</small>
       </div>
-      <div class="activity-layout">
-        <div class="insight-grid" aria-label="Player insights">
-          <div class="insight-card"><span>Recent win rate</span><strong id="activityWinRate">0%</strong></div>
-          <div class="insight-card"><span>Most played</span><strong id="activityMostPlayed">—</strong></div>
-          <div class="insight-card"><span>Best score</span><strong id="activityBestScore">—</strong></div>
-          <div class="insight-card"><span>Current win streak</span><strong id="activityWinStreak">0×</strong></div>
-        </div>
-        <div>
-          <span class="activity-list-label">Latest results</span>
-          <div id="recentActivityList" class="recent-activity-list" aria-live="polite">
-            <div class="activity-empty">Finish a match to start your activity feed.</div>
+      <div id="activityFoldBody" class="mobile-fold-content activity-fold-content">
+        <div class="activity-layout">
+          <div class="insight-grid" aria-label="Player insights">
+            <div class="insight-card"><span>Recent win rate</span><strong id="activityWinRate">0%</strong></div>
+            <div class="insight-card"><span>Most played</span><strong id="activityMostPlayed">—</strong></div>
+            <div class="insight-card"><span>Best score</span><strong id="activityBestScore">—</strong></div>
+            <div class="insight-card"><span>Current win streak</span><strong id="activityWinStreak">0×</strong></div>
+          </div>
+          <div>
+            <span class="activity-list-label">Latest results</span>
+            <div id="recentActivityList" class="recent-activity-list" aria-live="polite">
+              <div class="activity-empty">Finish a match to start your activity feed.</div>
+            </div>
           </div>
         </div>
       </div>
