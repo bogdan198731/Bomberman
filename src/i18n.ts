@@ -266,7 +266,7 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Tap a cell and number, or use your keyboard. Arrow keys move around the board.':
     'Atinge o celulă și un număr sau folosește tastatura. Săgețile te deplasează pe tablă.',
   'That number is part of the puzzle.': 'Acest număr face parte din puzzle.',
-  'That number does not belong here.': 'Acest număr nu se potrivește aici.',
+  'That number conflicts with this row, column, or box.': 'Acest număr intră în conflict cu rândul, coloana sau careul.',
   'Cell cleared. Choose another number.': 'Celulă ștearsă. Alege alt număr.',
   'Great — keep going.': 'Foarte bine — continuă.',
   'Given number selected.': 'Ai selectat un număr dat.',

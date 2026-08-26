@@ -11,7 +11,7 @@ export interface SudokuPuzzleDefinition {
 
 export interface SudokuInputResult {
   changed: boolean;
-  correct: boolean;
+  conflict: boolean;
   completed: boolean;
 }
 
@@ -141,19 +141,26 @@ export class SudokuGame {
     return this.selected;
   }
 
+  hasConflict(index: number, value: number = this.board[index]): boolean {
+    if (!Number.isInteger(index) || index < 0 || index >= 81 || !value) return false;
+    return this.board.some((cell, otherIndex) => (
+      otherIndex !== index && cell === value && this.isRelated(index, otherIndex)
+    ));
+  }
+
   input(value: number): SudokuInputResult {
     if (this.phase === 'complete' || this.isGiven(this.selected)
       || !Number.isInteger(value) || value < 0 || value > 9) {
-      return { changed: false, correct: false, completed: this.phase === 'complete' };
+      return { changed: false, conflict: false, completed: this.phase === 'complete' };
     }
     const previous = this.board[this.selected];
-    if (previous === value) return { changed: false, correct: value === this.solution[this.selected], completed: false };
+    if (previous === value) return { changed: false, conflict: this.hasConflict(this.selected), completed: false };
     this.board[this.selected] = value;
-    const correct = value === 0 || value === this.solution[this.selected];
-    if (value !== 0 && !correct) this.mistakes += 1;
+    const conflict = this.hasConflict(this.selected);
+    if (conflict) this.mistakes += 1;
     const completed = this.board.every((cell, index) => cell === this.solution[index]);
     if (completed) this.phase = 'complete';
-    return { changed: true, correct, completed };
+    return { changed: true, conflict, completed };
   }
 
   hint(): number | null {
@@ -215,9 +222,10 @@ export function initSudoku(): void {
       const row = Math.floor(index / 9) + 1;
       const column = index % 9 + 1;
       const classes = ['sudoku-cell'];
+      const conflict = game.hasConflict(index);
       if (game.isGiven(index)) classes.push('given');
       else if (value) classes.push('entered');
-      if (value && value !== game.solution[index]) classes.push('incorrect');
+      if (conflict) classes.push('conflict');
       if (index === game.selected) classes.push('selected');
       else if (game.isRelated(index, game.selected)) classes.push('related');
       if (selectedValue && value === selectedValue) classes.push('same-number');
@@ -231,6 +239,7 @@ export function initSudoku(): void {
       cell.setAttribute('aria-rowindex', String(row));
       cell.setAttribute('aria-colindex', String(column));
       cell.setAttribute('aria-selected', String(index === game.selected));
+      cell.setAttribute('aria-invalid', String(conflict));
       cell.tabIndex = index === game.selected ? 0 : -1;
       cell.setAttribute('aria-label', value
         ? `${game.isGiven(index) ? 'Given' : 'Entered'} ${value}, row ${row}, column ${column}`
@@ -264,8 +273,8 @@ export function initSudoku(): void {
       status = game.isGiven(game.selected) ? 'That number is part of the puzzle.' : status;
     } else if (result.completed) {
       status = 'Puzzle complete!';
-    } else if (!result.correct) {
-      status = 'That number does not belong here.';
+    } else if (result.conflict) {
+      status = 'That number conflicts with this row, column, or box.';
     } else if (value === 0) {
       status = 'Cell cleared. Choose another number.';
     } else {

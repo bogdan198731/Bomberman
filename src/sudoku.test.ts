@@ -38,16 +38,38 @@ test('given cells cannot be changed', () => {
   assert.equal(game.board[given], game.puzzle[given]);
 });
 
-test('wrong entries count mistakes and can be corrected or erased', () => {
+test('a hidden-solution mismatch stays neutral when it creates no visible conflict', () => {
   const game = new SudokuGame('easy');
-  const empty = game.puzzle.findIndex(value => value === 0);
+  let empty = -1;
+  let candidate = 0;
+  for (let index = 0; index < game.board.length && empty < 0; index += 1) {
+    if (game.puzzle[index]) continue;
+    candidate = Array.from({ length: 9 }, (_, offset) => offset + 1)
+      .find(value => value !== game.solution[index] && !game.hasConflict(index, value)) ?? 0;
+    if (candidate) empty = index;
+  }
+  assert.notEqual(empty, -1);
   game.select(empty);
-  const wrong = game.solution[empty] === 1 ? 2 : 1;
-  assert.deepEqual(game.input(wrong), { changed: true, correct: false, completed: false });
+  assert.deepEqual(game.input(candidate), { changed: true, conflict: false, completed: false });
+  assert.equal(game.board[empty], candidate);
+  assert.equal(game.hasConflict(empty), false);
+  assert.equal(game.mistakes, 0);
+});
+
+test('only visible row, column, or box conflicts count as mistakes', () => {
+  const game = new SudokuGame('easy');
+  const empty = game.puzzle.findIndex((value, index) => (
+    value === 0 && game.puzzle.some((other, otherIndex) => other > 0 && game.isRelated(index, otherIndex))
+  ));
+  const relatedGiven = game.puzzle.findIndex((value, index) => value > 0 && game.isRelated(empty, index));
+  game.select(empty);
+  assert.deepEqual(game.input(game.puzzle[relatedGiven]), { changed: true, conflict: true, completed: false });
+  assert.equal(game.hasConflict(empty), true);
+  assert.equal(game.hasConflict(relatedGiven), true);
   assert.equal(game.mistakes, 1);
-  assert.equal(game.input(0).correct, true);
-  assert.equal(game.input(game.solution[empty]).correct, true);
-  assert.equal(game.mistakes, 1);
+  assert.equal(game.input(0).conflict, false);
+  assert.equal(game.hasConflict(empty), false);
+  assert.equal(game.hasConflict(relatedGiven), false);
 });
 
 test('a hint fills the selected editable cell', () => {
