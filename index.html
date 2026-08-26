@@ -3751,11 +3751,73 @@
       }
 
       .game-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .catalog-card {
+        padding: 6px;
+        border-radius: 16px;
       }
 
       .game-cover {
-        min-height: 170px;
+        min-height: 104px;
+        border-radius: 11px;
+      }
+
+      .game-glyph {
+        font-size: 2.35rem;
+      }
+
+      .twenty48-cover .game-glyph {
+        padding: 10px 12px;
+        border-radius: 12px;
+        font-size: 1.35rem;
+      }
+
+      .cover-label {
+        top: 7px;
+        left: 7px;
+        padding: 4px 6px;
+        font-size: 0.48rem;
+      }
+
+      .favorite-button {
+        top: 6px;
+        right: 6px;
+        width: 30px;
+        height: 30px;
+        border-radius: 9px;
+        font-size: 0.92rem;
+      }
+
+      .catalog-card-body {
+        padding: 10px 3px 4px;
+      }
+
+      .catalog-card-body h3 {
+        overflow: hidden;
+        font-size: 0.92rem;
+        line-height: 1.15;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .catalog-card-body p,
+      .mode-label {
+        display: none;
+      }
+
+      .catalog-card-footer {
+        display: block;
+        margin-top: 10px;
+      }
+
+      .card-play-button {
+        width: 100%;
+        min-height: 36px;
+        padding: 0 8px;
+        font-size: 0.7rem;
       }
 
       .hub-footer {

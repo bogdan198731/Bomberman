@@ -53,3 +53,11 @@ test('2048 exposes a responsive swipe board and touch fallback controls', () => 
   assert.equal((html.match(/data-twenty48-direction=/g) ?? []).length, 4);
   assert.match(html, /Use arrow keys or WASD\. Swipe the board on touch screens\./);
 });
+
+test('mobile game library uses compact two-column tiles', () => {
+  assert.match(mobileStyles, /\.game-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\);[^}]*gap:\s*10px;/s);
+  assert.match(mobileStyles, /\.game-cover\s*\{[^}]*min-height:\s*104px;/s);
+  assert.match(mobileStyles, /\.game-glyph\s*\{[^}]*font-size:\s*2\.35rem;/s);
+  assert.match(mobileStyles, /\.catalog-card-body p,[\s\S]*?\.mode-label\s*\{[^}]*display:\s*none;/s);
+  assert.match(mobileStyles, /\.card-play-button\s*\{[^}]*width:\s*100%;[^}]*min-height:\s*36px;/s);
+});
