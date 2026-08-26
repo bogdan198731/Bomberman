@@ -21,3 +21,20 @@ test('Romanian translations cover the 2048 interface and dynamic scores', () => 
   assert.equal(translateArcadeText('Tile 2048 at row 2, column 3', 'ro'), 'Piesa 2048 pe rândul 2, coloana 3');
   assert.equal(translateArcadeText('No moves left. Final score: 8,192.', 'ro'), 'Nu mai sunt mutări. Scor final: 8,192.');
 });
+
+test('Romanian translations cover the Sudoku interface and dynamic progress', () => {
+  assert.equal(translateArcadeText('Sudoku difficulty', 'ro'), 'Dificultate Sudoku');
+  assert.equal(translateArcadeText('Hint placed — keep going.', 'ro'), 'Indiciu plasat — continuă.');
+  assert.equal(
+    translateArcadeText('Completed in 04:18 · 2 mistakes · 7,210 points.', 'ro'),
+    'Finalizat în 04:18 · 2 greșeli · 7,210 puncte.',
+  );
+  assert.equal(
+    translateArcadeText('Entered 7, row 4, column 9', 'ro'),
+    'Număr introdus 7, rândul 4, coloana 9',
+  );
+  assert.equal(
+    translateArcadeText('Empty cell, row 2, column 6', 'ro'),
+    'Celulă goală, rândul 2, coloana 6',
+  );
+});

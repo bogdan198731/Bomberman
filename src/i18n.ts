@@ -85,8 +85,8 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Finish a match to claim the first spot.': 'Termină un meci pentru a ocupa primul loc.',
   'Game library': 'Bibliotecă de jocuri',
   'Choose your next round': 'Alege următoarea rundă',
-  'Eleven instant games, from explosive duels and Romanian classics to number puzzles, neon racing, co-op survival, and star-fighter missions.':
-    'Unsprezece jocuri instant, de la dueluri explozive și clasice românești la puzzle-uri cu numere, curse neon, supraviețuire cooperativă și misiuni stelare.',
+  'Twelve instant games, from explosive duels and Romanian classics to Sudoku and number puzzles, neon racing, co-op survival, and star-fighter missions.':
+    'Douăsprezece jocuri instant, de la dueluri explozive și clasice românești la Sudoku și puzzle-uri cu numere, curse neon, supraviețuire cooperativă și misiuni stelare.',
   'Search games': 'Caută jocuri',
   'Clear game search': 'Șterge căutarea',
   'Filter games by play mode': 'Filtrează jocurile după modul de joc',
@@ -129,6 +129,8 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
     'Construiește stive curate, elimină linii și îngroapă un bot sau un prieten sub blocuri.',
   'Slide matching numbers together, build clever combos, and create the legendary 2048 tile.':
     'Glisează numerele identice, creează combinații inteligente și formează legendara piesă 2048.',
+  'Complete every row, column, and 3×3 box across three carefully tuned difficulty levels.':
+    'Completează fiecare rând, coloană și careu 3×3 în trei niveluri de dificultate atent echilibrate.',
   'Cut with sevens, capture aces and tens, and outplay the Coral dealer.':
     'Taie cu șeptari, capturează ași și zecari și învinge dealerul Coral.',
   'Hold the center, auto-aim at neon crawlers, and power up through endless waves.':
@@ -139,7 +141,8 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Try another search or show the complete arcade.': 'Încearcă altă căutare sau afișează întreaga arcadă.',
   'Show all games': 'Arată toate jocurile',
   'Blast Arcade · Play instantly in your browser': 'Blast Arcade · Joacă instant în browser',
-  'Eleven live games · Keyboard, touch, bots, and online rooms': 'Unsprezece jocuri active · Tastatură, atingere, boți și camere online',
+  'Twelve live games · Keyboard, touch, bots, and online rooms': 'Douăsprezece jocuri active · Tastatură, atingere, boți și camere online',
+  'Blast Arcade heroes surrounded by twelve game arenas': 'Eroii Blast Arcade înconjurați de douăsprezece arene de joc',
   'Bot · Local · Online PvP': 'Bot · Local · PvP online',
   'Bot · Local · Online': 'Bot · Local · Online',
   'Solo · Local · Online': 'Solo · Local · Online',
@@ -241,7 +244,35 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Slide tiles right': 'Glisează piesele la dreapta',
   'Use arrow keys or WASD. Swipe the board on touch screens.': 'Folosește săgețile sau WASD. Glisează tabla pe ecranele tactile.',
   'No moves left': 'Nu mai sunt mutări',
-  'Finish a match in all 11 games.': 'Termină un meci în toate cele 11 jocuri.',
+  'Classic logic puzzle · Easy, medium, or hard': 'Puzzle logic clasic · Ușor, mediu sau greu',
+  'Sudoku logic puzzle': 'Puzzle logic Sudoku',
+  'Classic logic puzzle': 'Puzzle logic clasic',
+  'Every number has one place.': 'Fiecare număr are un singur loc.',
+  'Fill each row, column, and 3×3 box with the numbers 1 through 9.':
+    'Completează fiecare rând, coloană și careu 3×3 cu numerele de la 1 la 9.',
+  'Sudoku difficulty': 'Dificultate Sudoku',
+  'Medium': 'Mediu',
+  'Sudoku progress': 'Progres Sudoku',
+  'Time': 'Timp',
+  'Mistakes': 'Greșeli',
+  'Hints': 'Indicii',
+  'Sudoku board': 'Tabla Sudoku',
+  'Puzzle complete!': 'Puzzle finalizat!',
+  'Excellent logic. Your score is ready.': 'Logică excelentă. Scorul tău este gata.',
+  'Select a cell and place a number from 1 to 9.': 'Selectează o celulă și alege un număr de la 1 la 9.',
+  'Sudoku number pad': 'Tastatură numerică Sudoku',
+  'Erase': 'Șterge',
+  'Hint': 'Indiciu',
+  'Tap a cell and number, or use your keyboard. Arrow keys move around the board.':
+    'Atinge o celulă și un număr sau folosește tastatura. Săgețile te deplasează pe tablă.',
+  'That number is part of the puzzle.': 'Acest număr face parte din puzzle.',
+  'That number does not belong here.': 'Acest număr nu se potrivește aici.',
+  'Cell cleared. Choose another number.': 'Celulă ștearsă. Alege alt număr.',
+  'Great — keep going.': 'Foarte bine — continuă.',
+  'Given number selected.': 'Ai selectat un număr dat.',
+  'Choose a number for this cell.': 'Alege un număr pentru această celulă.',
+  'Hint placed — keep going.': 'Indiciu plasat — continuă.',
+  'Finish a match in all 12 games.': 'Termină un meci în toate cele 12 jocuri.',
 };
 
 let activeLanguage: ArcadeLanguage = 'en';
@@ -295,6 +326,12 @@ function translateRomanianPattern(value: string): string | null {
   if (match) return `Piesa ${match[1]} pe rândul ${match[2]}, coloana ${match[3]}`;
   match = value.match(/^Empty tile at row (\d+), column (\d+)$/);
   if (match) return `Loc liber pe rândul ${match[1]}, coloana ${match[2]}`;
+  match = value.match(/^Completed in ([0-9:]+) · (\d+) mistakes · ([\d.,]+) points\.$/);
+  if (match) return `Finalizat în ${match[1]} · ${match[2]} greșeli · ${match[3]} puncte.`;
+  match = value.match(/^(Given|Entered) (\d+), row (\d+), column (\d+)$/);
+  if (match) return `${match[1] === 'Given' ? 'Număr dat' : 'Număr introdus'} ${match[2]}, rândul ${match[3]}, coloana ${match[4]}`;
+  match = value.match(/^Empty cell, row (\d+), column (\d+)$/);
+  if (match) return `Celulă goală, rândul ${match[1]}, coloana ${match[2]}`;
   match = value.match(/^(Empty point|Mint piece|Coral piece), position (\d+)$/);
   if (match) {
     const occupant = match[1] === 'Empty point' ? 'Punct liber' : match[1] === 'Mint piece' ? 'Piesă Mint' : 'Piesă Coral';

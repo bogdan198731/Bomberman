@@ -1873,6 +1873,29 @@
       box-shadow: 0 15px 32px rgba(0,0,0,.35), inset 0 2px rgba(255,255,255,.3);
     }
 
+    .sudoku-cover::before {
+      background:
+        linear-gradient(90deg, rgba(255,255,255,.09) 2px, transparent 2px),
+        linear-gradient(rgba(255,255,255,.09) 2px, transparent 2px),
+        linear-gradient(90deg, transparent 32%, rgba(85,217,255,.28) 33% 35%, transparent 36% 65%, rgba(85,217,255,.28) 66% 68%, transparent 69%),
+        linear-gradient(transparent 32%, rgba(85,217,255,.28) 33% 35%, transparent 36% 65%, rgba(85,217,255,.28) 66% 68%, transparent 69%),
+        radial-gradient(circle at 50% 50%, rgba(73,226,255,.22), transparent 55%),
+        #172233;
+      background-size: 24px 24px, 24px 24px, auto, auto, auto, auto;
+    }
+
+    .sudoku-cover .game-glyph {
+      padding: 14px 16px;
+      border: 2px solid rgba(255,255,255,.72);
+      border-radius: 14px;
+      color: #08171d;
+      background: linear-gradient(135deg, #c6f8ff, #49e2ff);
+      font-size: 2rem;
+      font-weight: 950;
+      letter-spacing: -.06em;
+      box-shadow: 0 14px 30px rgba(0,0,0,.34), 0 0 24px rgba(73,226,255,.24);
+    }
+
     .septica-cover::before {
       background:
         radial-gradient(circle at 50% 48%, rgba(255,200,87,.26), transparent 30%),
@@ -3940,6 +3963,12 @@
         font-size: 1.05rem;
       }
 
+      .sudoku-cover .game-glyph {
+        padding: 8px 9px;
+        border-radius: 9px;
+        font-size: 1rem;
+      }
+
       .cover-label {
         display: none;
       }
@@ -5090,6 +5119,260 @@
       .twenty48-controls { width: 168px; grid-template-columns: repeat(3, 50px); }
     }
 
+    .sudoku-app {
+      min-height: 100dvh;
+    }
+
+    .sudoku-brand-mark {
+      display: grid;
+      width: 48px;
+      height: 48px;
+      flex: 0 0 auto;
+      place-items: center;
+      border: 1px solid rgba(73,226,255,.5);
+      border-radius: 13px;
+      color: #06171c;
+      background:
+        linear-gradient(90deg, transparent 31%, rgba(6,23,28,.25) 32% 35%, transparent 36% 64%, rgba(6,23,28,.25) 65% 68%, transparent 69%),
+        linear-gradient(transparent 31%, rgba(6,23,28,.25) 32% 35%, transparent 36% 64%, rgba(6,23,28,.25) 65% 68%, transparent 69%),
+        linear-gradient(135deg, #b8f5ff, #49e2ff);
+      font-size: .8rem;
+      font-weight: 950;
+      box-shadow: 0 10px 24px rgba(0,0,0,.26), 0 0 18px rgba(73,226,255,.2);
+    }
+
+    .sudoku-shell {
+      width: min(100%, 760px);
+      margin: 0 auto;
+      padding: clamp(16px, 3vw, 28px);
+      border: 1px solid rgba(255,255,255,.11);
+      border-radius: 24px;
+      background: linear-gradient(145deg, rgba(25,34,48,.97), rgba(15,22,33,.99));
+      box-shadow: 0 22px 55px rgba(0,0,0,.28);
+    }
+
+    .sudoku-toolbar {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 14px;
+    }
+
+    .sudoku-kicker {
+      display: block;
+      margin-bottom: 5px;
+      color: #49e2ff;
+      font-size: .68rem;
+      font-weight: 900;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+
+    .sudoku-toolbar h2 {
+      margin: 0;
+      font-size: clamp(1.35rem, 4vw, 2rem);
+      line-height: 1.05;
+    }
+
+    .sudoku-toolbar p {
+      max-width: 450px;
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: .78rem;
+      line-height: 1.5;
+    }
+
+    .sudoku-difficulties {
+      display: flex;
+      gap: 6px;
+      flex: 0 0 auto;
+    }
+
+    .sudoku-difficulties button {
+      min-height: 38px;
+      padding: 0 11px;
+      border: 1px solid rgba(255,255,255,.11);
+      border-radius: 10px;
+      color: #c3cfdd;
+      background: rgba(255,255,255,.05);
+      cursor: pointer;
+      font-size: .68rem;
+      font-weight: 900;
+    }
+
+    .sudoku-difficulties button.active {
+      border-color: rgba(73,226,255,.42);
+      color: #06171c;
+      background: #49e2ff;
+    }
+
+    .sudoku-meta {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .sudoku-meta div {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-width: 0;
+      padding: 9px 12px;
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 11px;
+      color: var(--muted);
+      background: rgba(255,255,255,.035);
+      font-size: .62rem;
+      font-weight: 850;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+    }
+
+    .sudoku-meta b {
+      color: var(--ink);
+      font-size: .9rem;
+      letter-spacing: normal;
+    }
+
+    .sudoku-board-stage {
+      position: relative;
+      width: min(100%, 560px);
+      margin: 0 auto;
+    }
+
+    .sudoku-board {
+      display: grid;
+      width: 100%;
+      aspect-ratio: 1;
+      overflow: hidden;
+      grid-template-columns: repeat(9, 1fr);
+      grid-template-rows: repeat(9, 1fr);
+      border: 3px solid #9bcbd4;
+      border-radius: 13px;
+      background: #243446;
+      box-shadow: 0 20px 38px rgba(0,0,0,.32);
+      user-select: none;
+    }
+
+    .sudoku-cell {
+      display: grid;
+      min-width: 0;
+      min-height: 0;
+      padding: 0;
+      place-items: center;
+      border: 0;
+      border-right: 1px solid rgba(155,203,212,.27);
+      border-bottom: 1px solid rgba(155,203,212,.27);
+      color: #74e8fb;
+      background: #152132;
+      cursor: pointer;
+      font: 850 clamp(.9rem, 4.6vw, 1.55rem)/1 system-ui, sans-serif;
+      touch-action: manipulation;
+    }
+
+    .sudoku-cell.box-right { border-right: 3px solid #9bcbd4; }
+    .sudoku-cell.box-bottom { border-bottom: 3px solid #9bcbd4; }
+    .sudoku-cell.given { color: #f4f7fa; background: #1d2b3c; font-weight: 950; }
+    .sudoku-cell.related { background: #1b3041; }
+    .sudoku-cell.same-number { color: #07191e; background: #66dff3; }
+    .sudoku-cell.selected { position: relative; z-index: 1; color: #06171c; background: #a8f5ff; box-shadow: inset 0 0 0 3px #49e2ff; }
+    .sudoku-cell.incorrect { color: #fff; background: #c63e52; }
+    .sudoku-cell:focus-visible { position: relative; z-index: 2; outline: 3px solid var(--gold); outline-offset: -3px; }
+
+    .sudoku-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      display: grid;
+      padding: 22px;
+      place-content: center;
+      border-radius: 13px;
+      text-align: center;
+      background: rgba(10,19,29,.91);
+      backdrop-filter: blur(8px);
+    }
+
+    .sudoku-overlay[hidden] { display: none; }
+    .sudoku-win-icon { display: grid; width: 58px; height: 58px; margin: 0 auto 12px; place-items: center; border-radius: 18px; color: #07150d; background: var(--p1); font-size: 1.6rem; font-weight: 950; box-shadow: 0 0 28px rgba(84,227,142,.32); }
+    .sudoku-overlay h3 { margin: 0; color: var(--p1); font-size: clamp(1.5rem, 6vw, 2.3rem); }
+    .sudoku-overlay p { max-width: 370px; margin: 9px auto 17px; color: #c7d2df; font-size: .8rem; line-height: 1.5; }
+    .sudoku-overlay button { min-height: 42px; padding: 0 16px; border: 0; border-radius: 11px; color: #06171c; background: #49e2ff; cursor: pointer; font-weight: 950; }
+
+    .sudoku-status {
+      min-height: 22px;
+      margin: 12px 0 10px;
+      color: #c7d2df;
+      font-size: .75rem;
+      font-weight: 780;
+      text-align: center;
+    }
+
+    .sudoku-number-pad {
+      display: grid;
+      width: min(100%, 560px);
+      grid-template-columns: repeat(9, 1fr);
+      gap: 6px;
+      margin: 0 auto;
+    }
+
+    .sudoku-number-pad button {
+      min-height: 46px;
+      padding: 0;
+      border: 1px solid rgba(73,226,255,.2);
+      border-radius: 11px;
+      color: #9ff3ff;
+      background: rgba(73,226,255,.07);
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 950;
+      touch-action: manipulation;
+    }
+
+    .sudoku-number-pad button:active { color: #06171c; background: #49e2ff; transform: translateY(1px); }
+
+    .sudoku-actions {
+      display: grid;
+      width: min(100%, 560px);
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7px;
+      margin: 8px auto 0;
+    }
+
+    .sudoku-actions button {
+      min-height: 40px;
+      border: 1px solid rgba(255,255,255,.11);
+      border-radius: 11px;
+      color: var(--ink);
+      background: rgba(255,255,255,.05);
+      cursor: pointer;
+      font-size: .7rem;
+      font-weight: 900;
+    }
+
+    .sudoku-actions button.primary { border-color: rgba(84,227,142,.3); color: #07150d; background: var(--p1); }
+
+    .sudoku-help {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: .66rem;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    @media (max-width: 620px) {
+      .sudoku-shell { padding: 12px; border-radius: 18px; }
+      .sudoku-toolbar { align-items: stretch; flex-direction: column; gap: 11px; }
+      .sudoku-toolbar p { display: none; }
+      .sudoku-difficulties { display: grid; grid-template-columns: repeat(3, 1fr); }
+      .sudoku-difficulties button { padding: 0 7px; }
+      .sudoku-meta div { padding: 8px; }
+      .sudoku-number-pad { gap: 4px; }
+      .sudoku-number-pad button { min-height: 40px; border-radius: 9px; }
+      .sudoku-actions button { min-height: 38px; }
+    }
+
     .block-team {
       grid-template-columns: repeat(3, minmax(40px, 58px));
       grid-template-rows: auto repeat(2, 46px);
@@ -5456,7 +5739,7 @@
           <small>Profile</small>
         </button>
         <span id="connectivityStatus" class="connectivity-status" role="status"><i aria-hidden="true"></i><span id="connectivityLabel">Online</span></span>
-        <span class="live-chip">11 games live</span>
+        <span class="live-chip">12 games live</span>
       </div>
     </header>
 
@@ -5477,7 +5760,7 @@
         </div>
       </div>
       <div class="hub-visual">
-        <img src="/public/og-v3.png" alt="Blast Arcade heroes surrounded by ten game arenas">
+        <img src="/public/og-v3.png" alt="Blast Arcade heroes surrounded by twelve game arenas">
       </div>
     </section>
 
@@ -5686,7 +5969,7 @@
           <span class="catalog-kicker">Game library</span>
           <h2 id="gamesTitle">Choose your next round</h2>
         </div>
-        <p>Eleven instant games, from explosive duels and Romanian classics to number puzzles, neon racing, co-op survival, and star-fighter missions.</p>
+        <p>Twelve instant games, from explosive duels and Romanian classics to Sudoku and number puzzles, neon racing, co-op survival, and star-fighter missions.</p>
       </div>
 
       <div class="catalog-tools">
@@ -5702,7 +5985,7 @@
           <button class="catalog-filter" type="button" data-catalog-filter="online" aria-pressed="false">Online</button>
           <button class="catalog-filter" type="button" data-catalog-filter="favorites" aria-pressed="false">★ Favorites</button>
         </div>
-        <span id="catalogResultCount" class="catalog-result-count" aria-live="polite">11 games</span>
+        <span id="catalogResultCount" class="catalog-result-count" aria-live="polite">12 games</span>
       </div>
 
       <div class="game-grid">
@@ -5834,6 +6117,22 @@
           </div>
         </article>
 
+        <article class="catalog-card featured" data-catalog-game="sudoku" data-catalog-modes="solo">
+          <div class="game-cover sudoku-cover">
+            <span class="cover-label">New puzzle</span>
+            <button class="favorite-button" type="button" data-favorite-game aria-label="Add Sudoku to favorites" aria-pressed="false">☆</button>
+            <span class="game-glyph" aria-hidden="true">9×9</span>
+          </div>
+          <div class="catalog-card-body">
+            <h3>Sudoku</h3>
+            <p>Complete every row, column, and 3×3 box across three carefully tuned difficulty levels.</p>
+            <div class="catalog-card-footer">
+              <span class="mode-label">Solo puzzle</span>
+              <button class="card-play-button" type="button" data-launch-game="sudoku">Play now</button>
+            </div>
+          </div>
+        </article>
+
         <article class="catalog-card featured" data-catalog-game="septica" data-catalog-modes="solo local online">
           <div class="game-cover septica-cover">
             <span class="cover-label">Live now</span>
@@ -5891,7 +6190,7 @@
 
     <footer class="hub-footer">
       <span>Blast Arcade · Play instantly in your browser</span>
-      <span>Eleven live games · Keyboard, touch, bots, and online rooms</span>
+      <span>Twelve live games · Keyboard, touch, bots, and online rooms</span>
     </footer>
   </main>
 
@@ -6636,6 +6935,66 @@
         <button class="twenty48-direction right" type="button" data-twenty48-direction="right" aria-label="Slide tiles right">→</button>
       </div>
       <p class="twenty48-help">Use arrow keys or WASD. Swipe the board on touch screens.</p>
+    </section>
+  </main>
+
+  <main id="sudokuView" class="paddle-app sudoku-app view-hidden">
+    <header class="topbar">
+      <div class="brand">
+        <div class="sudoku-brand-mark" aria-hidden="true">9×9</div>
+        <div><h1>Sudoku</h1><p>Classic logic puzzle · Easy, medium, or hard</p></div>
+      </div>
+      <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub>← Arcade</button></div>
+    </header>
+
+    <section class="sudoku-shell" aria-label="Sudoku logic puzzle">
+      <div class="sudoku-toolbar">
+        <div>
+          <span class="sudoku-kicker">Classic logic puzzle</span>
+          <h2>Every number has one place.</h2>
+          <p>Fill each row, column, and 3×3 box with the numbers 1 through 9.</p>
+        </div>
+        <div class="sudoku-difficulties" role="group" aria-label="Sudoku difficulty">
+          <button class="active" type="button" data-sudoku-difficulty="easy" aria-pressed="true">Easy</button>
+          <button type="button" data-sudoku-difficulty="medium" aria-pressed="false">Medium</button>
+          <button type="button" data-sudoku-difficulty="hard" aria-pressed="false">Hard</button>
+        </div>
+      </div>
+
+      <div class="sudoku-meta" aria-label="Sudoku progress">
+        <div><span>Time</span><b id="sudokuTimer">00:00</b></div>
+        <div><span>Mistakes</span><b id="sudokuMistakes">0</b></div>
+        <div><span>Hints</span><b id="sudokuHints">0</b></div>
+      </div>
+
+      <div class="sudoku-board-stage">
+        <div id="sudokuBoard" class="sudoku-board" role="grid" aria-label="Sudoku board"></div>
+        <div id="sudokuOverlay" class="sudoku-overlay" role="dialog" aria-live="assertive" hidden>
+          <div class="sudoku-win-icon" aria-hidden="true">✓</div>
+          <h3>Puzzle complete!</h3>
+          <p id="sudokuOverlayMessage">Excellent logic. Your score is ready.</p>
+          <button type="button" data-sudoku-new>New puzzle</button>
+        </div>
+      </div>
+
+      <p id="sudokuStatus" class="sudoku-status" aria-live="polite">Select a cell and place a number from 1 to 9.</p>
+      <div class="sudoku-number-pad" aria-label="Sudoku number pad">
+        <button type="button" data-sudoku-number="1">1</button>
+        <button type="button" data-sudoku-number="2">2</button>
+        <button type="button" data-sudoku-number="3">3</button>
+        <button type="button" data-sudoku-number="4">4</button>
+        <button type="button" data-sudoku-number="5">5</button>
+        <button type="button" data-sudoku-number="6">6</button>
+        <button type="button" data-sudoku-number="7">7</button>
+        <button type="button" data-sudoku-number="8">8</button>
+        <button type="button" data-sudoku-number="9">9</button>
+      </div>
+      <div class="sudoku-actions">
+        <button id="sudokuEraseButton" type="button"><span aria-hidden="true">⌫</span> Erase</button>
+        <button id="sudokuHintButton" type="button"><span aria-hidden="true">◇</span> Hint</button>
+        <button class="primary" type="button" data-sudoku-new>New puzzle</button>
+      </div>
+      <p class="sudoku-help">Tap a cell and number, or use your keyboard. Arrow keys move around the board.</p>
     </section>
   </main>
 

@@ -1,4 +1,4 @@
-export const ARCADE_GAME_IDS = ['bomberman', 'tintar', 'paddle', 'snake', 'tanks', 'septica', 'survival', 'star', 'racing', 'blocks', 'twenty48'] as const;
+export const ARCADE_GAME_IDS = ['bomberman', 'tintar', 'paddle', 'snake', 'tanks', 'septica', 'survival', 'star', 'racing', 'blocks', 'twenty48', 'sudoku'] as const;
 export type ArcadeGameId = typeof ARCADE_GAME_IDS[number];
 export type ArcadeOutcome = 'win' | 'loss' | 'draw' | 'complete';
 
@@ -111,6 +111,7 @@ export const GAME_META: Record<ArcadeGameId, { name: string; icon: string }> = {
   racing: { name: 'Micro Racers', icon: '🏁' },
   blocks: { name: 'Block Drop', icon: '▦' },
   twenty48: { name: '2048', icon: '2048' },
+  sudoku: { name: 'Sudoku', icon: '9×9' },
 };
 
 export const ACHIEVEMENTS: ReadonlyArray<AchievementDefinition> = [
@@ -119,7 +120,7 @@ export const ACHIEVEMENTS: ReadonlyArray<AchievementDefinition> = [
   { id: 'arcade-regular', name: 'Arcade Regular', description: 'Finish 10 matches across the hub.', icon: '10' },
   { id: 'champion', name: 'Champion', description: 'Collect 10 competitive wins.', icon: '🏆' },
   { id: 'score-chaser', name: 'Score Chaser', description: 'Earn 5,000 total score.', icon: '5K' },
-  { id: 'world-tour', name: 'World Tour', description: 'Finish a match in all 11 games.', icon: '◎' },
+  { id: 'world-tour', name: 'World Tour', description: 'Finish a match in all 12 games.', icon: '◎' },
   { id: 'level-five', name: 'Level Five', description: 'Reach player level 5.', icon: 'V' },
 ];
 

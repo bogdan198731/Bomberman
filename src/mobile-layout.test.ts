@@ -54,6 +54,16 @@ test('2048 exposes a responsive swipe board and touch fallback controls', () => 
   assert.match(html, /Use arrow keys or WASD\. Swipe the board on touch screens\./);
 });
 
+test('Sudoku exposes a responsive board and complete touch controls', () => {
+  assert.match(html, /id="sudokuView" class="paddle-app sudoku-app view-hidden"/);
+  assert.match(html, /id="sudokuBoard" class="sudoku-board"[^>]*role="grid"/);
+  assert.match(html, /\.sudoku-board\s*\{[^}]*aspect-ratio:\s*1;[^}]*grid-template-columns:\s*repeat\(9, 1fr\);/s);
+  assert.equal((html.match(/data-sudoku-number=/g) ?? []).length, 9);
+  assert.equal((html.match(/data-sudoku-difficulty=/g) ?? []).length, 3);
+  assert.match(html, /id="sudokuHintButton"/);
+  assert.match(html, /Tap a cell and number, or use your keyboard\./);
+});
+
 test('mobile game library uses compact three-column tiles with a narrow-screen fallback', () => {
   assert.match(mobileStyles, /\.game-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\);[^}]*gap:\s*8px;/s);
   assert.match(mobileStyles, /\.game-cover\s*\{[^}]*min-height:\s*82px;/s);

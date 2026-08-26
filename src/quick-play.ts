@@ -28,6 +28,7 @@ export const QUICK_PLAY_GAMES: readonly QuickPlayGame[] = [
   { id: 'racing', title: 'Micro Racers', icon: '🏁', modes: ['solo', 'local', 'online'] },
   { id: 'blocks', title: 'Block Drop Duel', icon: '▦', modes: ['solo', 'local', 'online'] },
   { id: 'twenty48', title: '2048', icon: '2048', modes: ['solo'] },
+  { id: 'sudoku', title: 'Sudoku', icon: '9×9', modes: ['solo'] },
 ];
 
 export function gamesForQuickPlay(mode: QuickPlayMode): QuickPlayGame[] {
