@@ -54,10 +54,12 @@ test('2048 exposes a responsive swipe board and touch fallback controls', () => 
   assert.match(html, /Use arrow keys or WASD\. Swipe the board on touch screens\./);
 });
 
-test('mobile game library uses compact two-column tiles', () => {
-  assert.match(mobileStyles, /\.game-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\);[^}]*gap:\s*10px;/s);
-  assert.match(mobileStyles, /\.game-cover\s*\{[^}]*min-height:\s*104px;/s);
-  assert.match(mobileStyles, /\.game-glyph\s*\{[^}]*font-size:\s*2\.35rem;/s);
+test('mobile game library uses compact three-column tiles with a narrow-screen fallback', () => {
+  assert.match(mobileStyles, /\.game-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\);[^}]*gap:\s*8px;/s);
+  assert.match(mobileStyles, /\.game-cover\s*\{[^}]*min-height:\s*82px;/s);
+  assert.match(mobileStyles, /\.game-glyph\s*\{[^}]*font-size:\s*2rem;/s);
+  assert.match(mobileStyles, /\.cover-label\s*\{[^}]*display:\s*none;/s);
   assert.match(mobileStyles, /\.catalog-card-body p,[\s\S]*?\.mode-label\s*\{[^}]*display:\s*none;/s);
-  assert.match(mobileStyles, /\.card-play-button\s*\{[^}]*width:\s*100%;[^}]*min-height:\s*36px;/s);
+  assert.match(mobileStyles, /\.card-play-button\s*\{[^}]*width:\s*100%;[^}]*min-height:\s*34px;/s);
+  assert.match(html, /@media \(max-width: 340px\)[\s\S]*?\.game-grid\s*\{[^}]*repeat\(2, minmax\(0, 1fr\)\)/s);
 });

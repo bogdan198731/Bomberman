@@ -3601,7 +3601,7 @@
       }
 
       .catalog-section {
-        padding-top: 48px;
+        padding-top: 36px;
       }
 
       .profile-panel {
@@ -3751,56 +3751,57 @@
       }
 
       .game-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 10px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
       }
 
       .catalog-card {
-        padding: 6px;
-        border-radius: 16px;
+        padding: 4px;
+        border-radius: 14px;
       }
 
       .game-cover {
-        min-height: 104px;
-        border-radius: 11px;
+        min-height: 82px;
+        border-radius: 10px;
       }
 
       .game-glyph {
-        font-size: 2.35rem;
+        font-size: 2rem;
       }
 
       .twenty48-cover .game-glyph {
-        padding: 10px 12px;
-        border-radius: 12px;
-        font-size: 1.35rem;
+        padding: 8px 9px;
+        border-radius: 10px;
+        font-size: 1.05rem;
       }
 
       .cover-label {
-        top: 7px;
-        left: 7px;
-        padding: 4px 6px;
-        font-size: 0.48rem;
+        display: none;
       }
 
       .favorite-button {
-        top: 6px;
-        right: 6px;
-        width: 30px;
-        height: 30px;
-        border-radius: 9px;
-        font-size: 0.92rem;
+        top: 5px;
+        right: 5px;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        font-size: 0.86rem;
       }
 
       .catalog-card-body {
-        padding: 10px 3px 4px;
+        padding: 7px 2px 3px;
       }
 
       .catalog-card-body h3 {
+        display: -webkit-box;
+        min-height: 1.9em;
         overflow: hidden;
-        font-size: 0.92rem;
-        line-height: 1.15;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        font-size: 0.78rem;
+        line-height: 1.08;
+        text-align: center;
+        white-space: normal;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
       }
 
       .catalog-card-body p,
@@ -3810,14 +3811,15 @@
 
       .catalog-card-footer {
         display: block;
-        margin-top: 10px;
+        margin-top: 7px;
       }
 
       .card-play-button {
         width: 100%;
-        min-height: 36px;
-        padding: 0 8px;
-        font-size: 0.7rem;
+        min-height: 34px;
+        padding: 0 5px;
+        border-radius: 9px;
+        font-size: 0.64rem;
       }
 
       .hub-footer {
@@ -4011,6 +4013,20 @@
       .mobile-bomb-button {
         width: 78px;
         height: 78px;
+      }
+    }
+
+    @media (max-width: 340px) {
+      .game-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .game-cover {
+        min-height: 90px;
+      }
+
+      .catalog-card-body h3 {
+        font-size: 0.84rem;
       }
     }
 
