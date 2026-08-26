@@ -63,3 +63,14 @@ test('mobile game library uses compact three-column tiles with a narrow-screen f
   assert.match(mobileStyles, /\.card-play-button\s*\{[^}]*width:\s*100%;[^}]*min-height:\s*34px;/s);
   assert.match(html, /@media \(max-width: 340px\)[\s\S]*?\.game-grid\s*\{[^}]*repeat\(2, minmax\(0, 1fr\)\)/s);
 });
+
+test('mobile progression panels expose accessible fold controls and notice badges', () => {
+  assert.equal((html.match(/data-mobile-fold-target=/g) ?? []).length, 4);
+  assert.match(html, /data-mobile-fold-target="profilePanelBody"[^>]*aria-expanded="false"[^>]*aria-controls="profilePanelBody"/);
+  assert.match(html, /data-mobile-fold-target="dailyChallengeFoldBody"[^>]*aria-expanded="false"/);
+  assert.match(html, /id="dailyFoldNotice" class="mobile-fold-notice alert"/);
+  assert.match(html, /data-mobile-fold-target="achievementFoldBody"[^>]*aria-expanded="false"/);
+  assert.match(html, /data-mobile-fold-target="activityFoldBody"[^>]*aria-expanded="false"/);
+  assert.match(mobileStyles, /\.mobile-fold-toggle\s*\{[^}]*display:\s*grid;[^}]*min-height:\s*66px;/s);
+  assert.match(mobileStyles, /\.mobile-fold-toggle\[aria-expanded="false"\][\s\S]*?\.mobile-fold-content\s*\{[^}]*display:\s*none;/s);
+});

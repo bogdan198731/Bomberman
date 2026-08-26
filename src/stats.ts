@@ -479,11 +479,40 @@ export function initArcadeProfile(): void {
   const activityWinStreak = document.getElementById('activityWinStreak');
   const recentActivityList = document.getElementById('recentActivityList');
   const recentActivityCount = document.getElementById('recentActivityCount');
+  const profileFoldNotice = document.getElementById('profileFoldNotice');
+  const dailyFoldNotice = document.getElementById('dailyFoldNotice');
+  const achievementFoldNotice = document.getElementById('achievementFoldNotice');
+  const activityFoldNotice = document.getElementById('activityFoldNotice');
+  const mobileFoldButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-mobile-fold-target]'));
   const rewardToast = document.getElementById('progressionToast');
   if (!panel || !nameInput || !gameStats) return;
   const activeNameInput = nameInput;
   const activeGameStats = gameStats;
+  const mobileFoldMedia = window.matchMedia('(max-width: 700px)');
   let rewardTimer = 0;
+
+  function setMobileFold(button: HTMLButtonElement, expanded: boolean): void {
+    const targetId = button.dataset.mobileFoldTarget;
+    const content = targetId ? document.getElementById(targetId) : null;
+    if (!content) return;
+    button.dataset.mobileFoldOpen = String(expanded);
+    const effectiveExpanded = mobileFoldMedia.matches ? expanded : true;
+    button.setAttribute('aria-expanded', String(effectiveExpanded));
+    content.hidden = !effectiveExpanded;
+    button.closest('.mobile-fold-section')?.classList.toggle('mobile-fold-open', effectiveExpanded);
+  }
+
+  function syncMobileFolds(): void {
+    mobileFoldButtons.forEach(button => setMobileFold(button, button.dataset.mobileFoldOpen === 'true'));
+  }
+
+  mobileFoldButtons.forEach(button => button.addEventListener('click', () => {
+    if (!mobileFoldMedia.matches) return;
+    setMobileFold(button, button.getAttribute('aria-expanded') !== 'true');
+  }));
+  if (typeof mobileFoldMedia.addEventListener === 'function') mobileFoldMedia.addEventListener('change', syncMobileFolds);
+  else mobileFoldMedia.addListener(syncMobileFolds);
+  syncMobileFolds();
 
   function initials(name: string): string {
     return name.split(' ').slice(0, 2).map(part => part[0]?.toUpperCase() ?? '').join('') || 'AP';
@@ -495,6 +524,7 @@ export function initArcadeProfile(): void {
     if (document.activeElement !== activeNameInput) activeNameInput.value = profile.name;
     if (avatar) avatar.textContent = initials(profile.name);
     if (level) level.textContent = `Level ${currentLevel}`;
+    if (profileFoldNotice) profileFoldNotice.textContent = `L${currentLevel}`;
     if (chipName) chipName.textContent = profile.name;
     if (games) games.textContent = String(profile.totalPlays);
     if (wins) wins.textContent = String(profile.totalWins);
@@ -524,6 +554,11 @@ export function initArcadeProfile(): void {
     }));
     const challenge = profile.dailyChallenge!;
     const dailyMeta = GAME_META[challenge.gameId];
+    if (dailyFoldNotice) {
+      dailyFoldNotice.textContent = challenge.completed ? '✓' : String(Math.max(0, challenge.target - challenge.progress));
+      dailyFoldNotice.classList.toggle('alert', !challenge.completed);
+      dailyFoldNotice.classList.toggle('complete', challenge.completed);
+    }
     if (dailyName) dailyName.textContent = dailyMeta.name;
     if (dailyIcon) dailyIcon.textContent = dailyMeta.icon;
     if (dailyDescription) dailyDescription.textContent = `Finish ${challenge.target} matches today to earn +${DAILY_CHALLENGE_XP} XP.`;
@@ -576,6 +611,7 @@ export function initArcadeProfile(): void {
       return item;
     }));
     const unlocked = new Set(profile.unlockedAchievements);
+    if (achievementFoldNotice) achievementFoldNotice.textContent = String(unlocked.size);
     if (achievementCount) achievementCount.textContent = `${unlocked.size}/${ACHIEVEMENTS.length} unlocked`;
     achievementGrid?.replaceChildren(...ACHIEVEMENTS.map(achievement => {
       const earned = unlocked.has(achievement.id);
@@ -605,6 +641,7 @@ export function initArcadeProfile(): void {
     }
     if (activityWinStreak) activityWinStreak.textContent = `${insights.winStreak}×`;
     if (recentActivityCount) recentActivityCount.textContent = `${profile.recentMatches.length} saved`;
+    if (activityFoldNotice) activityFoldNotice.textContent = String(profile.recentMatches.length);
     if (recentActivityList) {
       const visibleMatches = profile.recentMatches.slice(0, 6);
       if (!visibleMatches.length) {
@@ -649,6 +686,8 @@ export function initArcadeProfile(): void {
   saveButton?.addEventListener('click', saveName);
   activeNameInput.addEventListener('keydown', event => { if (event.key === 'Enter') saveName(); });
   focusButton?.addEventListener('click', () => {
+    const profileFoldButton = mobileFoldButtons.find(button => button.dataset.mobileFoldTarget === 'profilePanelBody');
+    if (profileFoldButton && mobileFoldMedia.matches) setMobileFold(profileFoldButton, true);
     panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
     window.setTimeout(() => activeNameInput.focus(), 350);
   });
