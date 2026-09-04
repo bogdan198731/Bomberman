@@ -15,6 +15,20 @@ export interface SudokuInputResult {
   completed: boolean;
 }
 
+interface SudokuDifficultyRules {
+  hintLimit: number;
+  baseScore: number;
+  timePenalty: number;
+  mistakePenalty: number;
+  hintPenalty: number;
+}
+
+export const SUDOKU_DIFFICULTY_RULES: Record<SudokuDifficulty, SudokuDifficultyRules> = {
+  easy: { hintLimit: 2, baseScore: 10_000, timePenalty: 3, mistakePenalty: 500, hintPenalty: 1_500 },
+  medium: { hintLimit: 1, baseScore: 15_000, timePenalty: 4, mistakePenalty: 750, hintPenalty: 3_000 },
+  hard: { hintLimit: 1, baseScore: 20_000, timePenalty: 5, mistakePenalty: 1_000, hintPenalty: 5_000 },
+};
+
 export const SUDOKU_PUZZLES: Record<SudokuDifficulty, SudokuPuzzleDefinition> = {
   easy: {
     difficulty: 'easy',
@@ -85,11 +99,17 @@ export function transformSudokuPuzzle(
   };
 }
 
-export function sudokuCompletionScore(elapsedSeconds: number, mistakes: number, hints: number): number {
-  const timePenalty = Math.max(0, Math.floor(elapsedSeconds)) * 5;
-  const mistakePenalty = Math.max(0, Math.floor(mistakes)) * 250;
-  const hintPenalty = Math.max(0, Math.floor(hints)) * 500;
-  return Math.max(100, 10_000 - timePenalty - mistakePenalty - hintPenalty);
+export function sudokuCompletionScore(
+  difficulty: SudokuDifficulty,
+  elapsedSeconds: number,
+  mistakes: number,
+  hints: number,
+): number {
+  const rules = SUDOKU_DIFFICULTY_RULES[difficulty];
+  const timePenalty = Math.max(0, Math.floor(elapsedSeconds)) * rules.timePenalty;
+  const mistakePenalty = Math.max(0, Math.floor(mistakes)) * rules.mistakePenalty;
+  const hintPenalty = Math.max(0, Math.floor(hints)) * rules.hintPenalty;
+  return Math.max(100, rules.baseScore - timePenalty - mistakePenalty - hintPenalty);
 }
 
 export class SudokuGame {
@@ -124,6 +144,14 @@ export class SudokuGame {
 
   isGiven(index: number): boolean {
     return index >= 0 && index < 81 && this.puzzle[index] !== 0;
+  }
+
+  get hintLimit(): number {
+    return SUDOKU_DIFFICULTY_RULES[this.difficulty].hintLimit;
+  }
+
+  get hintsRemaining(): number {
+    return Math.max(0, this.hintLimit - this.hints);
   }
 
   select(index: number): boolean {
@@ -164,7 +192,7 @@ export class SudokuGame {
   }
 
   hint(): number | null {
-    if (this.phase === 'complete') return null;
+    if (this.phase === 'complete' || this.hintsRemaining === 0) return null;
     let target = this.isGiven(this.selected) || this.board[this.selected] === this.solution[this.selected]
       ? this.board.findIndex((value, index) => value !== this.solution[index])
       : this.selected;
@@ -200,9 +228,11 @@ export function initSudoku(): void {
   const timerElement = document.getElementById('sudokuTimer');
   const mistakesElement = document.getElementById('sudokuMistakes');
   const hintsElement = document.getElementById('sudokuHints');
+  const scoreElement = document.getElementById('sudokuScore');
   const statusElement = document.getElementById('sudokuStatus');
   const overlay = document.getElementById('sudokuOverlay');
   const overlayMessage = document.getElementById('sudokuOverlayMessage');
+  const hintButton = document.getElementById('sudokuHintButton') as HTMLButtonElement | null;
   if (!view || !boardElement) return;
   const activeView = view;
   const activeBoard = boardElement;
@@ -213,6 +243,17 @@ export function initSudoku(): void {
   let status = 'Select a cell and place a number from 1 to 9.';
 
   function visible(): boolean { return !activeView.classList.contains('view-hidden'); }
+
+  function currentScore(): number {
+    return sudokuCompletionScore(game.difficulty, elapsedSeconds, game.mistakes, game.hints);
+  }
+
+  function syncProgress(): void {
+    if (timerElement) timerElement.textContent = formatSudokuTime(elapsedSeconds);
+    if (mistakesElement) mistakesElement.textContent = String(game.mistakes);
+    if (hintsElement) hintsElement.textContent = String(game.hintsRemaining);
+    if (scoreElement) scoreElement.textContent = currentScore().toLocaleString();
+  }
 
   function syncUi(): void {
     const restoreBoardFocus = activeBoard.contains(document.activeElement);
@@ -248,9 +289,7 @@ export function initSudoku(): void {
     });
     activeBoard.replaceChildren(...cells);
     if (restoreBoardFocus) activeBoard.querySelector<HTMLElement>('[tabindex="0"]')?.focus();
-    if (timerElement) timerElement.textContent = formatSudokuTime(elapsedSeconds);
-    if (mistakesElement) mistakesElement.textContent = String(game.mistakes);
-    if (hintsElement) hintsElement.textContent = String(game.hints);
+    syncProgress();
     if (statusElement) statusElement.textContent = status;
     document.querySelectorAll<HTMLButtonElement>('[data-sudoku-difficulty]').forEach(button => {
       const active = button.dataset.sudokuDifficulty === game.difficulty;
@@ -259,9 +298,17 @@ export function initSudoku(): void {
     });
     const complete = game.phase === 'complete';
     overlay?.toggleAttribute('hidden', !complete);
+    if (hintButton) {
+      hintButton.disabled = complete || game.hintsRemaining === 0;
+      hintButton.setAttribute('aria-label', game.hintsRemaining > 0
+        ? `Hint, ${game.hintsRemaining} remaining`
+        : 'No hints remaining');
+    }
     if (complete) {
-      const score = sudokuCompletionScore(elapsedSeconds, game.mistakes, game.hints);
-      if (overlayMessage) overlayMessage.textContent = `Completed in ${formatSudokuTime(elapsedSeconds)} · ${game.mistakes} mistakes · ${score.toLocaleString()} points.`;
+      const score = currentScore();
+      const mistakeLabel = game.mistakes === 1 ? 'mistake' : 'mistakes';
+      const hintLabel = game.hints === 1 ? 'hint' : 'hints';
+      if (overlayMessage) overlayMessage.textContent = `Completed in ${formatSudokuTime(elapsedSeconds)} · ${game.mistakes} ${mistakeLabel} · ${game.hints} ${hintLabel} · ${score.toLocaleString()} points.`;
       reporter.report(true, { outcome: 'complete', score });
     }
   }
@@ -305,8 +352,9 @@ export function initSudoku(): void {
     button.addEventListener('click', () => enter(Number(button.dataset.sudokuNumber)));
   });
   document.getElementById('sudokuEraseButton')?.addEventListener('click', () => enter(0));
-  document.getElementById('sudokuHintButton')?.addEventListener('click', () => {
+  hintButton?.addEventListener('click', () => {
     if (game.hint() !== null) status = game.phase === 'complete' ? 'Puzzle complete!' : 'Hint placed — keep going.';
+    else if (game.phase !== 'complete') status = 'No hints remaining for this puzzle.';
     syncUi();
   });
   document.querySelectorAll<HTMLElement>('[data-sudoku-new]').forEach(button => button.addEventListener('click', () => reset()));
@@ -332,7 +380,7 @@ export function initSudoku(): void {
   window.setInterval(() => {
     if (!visible() || game.phase !== 'playing') return;
     elapsedSeconds += 1;
-    if (timerElement) timerElement.textContent = formatSudokuTime(elapsedSeconds);
+    syncProgress();
   }, 1_000);
   syncUi();
 }

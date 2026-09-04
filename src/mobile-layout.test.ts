@@ -61,7 +61,9 @@ test('Sudoku exposes a responsive board and complete touch controls', () => {
   assert.equal((html.match(/data-sudoku-number=/g) ?? []).length, 9);
   assert.equal((html.match(/data-sudoku-difficulty=/g) ?? []).length, 3);
   assert.match(html, /id="sudokuHintButton"/);
-  assert.match(html, /Tap a cell and number, or use your keyboard\./);
+  assert.match(html, /id="sudokuHints">2<\/b>/);
+  assert.match(html, /id="sudokuScore">10,000<\/b>/);
+  assert.match(html, /Tougher puzzles start with a higher score/);
 });
 
 test('mobile game library uses compact three-column tiles with a narrow-screen fallback', () => {

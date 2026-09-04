@@ -256,6 +256,8 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Time': 'Timp',
   'Mistakes': 'Greșeli',
   'Hints': 'Indicii',
+  'Hints left': 'Indicii rămase',
+  'Live score': 'Scor actual',
   'Sudoku board': 'Tabla Sudoku',
   'Puzzle complete!': 'Puzzle finalizat!',
   'Excellent logic. Your score is ready.': 'Logică excelentă. Scorul tău este gata.',
@@ -263,8 +265,8 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Sudoku number pad': 'Tastatură numerică Sudoku',
   'Erase': 'Șterge',
   'Hint': 'Indiciu',
-  'Tap a cell and number, or use your keyboard. Arrow keys move around the board.':
-    'Atinge o celulă și un număr sau folosește tastatura. Săgețile te deplasează pe tablă.',
+  'Tap a cell and number, or use your keyboard. Tougher puzzles start with a higher score; time, mistakes, and hints reduce it.':
+    'Atinge o celulă și un număr sau folosește tastatura. Puzzle-urile mai dificile pornesc cu un scor mai mare; timpul, greșelile și indiciile îl reduc.',
   'That number is part of the puzzle.': 'Acest număr face parte din puzzle.',
   'That number conflicts with this row, column, or box.': 'Acest număr intră în conflict cu rândul, coloana sau careul.',
   'Cell cleared. Choose another number.': 'Celulă ștearsă. Alege alt număr.',
@@ -272,6 +274,8 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Given number selected.': 'Ai selectat un număr dat.',
   'Choose a number for this cell.': 'Alege un număr pentru această celulă.',
   'Hint placed — keep going.': 'Indiciu plasat — continuă.',
+  'No hints remaining': 'Nu mai sunt indicii',
+  'No hints remaining for this puzzle.': 'Nu mai sunt indicii pentru acest puzzle.',
   'Finish a match in all 12 games.': 'Termină un meci în toate cele 12 jocuri.',
 };
 
@@ -326,8 +330,14 @@ function translateRomanianPattern(value: string): string | null {
   if (match) return `Piesa ${match[1]} pe rândul ${match[2]}, coloana ${match[3]}`;
   match = value.match(/^Empty tile at row (\d+), column (\d+)$/);
   if (match) return `Loc liber pe rândul ${match[1]}, coloana ${match[2]}`;
-  match = value.match(/^Completed in ([0-9:]+) · (\d+) mistakes · ([\d.,]+) points\.$/);
-  if (match) return `Finalizat în ${match[1]} · ${match[2]} greșeli · ${match[3]} puncte.`;
+  match = value.match(/^Completed in ([0-9:]+) · (\d+) mistakes? · (\d+) hints? · ([\d.,]+) points\.$/);
+  if (match) {
+    const mistakes = Number(match[2]) === 1 ? 'greșeală' : 'greșeli';
+    const hints = Number(match[3]) === 1 ? 'indiciu' : 'indicii';
+    return `Finalizat în ${match[1]} · ${match[2]} ${mistakes} · ${match[3]} ${hints} · ${match[4]} puncte.`;
+  }
+  match = value.match(/^Hint, (\d+) remaining$/);
+  if (match) return `Indiciu, ${match[1]} ${Number(match[1]) === 1 ? 'rămas' : 'rămase'}`;
   match = value.match(/^(Given|Entered) (\d+), row (\d+), column (\d+)$/);
   if (match) return `${match[1] === 'Given' ? 'Număr dat' : 'Număr introdus'} ${match[2]}, rândul ${match[3]}, coloana ${match[4]}`;
   match = value.match(/^Empty cell, row (\d+), column (\d+)$/);

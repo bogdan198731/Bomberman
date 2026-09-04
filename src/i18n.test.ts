@@ -30,9 +30,11 @@ test('Romanian translations cover the Sudoku interface and dynamic progress', ()
     'Acest număr intră în conflict cu rândul, coloana sau careul.',
   );
   assert.equal(
-    translateArcadeText('Completed in 04:18 · 2 mistakes · 7,210 points.', 'ro'),
-    'Finalizat în 04:18 · 2 greșeli · 7,210 puncte.',
+    translateArcadeText('Completed in 04:18 · 2 mistakes · 1 hint · 7,210 points.', 'ro'),
+    'Finalizat în 04:18 · 2 greșeli · 1 indiciu · 7,210 puncte.',
   );
+  assert.equal(translateArcadeText('Hint, 1 remaining', 'ro'), 'Indiciu, 1 rămas');
+  assert.equal(translateArcadeText('Hint, 2 remaining', 'ro'), 'Indiciu, 2 rămase');
   assert.equal(
     translateArcadeText('Entered 7, row 4, column 9', 'ro'),
     'Număr introdus 7, rândul 4, coloana 9',

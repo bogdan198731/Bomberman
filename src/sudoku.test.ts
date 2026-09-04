@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   isValidSudokuSolution,
   parseSudokuGrid,
+  SUDOKU_DIFFICULTY_RULES,
   SUDOKU_PUZZLES,
   sudokuCompletionScore,
   SudokuGame,
@@ -81,6 +82,24 @@ test('a hint fills the selected editable cell', () => {
   assert.equal(game.hints, 1);
 });
 
+test('hint limits allow two assists on easy and one on medium or hard', () => {
+  const easy = new SudokuGame('easy');
+  assert.equal(easy.hintLimit, 2);
+  assert.notEqual(easy.hint(), null);
+  assert.notEqual(easy.hint(), null);
+  assert.equal(easy.hintsRemaining, 0);
+  assert.equal(easy.hint(), null);
+  assert.equal(easy.hints, 2);
+
+  (['medium', 'hard'] as const).forEach(difficulty => {
+    const game = new SudokuGame(difficulty);
+    assert.equal(game.hintLimit, 1);
+    assert.notEqual(game.hint(), null);
+    assert.equal(game.hint(), null);
+    assert.equal(game.hints, 1);
+  });
+});
+
 test('entering the final correct number completes a puzzle', () => {
   const game = new SudokuGame('easy');
   game.board = [...game.solution];
@@ -98,8 +117,16 @@ test('selection wraps around the Sudoku board', () => {
   assert.equal(game.moveSelection(0, -1), 80);
 });
 
-test('completion score rewards faster, cleaner runs without hints', () => {
-  assert.equal(sudokuCompletionScore(0, 0, 0), 10_000);
-  assert.equal(sudokuCompletionScore(120, 1, 1), 8_650);
-  assert.equal(sudokuCompletionScore(10_000, 20, 20), 100);
+test('completion score uses difficulty, time, mistakes, and hints', () => {
+  assert.deepEqual(
+    Object.fromEntries(Object.entries(SUDOKU_DIFFICULTY_RULES).map(([difficulty, rules]) => [difficulty, rules.hintLimit])),
+    { easy: 2, medium: 1, hard: 1 },
+  );
+  assert.equal(sudokuCompletionScore('easy', 0, 0, 0), 10_000);
+  assert.equal(sudokuCompletionScore('medium', 0, 0, 0), 15_000);
+  assert.equal(sudokuCompletionScore('hard', 0, 0, 0), 20_000);
+  assert.equal(sudokuCompletionScore('easy', 120, 1, 1), 7_640);
+  assert.ok(sudokuCompletionScore('medium', 120, 1, 0) > sudokuCompletionScore('medium', 120, 2, 0));
+  assert.ok(sudokuCompletionScore('hard', 120, 0, 0) > sudokuCompletionScore('hard', 120, 0, 1));
+  assert.equal(sudokuCompletionScore('hard', 10_000, 20, 20), 100);
 });

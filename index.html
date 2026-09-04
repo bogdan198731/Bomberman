@@ -5209,7 +5209,7 @@
 
     .sudoku-meta {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 8px;
       margin-bottom: 12px;
     }
@@ -5352,6 +5352,7 @@
     }
 
     .sudoku-actions button.primary { border-color: rgba(84,227,142,.3); color: #07150d; background: var(--p1); }
+    .sudoku-actions button:disabled { cursor: not-allowed; opacity: .45; }
 
     .sudoku-help {
       margin: 10px 0 0;
@@ -5367,6 +5368,7 @@
       .sudoku-toolbar p { display: none; }
       .sudoku-difficulties { display: grid; grid-template-columns: repeat(3, 1fr); }
       .sudoku-difficulties button { padding: 0 7px; }
+      .sudoku-meta { grid-template-columns: repeat(2, 1fr); }
       .sudoku-meta div { padding: 8px; }
       .sudoku-number-pad { gap: 4px; }
       .sudoku-number-pad button { min-height: 40px; border-radius: 9px; }
@@ -6964,7 +6966,8 @@
       <div class="sudoku-meta" aria-label="Sudoku progress">
         <div><span>Time</span><b id="sudokuTimer">00:00</b></div>
         <div><span>Mistakes</span><b id="sudokuMistakes">0</b></div>
-        <div><span>Hints</span><b id="sudokuHints">0</b></div>
+        <div><span>Hints left</span><b id="sudokuHints">2</b></div>
+        <div><span>Live score</span><b id="sudokuScore">10,000</b></div>
       </div>
 
       <div class="sudoku-board-stage">
@@ -6994,7 +6997,7 @@
         <button id="sudokuHintButton" type="button"><span aria-hidden="true">◇</span> Hint</button>
         <button class="primary" type="button" data-sudoku-new>New puzzle</button>
       </div>
-      <p class="sudoku-help">Tap a cell and number, or use your keyboard. Arrow keys move around the board.</p>
+      <p class="sudoku-help">Tap a cell and number, or use your keyboard. Tougher puzzles start with a higher score; time, mistakes, and hints reduce it.</p>
     </section>
   </main>
 
