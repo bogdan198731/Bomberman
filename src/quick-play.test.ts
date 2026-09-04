@@ -15,7 +15,7 @@ const match = (gameId: ArcadeMatchRecord['gameId'], playedAt: number): ArcadeMat
 test('Quick Play exposes the expected games for each mode', () => {
   assert.equal(gamesForQuickPlay('all').length, QUICK_PLAY_GAMES.length);
   assert.equal(gamesForQuickPlay('online').some(game => game.id === 'star'), false);
-  assert.equal(gamesForQuickPlay('solo').some(game => game.id === 'tintar'), false);
+  assert.equal(gamesForQuickPlay('solo').some(game => game.id === 'tintar'), true);
   assert.equal(gamesForQuickPlay('local').length, QUICK_PLAY_GAMES.length - 2);
   assert.equal(gamesForQuickPlay('solo').some(game => game.id === 'twenty48'), true);
   assert.equal(gamesForQuickPlay('local').some(game => game.id === 'twenty48'), false);

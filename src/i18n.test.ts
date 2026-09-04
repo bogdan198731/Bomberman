@@ -13,6 +13,8 @@ test('Romanian translations preserve whitespace and localize dynamic Țintar mes
   assert.equal(translateArcadeText('  Mint: place a piece (4 left).  ', 'ro'), '  Mint: așază o piesă (4 rămase).  ');
   assert.equal(translateArcadeText('Coral wins the match!', 'ro'), 'Coral câștigă meciul!');
   assert.equal(translateArcadeText('Empty point, position 7', 'ro'), 'Punct liber, poziția 7');
+  assert.equal(translateArcadeText('Coral Bot · Hard', 'ro'), 'Bot Coral · Greu');
+  assert.equal(translateArcadeText('Coral bot (Normal) is thinking…', 'ro'), 'Botul Coral (Normal) se gândește…');
 });
 
 test('Romanian translations cover the 2048 interface and dynamic scores', () => {

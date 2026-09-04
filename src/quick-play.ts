@@ -18,7 +18,7 @@ export interface QuickPlayGame {
 
 export const QUICK_PLAY_GAMES: readonly QuickPlayGame[] = [
   { id: 'bomberman', title: 'Blast Buddies', icon: '💣', modes: ['solo', 'local', 'online'] },
-  { id: 'tintar', title: 'Țintar', icon: '◎', modes: ['local', 'online'] },
+  { id: 'tintar', title: 'Țintar', icon: '◎', modes: ['solo', 'local', 'online'] },
   { id: 'paddle', title: 'Paddle Clash', icon: '⚡', modes: ['local', 'online'] },
   { id: 'snake', title: 'Neon Snake Arena', icon: '〰', modes: ['solo', 'local', 'online'] },
   { id: 'tanks', title: 'Mini Tanks', icon: '▰', modes: ['solo', 'local', 'online'] },

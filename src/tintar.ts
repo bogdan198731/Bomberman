@@ -3,6 +3,12 @@ import { ArcadeResultReporter } from './stats.js';
 
 export type TintarPlayer = 1 | 2;
 export type TintarPhase = 'placing' | 'moving' | 'removing' | 'finished';
+export type TintarBotDifficulty = 'easy' | 'normal' | 'hard';
+
+export type TintarBotAction =
+  | { type: 'place'; point: number }
+  | { type: 'move'; from: number; to: number }
+  | { type: 'remove'; point: number };
 
 export const TINTAR_POINTS: ReadonlyArray<readonly [number, number]> = [
   [7, 7], [50, 7], [93, 7],
@@ -191,6 +197,161 @@ export class TintarGame {
   }
 }
 
+function cloneTintarGame(source: TintarGame): TintarGame {
+  const clone = new TintarGame();
+  clone.board = [...source.board];
+  clone.currentPlayer = source.currentPlayer;
+  clone.phase = source.phase;
+  clone.piecesToPlace = { ...source.piecesToPlace };
+  clone.selectedPoint = source.selectedPoint;
+  clone.winner = source.winner;
+  clone.noCaptureTurns = source.noCaptureTurns;
+  return clone;
+}
+
+export function legalTintarBotActions(game: TintarGame): TintarBotAction[] {
+  if (game.phase === 'finished') return [];
+  if (game.phase === 'placing') {
+    return game.board.flatMap((piece, point) => piece === 0 ? [{ type: 'place' as const, point }] : []);
+  }
+  if (game.phase === 'removing') {
+    return game.board.flatMap((_piece, point) => game.canRemove(point) ? [{ type: 'remove' as const, point }] : []);
+  }
+  return game.board.flatMap((piece, from) => (
+    piece === game.currentPlayer
+      ? game.legalDestinations(from).map(to => ({ type: 'move' as const, from, to }))
+      : []
+  ));
+}
+
+export function applyTintarBotAction(game: TintarGame, action: TintarBotAction): boolean {
+  if (action.type === 'place') return game.phase === 'placing' && game.click(action.point);
+  if (action.type === 'remove') return game.phase === 'removing' && game.click(action.point);
+  if (game.phase !== 'moving') return false;
+  game.selectedPoint = null;
+  return game.click(action.from) && game.click(action.to);
+}
+
+function actionDestination(action: TintarBotAction): number | null {
+  return action.type === 'move' ? action.to : action.type === 'place' ? action.point : null;
+}
+
+function millCount(game: TintarGame, player: TintarPlayer): number {
+  return TINTAR_MILLS.filter(mill => mill.every(point => game.board[point] === player)).length;
+}
+
+function millCompletionPoints(game: TintarGame, player: TintarPlayer): number[] {
+  return TINTAR_MILLS.flatMap(mill => {
+    const own = mill.filter(point => game.board[point] === player);
+    const empty = mill.filter(point => game.board[point] === 0);
+    return own.length === 2 && empty.length === 1 ? empty : [];
+  });
+}
+
+function playerMobility(game: TintarGame, player: TintarPlayer): number {
+  const emptyCount = game.board.filter(piece => piece === 0).length;
+  if (game.pieceCount(player) === 3) return emptyCount;
+  return game.board.reduce<number>((total, piece, point) => (
+    piece === player
+      ? total + TINTAR_ADJACENCY[point].filter(neighbor => game.board[neighbor] === 0).length
+      : total
+  ), 0);
+}
+
+function evaluateTintarPosition(game: TintarGame, bot: TintarPlayer): number {
+  if (game.phase === 'finished') {
+    if (game.winner === bot) return 100_000;
+    if (game.winner === 0) return 0;
+    return -100_000;
+  }
+  const opponent = otherPlayer(bot);
+  const pieceScore = (game.pieceCount(bot) - game.pieceCount(opponent)) * 420;
+  const millScore = (millCount(game, bot) - millCount(game, opponent)) * 190;
+  const threatScore = (millCompletionPoints(game, bot).length - millCompletionPoints(game, opponent).length) * 85;
+  const mobilityScore = (playerMobility(game, bot) - playerMobility(game, opponent)) * 12;
+  const removalScore = game.phase === 'removing' ? (game.currentPlayer === bot ? 1_800 : -1_800) : 0;
+  return pieceScore + millScore + threatScore + mobilityScore + removalScore;
+}
+
+function scoreTintarAction(game: TintarGame, action: TintarBotAction, bot: TintarPlayer): number {
+  const opponentThreats = new Set(millCompletionPoints(game, otherPlayer(bot)));
+  const next = cloneTintarGame(game);
+  if (!applyTintarBotAction(next, action)) return -Infinity;
+  const destination = actionDestination(action);
+  const blocksMill = destination !== null && opponentThreats.has(destination) ? 1_000 : 0;
+  const formsMill = next.phase === 'removing' && next.currentPlayer === bot ? 4_000 : 0;
+  const intersection = destination === null ? 0 : TINTAR_ADJACENCY[destination].length * 4;
+  return evaluateTintarPosition(next, bot) + blocksMill + formsMill + intersection;
+}
+
+function minimaxTintar(
+  game: TintarGame,
+  bot: TintarPlayer,
+  depth: number,
+  alpha: number,
+  beta: number,
+): number {
+  if (depth === 0 || game.phase === 'finished') return evaluateTintarPosition(game, bot);
+  const actions = legalTintarBotActions(game);
+  if (actions.length === 0) return evaluateTintarPosition(game, bot);
+  const maximizing = game.currentPlayer === bot;
+  let best = maximizing ? -Infinity : Infinity;
+  for (const action of actions) {
+    const next = cloneTintarGame(game);
+    if (!applyTintarBotAction(next, action)) continue;
+    const score = minimaxTintar(next, bot, depth - 1, alpha, beta);
+    if (maximizing) {
+      best = Math.max(best, score);
+      alpha = Math.max(alpha, best);
+    } else {
+      best = Math.min(best, score);
+      beta = Math.min(beta, best);
+    }
+    if (beta <= alpha) break;
+  }
+  return best;
+}
+
+function chooseAmongBest(
+  scored: ReadonlyArray<{ action: TintarBotAction; score: number }>,
+  random: () => number,
+): TintarBotAction | null {
+  if (scored.length === 0) return null;
+  const bestScore = Math.max(...scored.map(candidate => candidate.score));
+  const best = scored.filter(candidate => candidate.score === bestScore);
+  return best[Math.min(best.length - 1, Math.floor(random() * best.length))]?.action ?? null;
+}
+
+export function chooseTintarBotAction(
+  game: TintarGame,
+  difficulty: TintarBotDifficulty,
+  random: () => number = Math.random,
+): TintarBotAction | null {
+  const actions = legalTintarBotActions(game);
+  if (actions.length === 0) return null;
+  if (difficulty === 'easy') {
+    return actions[Math.min(actions.length - 1, Math.floor(random() * actions.length))] ?? null;
+  }
+  const bot = game.currentPlayer;
+  if (difficulty === 'normal') {
+    return chooseAmongBest(actions.map(action => ({ action, score: scoreTintarAction(game, action, bot) })), random);
+  }
+  let bestAction: TintarBotAction | null = null;
+  let bestScore = -Infinity;
+  let alpha = -Infinity;
+  for (const action of actions) {
+    const next = cloneTintarGame(game);
+    if (!applyTintarBotAction(next, action)) continue;
+    const score = minimaxTintar(next, bot, 3, alpha, Infinity);
+    if (score > bestScore) {
+      bestScore = score;
+      bestAction = action;
+    }
+    alpha = Math.max(alpha, bestScore);
+  }
+  return bestAction;
+}
+
 export function initTintar(): void {
   if (typeof document === 'undefined') return;
   const boardElement = document.getElementById('tintarBoard');
@@ -203,6 +364,7 @@ export function initTintar(): void {
   const mintBoardElement = document.getElementById('tintarMintBoard');
   const coralHandElement = document.getElementById('tintarCoralHand');
   const coralBoardElement = document.getElementById('tintarCoralBoard');
+  const coralNameElement = document.getElementById('tintarCoralName');
   const turnMarker = document.getElementById('tintarTurnMarker');
   const boardFrame = document.getElementById('tintarBoardFrame') as HTMLElement | null;
   const boardActions = document.getElementById('tintarBoardActions');
@@ -211,14 +373,34 @@ export function initTintar(): void {
   const victoryOverlay = document.getElementById('tintarVictoryOverlay');
   const victoryTitle = document.getElementById('tintarVictoryTitle');
   const revengeButton = document.getElementById('tintarRevengeButton') as HTMLButtonElement | null;
+  const botButtons = document.querySelectorAll<HTMLButtonElement>('[data-tintar-bot-difficulty]');
   const pointButtons: HTMLButtonElement[] = [];
   const roomMount = document.querySelector<HTMLElement>('[data-game-room="tintar"]');
   let room: GameRoomClient | null = null;
   let matchStarted = false;
+  let botDifficulty: TintarBotDifficulty | null = null;
+  let botTimer: number | null = null;
   let fallbackFullscreen = false;
   let fullscreenPending = false;
   let lastRenderedPhase: TintarPhase | null = null;
   const resultReporter = new ArcadeResultReporter('tintar');
+  const botLabels: Record<TintarBotDifficulty, string> = { easy: 'Easy', normal: 'Normal', hard: 'Hard' };
+  const botDelays: Record<TintarBotDifficulty, number> = { easy: 700, normal: 480, hard: 300 };
+
+  function cancelBotTurn(): void {
+    if (botTimer !== null) window.clearTimeout(botTimer);
+    botTimer = null;
+  }
+
+  function setBotDifficulty(difficulty: TintarBotDifficulty | null): void {
+    cancelBotTurn();
+    botDifficulty = difficulty;
+    botButtons.forEach(button => {
+      const active = button.dataset.tintarBotDifficulty === difficulty;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+  }
 
   function hideVictoryEffect(): void {
     victoryOverlay?.classList.remove('is-celebrating');
@@ -317,6 +499,7 @@ export function initTintar(): void {
   function playPoint(point: number): void {
     const session = room?.session();
     if (!session?.online) {
+      if (botDifficulty && game.currentPlayer === 2) return;
       if (game.click(point)) {
         matchStarted = true;
         render();
@@ -355,7 +538,11 @@ export function initTintar(): void {
       button.setAttribute('aria-pressed', game.selectedPoint === point ? 'true' : 'false');
     });
 
-    if (statusElement) statusElement.textContent = game.statusText();
+    if (statusElement) {
+      statusElement.textContent = botDifficulty && game.currentPlayer === 2 && game.phase !== 'finished'
+        ? `Coral bot (${botLabels[botDifficulty]}) is thinking…`
+        : game.statusText();
+    }
     if (phaseElement) {
       phaseElement.textContent = game.phase === 'placing'
         ? 'Placement phase'
@@ -369,6 +556,7 @@ export function initTintar(): void {
     if (mintBoardElement) mintBoardElement.textContent = String(game.pieceCount(1));
     if (coralHandElement) coralHandElement.textContent = String(game.piecesToPlace[2]);
     if (coralBoardElement) coralBoardElement.textContent = String(game.pieceCount(2));
+    if (coralNameElement) coralNameElement.textContent = botDifficulty ? `Coral Bot · ${botLabels[botDifficulty]}` : 'Coral';
     turnMarker?.classList.toggle('coral', game.currentPlayer === 2);
     if (boardActions) boardActions.hidden = !matchStarted;
     if (game.phase === 'finished' && game.winner !== null && game.winner !== 0) {
@@ -382,6 +570,31 @@ export function initTintar(): void {
       outcome: game.winner === 0 ? 'draw' : game.winner === trackedPlayer ? 'win' : 'loss',
       score: game.pieceCount(trackedPlayer),
     });
+    scheduleBotTurn();
+  }
+
+  function scheduleBotTurn(): void {
+    if (!botDifficulty || botTimer !== null || game.phase === 'finished' || game.currentPlayer !== 2
+      || room?.session().online) return;
+    const scheduledDifficulty = botDifficulty;
+    botTimer = window.setTimeout(() => {
+      botTimer = null;
+      if (botDifficulty !== scheduledDifficulty || game.phase === 'finished' || game.currentPlayer !== 2
+        || room?.session().online) return;
+      const action = chooseTintarBotAction(game, scheduledDifficulty);
+      if (action && applyTintarBotAction(game, action)) {
+        matchStarted = true;
+        render();
+      }
+    }, botDelays[scheduledDifficulty]);
+  }
+
+  function startBotMatch(difficulty: TintarBotDifficulty): void {
+    room?.leave();
+    setBotDifficulty(difficulty);
+    matchStarted = true;
+    game.reset();
+    render();
   }
 
   function restartMatch(): void {
@@ -399,6 +612,10 @@ export function initTintar(): void {
 
   document.getElementById('tintarRestartButton')?.addEventListener('click', restartMatch);
   revengeButton?.addEventListener('click', restartMatch);
+  botButtons.forEach(button => button.addEventListener('click', () => {
+    const difficulty = button.dataset.tintarBotDifficulty;
+    if (difficulty === 'easy' || difficulty === 'normal' || difficulty === 'hard') startBotMatch(difficulty);
+  }));
 
   fullscreenButton?.addEventListener('click', () => { void toggleBoardFullscreen(); });
   document.addEventListener('fullscreenchange', updateFullscreenUi);
@@ -417,8 +634,9 @@ export function initTintar(): void {
     room = new GameRoomClient({
       game: 'tintar',
       mount: roomMount,
-      onPlayLocal: () => { matchStarted = true; game.reset(); render(); },
+      onPlayLocal: () => { setBotDifficulty(null); matchStarted = true; game.reset(); render(); },
       onSessionChange: session => {
+        if (session.online) setBotDifficulty(null);
         if (session.ready) matchStarted = true;
         if (session.ready && session.playerId === 1) {
           game.reset();
@@ -435,6 +653,10 @@ export function initTintar(): void {
         }
       },
       onState: state => { if (room?.isGuest()) { matchStarted = true; restore(state); render(); } },
+    });
+    roomMount.addEventListener('click', event => {
+      const target = event.target instanceof Element ? event.target.closest('[data-room-matchmake], [data-room-create], [data-room-join]') : null;
+      if (target) setBotDifficulty(null);
     });
   }
 

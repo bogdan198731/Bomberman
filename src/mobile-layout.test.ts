@@ -66,6 +66,13 @@ test('Sudoku exposes a responsive board and complete touch controls', () => {
   assert.match(html, /Tougher puzzles start with a higher score/);
 });
 
+test('Țintar exposes three responsive single-player bot levels', () => {
+  assert.equal((html.match(/<button[^>]*data-tintar-bot-difficulty=/g) ?? []).length, 3);
+  assert.match(html, /class="game-room-panel tintar-bot-panel"[^>]*aria-label="Țintar bot difficulty"/);
+  assert.match(html, /data-catalog-game="tintar" data-catalog-modes="solo local online"/);
+  assert.match(html, /id="tintarCoralName"/);
+});
+
 test('mobile game library uses compact three-column tiles with a narrow-screen fallback', () => {
   assert.match(mobileStyles, /\.game-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\);[^}]*gap:\s*8px;/s);
   assert.match(mobileStyles, /\.game-cover\s*\{[^}]*min-height:\s*82px;/s);

@@ -5678,6 +5678,23 @@
       background: linear-gradient(135deg, #dab8ff, #a064ff);
     }
 
+    .tintar-bot-panel {
+      border-color: rgba(255,200,87,.24);
+      background: linear-gradient(100deg, rgba(255,200,87,.09), rgba(255,107,120,.05));
+    }
+
+    .tintar-bot-panel .game-room-copy strong { color: var(--gold); }
+
+    .tintar-bot-button.active {
+      color: #101722;
+      background: var(--gold);
+      box-shadow: 0 0 0 3px rgba(255,200,87,.13);
+    }
+
+    .tintar-bot-button[data-tintar-bot-difficulty="easy"] { color: var(--p1); }
+    .tintar-bot-button[data-tintar-bot-difficulty="hard"] { color: #ff8d98; }
+    .tintar-bot-button.active[data-tintar-bot-difficulty] { color: #101722; }
+
     .game-room-join { display: flex; gap: 6px; }
 
     .game-room-join input {
@@ -6007,7 +6024,7 @@
           </div>
         </article>
 
-        <article class="catalog-card featured" data-catalog-game="tintar" data-catalog-modes="local online">
+        <article class="catalog-card featured" data-catalog-game="tintar" data-catalog-modes="solo local online">
           <div class="game-cover tintar-cover">
             <span class="cover-label">Live now</span>
             <button class="favorite-button" type="button" data-favorite-game aria-label="Add Țintar to favorites" aria-pressed="false">☆</button>
@@ -6017,7 +6034,7 @@
             <h3>Țintar</h3>
             <p>Build mills, capture rival pieces, and master Romania's classic strategy board game.</p>
             <div class="catalog-card-footer">
-              <span class="mode-label">Local · Online 2P</span>
+              <span class="mode-label">Bot · Local · Online 2P</span>
               <button class="card-play-button" type="button" data-launch-game="tintar">Play now</button>
             </div>
           </div>
@@ -6354,7 +6371,7 @@
         <div class="tintar-brand-mark" aria-hidden="true"></div>
         <div>
           <h1>Țintar</h1>
-          <p>Nine Men's Morris · Local or online</p>
+          <p>Nine Men's Morris · Bot, local, or online</p>
         </div>
       </div>
       <div class="game-nav-actions">
@@ -6363,6 +6380,18 @@
     </header>
 
     <div data-game-room="tintar"></div>
+
+    <section class="game-room-panel tintar-bot-panel" aria-label="Țintar bot difficulty">
+      <div class="game-room-copy">
+        <strong>Single player vs bot</strong>
+        <span>Play as Mint against the Coral bot.</span>
+      </div>
+      <div class="game-room-actions" role="group" aria-label="Bot difficulty">
+        <button class="tintar-bot-button" type="button" data-tintar-bot-difficulty="easy" aria-pressed="false">Easy</button>
+        <button class="tintar-bot-button" type="button" data-tintar-bot-difficulty="normal" aria-pressed="false">Normal</button>
+        <button class="tintar-bot-button" type="button" data-tintar-bot-difficulty="hard" aria-pressed="false">Hard</button>
+      </div>
+    </section>
 
     <section class="tintar-shell" aria-label="Țintar match">
       <aside class="tintar-panel">
@@ -6386,7 +6415,7 @@
           </div>
           <div class="tintar-player-row">
             <i class="tintar-piece-sample coral" aria-hidden="true"></i>
-            <strong>Coral</strong>
+            <strong id="tintarCoralName">Coral</strong>
             <span class="tintar-counts"><b id="tintarCoralHand">9</b> hand · <b id="tintarCoralBoard">0</b> board</span>
           </div>
         </div>

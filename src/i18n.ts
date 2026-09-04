@@ -145,6 +145,7 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Blast Arcade heroes surrounded by twelve game arenas': 'Eroii Blast Arcade înconjurați de douăsprezece arene de joc',
   'Bot · Local · Online PvP': 'Bot · Local · PvP online',
   'Bot · Local · Online': 'Bot · Local · Online',
+  'Bot · Local · Online 2P': 'Bot · Local · Online 2P',
   'Solo · Local · Online': 'Solo · Local · Online',
   'Solo · Local · Online co-op': 'Solo · Local · Cooperativ online',
   'Solo · Local co-op': 'Solo · Cooperativ local',
@@ -171,7 +172,9 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Settings are saved privately on this device and apply to every game.':
     'Setările sunt salvate privat pe acest dispozitiv și se aplică tuturor jocurilor.',
   '← Arcade': '← Arcadă',
-  'Nine Men\'s Morris · Local or online': 'Moara cu nouă piese · Local sau online',
+  'Nine Men\'s Morris · Bot, local, or online': 'Moara cu nouă piese · Bot, local sau online',
+  'Țintar bot difficulty': 'Dificultatea botului de Țintar',
+  'Play as Mint against the Coral bot.': 'Joacă drept Mint împotriva botului Coral.',
   'Classic strategy': 'Strategie clasică',
   'Make a mill.': 'Formează o moară.',
   'Take control.': 'Preia controlul.',
@@ -318,6 +321,16 @@ function translateRomanianPattern(value: string): string | null {
   if (match) return `${match[1]} câștigă meciul!`;
   match = value.match(/^(Mint|Coral) wins!$/);
   if (match) return `${match[1]} câștigă!`;
+  match = value.match(/^Coral Bot · (Easy|Normal|Hard)$/);
+  if (match) {
+    const difficulty = match[1] === 'Easy' ? 'Ușor' : match[1] === 'Hard' ? 'Greu' : 'Normal';
+    return `Bot Coral · ${difficulty}`;
+  }
+  match = value.match(/^Coral bot \((Easy|Normal|Hard)\) is thinking…$/);
+  if (match) {
+    const difficulty = match[1] === 'Easy' ? 'Ușor' : match[1] === 'Hard' ? 'Greu' : 'Normal';
+    return `Botul Coral (${difficulty}) se gândește…`;
+  }
   match = value.match(/^Great move — \+([\d.,]+) points\.$/);
   if (match) return `Mutare excelentă — +${match[1]} puncte.`;
   match = value.match(/^No moves left\. Final score: ([\d.,]+)\.$/);
