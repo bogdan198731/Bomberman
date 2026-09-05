@@ -113,6 +113,8 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Create invite code': 'Creează cod de invitație',
   'or join a friend': 'sau intră la un prieten',
   'Create a room or enter an invitation code.': 'Creează o cameră sau introdu un cod de invitație.',
+  'Movement joystick. Drag and hold to move, or use arrow keys.':
+    'Joystick de mișcare. Trage și ține apăsat pentru a te deplasa sau folosește săgețile.',
   'Outsmart bots or invite a friend into a fast explosive maze battle.':
     'Păcălește boții sau invită un prieten într-o luptă rapidă printr-un labirint exploziv.',
   "Build mills, capture rival pieces, and master Romania's classic strategy board game.":

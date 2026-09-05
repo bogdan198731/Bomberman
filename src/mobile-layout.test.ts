@@ -20,6 +20,15 @@ test('mobile Blast Buddies lobby keeps online controls reachable', () => {
   assert.match(html, /class="lobby-scroll-hint"[^>]*>Swipe for online play<\/div>/);
 });
 
+test('mobile Blast Buddies uses a drag-and-hold virtual joystick', () => {
+  assert.match(html, /id="mobileJoystick" class="mobile-joystick"[^>]*tabindex="0"[^>]*data-direction="idle"/);
+  assert.match(html, /id="mobileJoystickKnob" class="mobile-joystick-knob"/);
+  assert.match(html, /\.mobile-joystick\s*\{[^}]*aspect-ratio:\s*1;[^}]*border-radius:\s*50%;[^}]*touch-action:\s*none;/s);
+  assert.match(html, /\.mobile-joystick-knob\s*\{[^}]*transform:\s*translate\(-50%, -50%\) translate\(var\(--joystick-x\), var\(--joystick-y\)\);/s);
+  assert.equal((html.match(/data-move-x=/g) ?? []).length, 0);
+  assert.equal((html.match(/data-bomberman-player=/g) ?? []).length, 10);
+});
+
 test('Țintar board includes native fullscreen styling and a mobile fallback', () => {
   assert.match(html, /id="tintarBoardFrame" class="tintar-board-frame"/);
   assert.match(html, /id="tintarBoardActions" class="tintar-board-actions" hidden/);
