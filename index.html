@@ -3478,44 +3478,67 @@
         white-space: nowrap;
       }
 
-      .touch-dpad {
-        display: grid;
-        grid-template-columns: repeat(3, 54px);
-        grid-template-rows: repeat(2, 54px);
-        gap: 5px;
-        justify-content: start;
+      .mobile-joystick {
+        --joystick-x: 0px;
+        --joystick-y: 0px;
+        position: relative;
+        width: clamp(112px, 30vw, 128px);
+        aspect-ratio: 1;
         margin-top: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 50%;
+        outline: none;
+        background:
+          linear-gradient(90deg, transparent 49.4%, rgba(255, 255, 255, 0.08) 50%, transparent 50.6%),
+          linear-gradient(transparent 49.4%, rgba(255, 255, 255, 0.08) 50%, transparent 50.6%),
+          radial-gradient(circle, rgba(77, 224, 147, 0.12) 0 24%, transparent 25%),
+          linear-gradient(145deg, #303d51, #1d2635);
+        box-shadow: inset 0 0 0 6px rgba(8, 12, 20, 0.2), 0 8px 20px rgba(0, 0, 0, 0.26);
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
       }
 
-      .touch-button {
-        display: grid;
+      .mobile-joystick:focus-visible {
+        box-shadow: inset 0 0 0 6px rgba(8, 12, 20, 0.2), 0 0 0 3px rgba(77, 224, 147, 0.72);
+      }
+
+      .mobile-joystick-arrow {
+        position: absolute;
+        color: rgba(235, 242, 251, 0.52);
+        font-size: 0.75rem;
+        font-weight: 950;
+        line-height: 1;
+        pointer-events: none;
+      }
+
+      .mobile-joystick-arrow.up { top: 8px; left: 50%; transform: translateX(-50%); }
+      .mobile-joystick-arrow.right { top: 50%; right: 8px; transform: translateY(-50%); }
+      .mobile-joystick-arrow.down { bottom: 8px; left: 50%; transform: translateX(-50%); }
+      .mobile-joystick-arrow.left { top: 50%; left: 8px; transform: translateY(-50%); }
+
+      .mobile-joystick-knob {
+        position: absolute;
+        top: 50%;
+        left: 50%;
         width: 54px;
         height: 54px;
-        padding: 0;
-        place-items: center;
-        border: 1px solid rgba(255, 255, 255, 0.16);
-        border-bottom-width: 4px;
-        border-radius: 15px;
-        color: #f3f7fc;
-        background: linear-gradient(#3a475b, #263143);
-        box-shadow: 0 5px 12px rgba(0, 0, 0, 0.25);
-        touch-action: none;
-        -webkit-tap-highlight-color: transparent;
-        font-size: 1.35rem;
-        font-weight: 950;
+        border: 2px solid rgba(255, 255, 255, 0.55);
+        border-bottom-width: 5px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 36% 30%, #6bf0aa, #36bd78 60%, #238957);
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.36), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+        pointer-events: none;
+        transform: translate(-50%, -50%) translate(var(--joystick-x), var(--joystick-y));
+        transition: transform 140ms ease-out, filter 140ms ease;
+        will-change: transform;
       }
 
-      .touch-button.pressed,
-      .touch-button:active {
-        border-bottom-width: 1px;
-        filter: brightness(1.18);
-        transform: translateY(3px);
+      .mobile-joystick.is-active .mobile-joystick-knob {
+        filter: brightness(1.12);
+        transition: filter 100ms ease;
       }
-
-      .touch-up { grid-column: 2; grid-row: 1; }
-      .touch-left { grid-column: 1; grid-row: 2; }
-      .touch-down { grid-column: 2; grid-row: 2; }
-      .touch-right { grid-column: 3; grid-row: 2; }
 
       .mobile-round-button {
         align-self: end;
@@ -4189,19 +4212,13 @@
       }
 
       .mobile-controls:not(.hidden) {
-        grid-template-columns: 166px 1fr 82px;
-        gap: 8px;
+        grid-template-columns: 118px minmax(0, 1fr) 78px;
+        gap: 7px;
         padding-top: 11px;
       }
 
-      .touch-dpad {
-        grid-template-columns: repeat(3, 50px);
-        grid-template-rows: repeat(2, 50px);
-      }
-
-      .touch-button {
-        width: 50px;
-        height: 50px;
+      .mobile-joystick {
+        width: 112px;
       }
 
       .mobile-bomb-button {
@@ -6333,11 +6350,12 @@
 
       <div id="mobileControls" class="mobile-controls hidden" aria-label="Touch game controls">
         <span id="mobilePlayerLabel" class="mobile-player-label">Your controls</span>
-        <div class="touch-dpad" aria-label="Movement pad">
-          <button class="touch-button touch-up" type="button" data-move-x="0" data-move-y="-1" aria-label="Move up">▲</button>
-          <button class="touch-button touch-left" type="button" data-move-x="-1" data-move-y="0" aria-label="Move left">◀</button>
-          <button class="touch-button touch-down" type="button" data-move-x="0" data-move-y="1" aria-label="Move down">▼</button>
-          <button class="touch-button touch-right" type="button" data-move-x="1" data-move-y="0" aria-label="Move right">▶</button>
+        <div id="mobileJoystick" class="mobile-joystick" role="group" tabindex="0" aria-label="Movement joystick. Drag and hold to move, or use arrow keys." data-direction="idle">
+          <span class="mobile-joystick-arrow up" aria-hidden="true">▲</span>
+          <span class="mobile-joystick-arrow right" aria-hidden="true">▶</span>
+          <span class="mobile-joystick-arrow down" aria-hidden="true">▼</span>
+          <span class="mobile-joystick-arrow left" aria-hidden="true">◀</span>
+          <span id="mobileJoystickKnob" class="mobile-joystick-knob" aria-hidden="true"></span>
         </div>
         <button id="mobileRestartButton" class="mobile-round-button" type="button">New round</button>
         <button id="mobileBombButton" class="mobile-bomb-button" type="button" aria-label="Place bomb">Bomb</button>

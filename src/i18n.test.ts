@@ -6,6 +6,10 @@ test('Romanian translations cover shared arcade and revenge actions', () => {
   assert.equal(translateArcadeText('Arcade settings', 'ro'), 'Setările arcadei');
   assert.equal(translateArcadeText('Play revenge match', 'ro'), 'Joacă revanșa');
   assert.equal(translateArcadeText('Quick Match', 'ro'), 'Meci rapid');
+  assert.equal(
+    translateArcadeText('Movement joystick. Drag and hold to move, or use arrow keys.', 'ro'),
+    'Joystick de mișcare. Trage și ține apăsat pentru a te deplasa sau folosește săgețile.',
+  );
   assert.equal(translateArcadeText('Play revenge match', 'en'), 'Play revenge match');
 });
 

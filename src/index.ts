@@ -16,6 +16,7 @@ import { initQuickPlay } from './quick-play.js';
 import { initArcadePwa } from './pwa.js';
 import { initArcadeLeaderboard } from './leaderboard.js';
 import { initArcadeCircuit } from './circuit.js';
+import { clampJoystickOffset, joystickDirection, type JoystickDirection } from './touch-controls.js';
 import {
   arcadeInviteShareData,
   clearArcadeInviteUrl,
@@ -1215,6 +1216,8 @@ export function initGame(): void {
     botButtons: document.querySelectorAll<HTMLButtonElement>('[data-bot-difficulty]'),
     mobileControls: document.getElementById('mobileControls'),
     mobilePlayerLabel: document.getElementById('mobilePlayerLabel'),
+    mobileJoystick: document.getElementById('mobileJoystick'),
+    mobileJoystickKnob: document.getElementById('mobileJoystickKnob'),
     mobileBombButton: document.getElementById('mobileBombButton') as HTMLButtonElement | null,
     mobileRestartButton: document.getElementById('mobileRestartButton'),
     localMobileControls: document.getElementById('bombermanLocalControls'),
@@ -1577,6 +1580,86 @@ export function initGame(): void {
     const dy = Number(button.dataset.moveY) as -1 | 0 | 1;
     bindTouchControl(button, { type: 'move', dx, dy }, true);
   });
+  function bindMobileJoystick(track: HTMLElement, knob: HTMLElement): void {
+    let activePointerId: number | undefined;
+    let repeatTimer: number | undefined;
+    let activeDirection: JoystickDirection | null = null;
+
+    const dispatchDirection = (): void => {
+      if (activeDirection) sendAction({ type: 'move', ...activeDirection });
+    };
+    const setDirection = (direction: JoystickDirection | null): void => {
+      if (direction?.dx === activeDirection?.dx && direction?.dy === activeDirection?.dy) return;
+      if (repeatTimer !== undefined) window.clearInterval(repeatTimer);
+      repeatTimer = undefined;
+      activeDirection = direction;
+      track.dataset.direction = direction
+        ? direction.dx < 0 ? 'left' : direction.dx > 0 ? 'right' : direction.dy < 0 ? 'up' : 'down'
+        : 'idle';
+      if (!direction) return;
+      dispatchDirection();
+      repeatTimer = window.setInterval(dispatchDirection, 35);
+    };
+    const updateJoystick = (clientX: number, clientY: number): void => {
+      const bounds = track.getBoundingClientRect();
+      const knobSize = Math.max(knob.offsetWidth, knob.offsetHeight);
+      const radius = Math.max(1, (Math.min(bounds.width, bounds.height) - knobSize) / 2);
+      const deltaX = clientX - (bounds.left + bounds.width / 2);
+      const deltaY = clientY - (bounds.top + bounds.height / 2);
+      const offset = clampJoystickOffset(deltaX, deltaY, radius);
+      track.style.setProperty('--joystick-x', `${offset.x}px`);
+      track.style.setProperty('--joystick-y', `${offset.y}px`);
+      setDirection(joystickDirection(deltaX, deltaY, radius));
+    };
+    const release = (pointerId?: number): void => {
+      if (pointerId !== undefined && pointerId !== activePointerId) return;
+      if (repeatTimer !== undefined) window.clearInterval(repeatTimer);
+      repeatTimer = undefined;
+      activeDirection = null;
+      activePointerId = undefined;
+      track.dataset.direction = 'idle';
+      track.classList.remove('is-active');
+      track.style.setProperty('--joystick-x', '0px');
+      track.style.setProperty('--joystick-y', '0px');
+    };
+
+    track.addEventListener('pointerdown', event => {
+      if (activePointerId !== undefined) return;
+      event.preventDefault();
+      activePointerId = event.pointerId;
+      track.classList.add('is-active');
+      track.setPointerCapture?.(event.pointerId);
+      updateJoystick(event.clientX, event.clientY);
+      if ('vibrate' in navigator) navigator.vibrate(12);
+    });
+    track.addEventListener('pointermove', event => {
+      if (event.pointerId !== activePointerId) return;
+      event.preventDefault();
+      updateJoystick(event.clientX, event.clientY);
+    });
+    track.addEventListener('pointerup', event => release(event.pointerId));
+    track.addEventListener('pointercancel', event => release(event.pointerId));
+    track.addEventListener('lostpointercapture', event => release(event.pointerId));
+    track.addEventListener('contextmenu', event => event.preventDefault());
+    track.addEventListener('keydown', event => {
+      const directions: Record<string, JoystickDirection> = {
+        ArrowUp: { dx: 0, dy: -1 }, ArrowDown: { dx: 0, dy: 1 },
+        ArrowLeft: { dx: -1, dy: 0 }, ArrowRight: { dx: 1, dy: 0 },
+      };
+      const direction = directions[event.key];
+      if (!direction) return;
+      event.preventDefault();
+      event.stopPropagation();
+      sendAction({ type: 'move', ...direction });
+    });
+    window.addEventListener('blur', () => release());
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) release();
+    });
+  }
+  if (elements.mobileJoystick && elements.mobileJoystickKnob) {
+    bindMobileJoystick(elements.mobileJoystick, elements.mobileJoystickKnob);
+  }
   if (elements.mobileBombButton) {
     bindTouchControl(elements.mobileBombButton, { type: 'bomb' }, false, true);
   }

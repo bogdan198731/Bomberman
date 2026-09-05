@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blast-arcade-shell-v17';
+const CACHE_NAME = 'blast-arcade-shell-v18';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -32,6 +32,7 @@ const APP_SHELL = [
   '/dist/survival.js',
   '/dist/tanks.js',
   '/dist/tintar.js',
+  '/dist/touch-controls.js',
 ];
 
 self.addEventListener('install', event => {
