@@ -1,5 +1,6 @@
 import { GameRoomClient } from './game-room.js';
 import { ArcadeResultReporter } from './stats.js';
+import { bindDirectionalJoystick } from './touch-controls.js';
 
 export type PaddlePlayer = 1 | 2;
 export type PaddleDirection = 'up' | 'down';
@@ -340,6 +341,12 @@ export function initPaddleClash(): void {
     button.addEventListener('pointerup', release);
     button.addEventListener('pointercancel', release);
     button.addEventListener('lostpointercapture', release);
+  });
+  document.querySelectorAll<HTMLElement>('[data-paddle-joystick]').forEach(track => {
+    const player = Number(track.dataset.paddleJoystick) as PaddlePlayer;
+    bindDirectionalJoystick(track, (direction, pressed) => {
+      if (direction === 'up' || direction === 'down') setPlayerInput(player, direction, pressed);
+    }, 'vertical');
   });
 
   serveButton?.addEventListener('click', serve);

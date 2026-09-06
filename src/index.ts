@@ -18,6 +18,7 @@ import { initArcadeLeaderboard } from './leaderboard.js';
 import { initArcadeCircuit } from './circuit.js';
 import {
   BOMBERMAN_TOUCH_LAYOUT_STORAGE_KEY,
+  bindVirtualJoystick,
   clampJoystickOffset,
   joystickDirection,
   normalizeBombermanTouchLayout,
@@ -1716,6 +1717,24 @@ export function initGame(): void {
     };
     const action = actionName ? moves[actionName] : undefined;
     if (action) bindTouchControl(button, action, action.type === 'move', action.type === 'bomb', player);
+  });
+  document.querySelectorAll<HTMLElement>('[data-bomberman-local-joystick]').forEach(track => {
+    const player = Number(track.dataset.bombermanLocalJoystick) as 1 | 2;
+    let direction: JoystickDirection | null = null;
+    let timer: number | undefined;
+    const dispatch = (): void => {
+      if (direction) sendPlayerAction(player, { type: 'move', ...direction });
+    };
+    bindVirtualJoystick(track, vector => {
+      const next = joystickDirection(vector.x, vector.y, 1, .32);
+      if (next?.dx === direction?.dx && next?.dy === direction?.dy) return;
+      if (timer !== undefined) window.clearInterval(timer);
+      timer = undefined;
+      direction = next;
+      if (!direction) return;
+      dispatch();
+      timer = window.setInterval(dispatch, 35);
+    });
   });
 
   const handledKeys = new Set([

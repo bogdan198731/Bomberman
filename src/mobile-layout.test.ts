@@ -26,7 +26,8 @@ test('mobile Blast Buddies uses a drag-and-hold virtual joystick', () => {
   assert.match(html, /\.mobile-joystick\s*\{[^}]*aspect-ratio:\s*1;[^}]*border-radius:\s*50%;[^}]*touch-action:\s*none;/s);
   assert.match(html, /\.mobile-joystick-knob\s*\{[^}]*transform:\s*translate\(-50%, -50%\) translate\(var\(--joystick-x\), var\(--joystick-y\)\);/s);
   assert.equal((html.match(/data-move-x=/g) ?? []).length, 0);
-  assert.equal((html.match(/data-bomberman-player=/g) ?? []).length, 10);
+  assert.equal((html.match(/data-bomberman-player=/g) ?? []).length, 2);
+  assert.equal((html.match(/data-bomberman-local-joystick=/g) ?? []).length, 2);
 });
 
 test('mobile Blast Buddies defaults to joystick right and offers a persistent side swap', () => {
@@ -48,6 +49,19 @@ test('short landscape Bomberman keeps the arena visible between overlay controls
   assert.match(html, /#gameView \.mobile-controls:not\(\.hidden\)\s*\{[^}]*position:\s*fixed;[^}]*height:\s*100dvh;[^}]*pointer-events:\s*none;/s);
   assert.match(html, /#gameView \.mobile-control-actions\s*\{[^}]*position:\s*fixed;[^}]*bottom:\s*6px;/s);
   assert.match(html, /#bombermanLocalControls:not\(\.hidden\)\s*\{[^}]*position:\s*fixed;[^}]*grid-template-columns:/s);
+});
+
+test('real-time mobile games use shared virtual joysticks', () => {
+  for (const game of ['paddle', 'snake', 'tank', 'survival', 'star', 'racing']) {
+    assert.equal((html.match(new RegExp(`data-${game}-joystick=`, 'g')) ?? []).length, 2, `${game} joysticks`);
+  }
+  assert.equal((html.match(/class="arcade-joystick"/g) ?? []).length, 14);
+  assert.equal((html.match(/data-joystick-knob/g) ?? []).length, 14);
+  assert.match(html, /\.arcade-joystick\s*\{[^}]*aspect-ratio:\s*1;[^}]*touch-action:\s*none;/s);
+  assert.match(html, /\.tank-touch-team\.joystick-team\s*\{[^}]*grid-template-columns:/s);
+  assert.equal((html.match(/data-paddle-direction=/g) ?? []).length, 0);
+  assert.equal((html.match(/data-snake-direction=/g) ?? []).length, 0);
+  assert.equal((html.match(/data-racing-action=/g) ?? []).length, 0);
 });
 
 test('Țintar board includes native fullscreen styling and a mobile fallback', () => {

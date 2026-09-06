@@ -1,5 +1,6 @@
 import { GameRoomClient } from './game-room.js';
 import { ArcadeResultReporter } from './stats.js';
+import { bindVirtualJoystick, digitalJoystickState, type JoystickInputDirection } from './touch-controls.js';
 
 export type SnakePlayer = 1 | 2;
 export type SnakeMode = 'solo' | 'duel';
@@ -313,6 +314,16 @@ export function initNeonSnake(): void {
     button.addEventListener('pointerdown', event => {
       event.preventDefault();
       turn(Number(button.dataset.snakePlayer) as SnakePlayer, button.dataset.snakeDirection as SnakeDirection);
+    });
+  });
+  document.querySelectorAll<HTMLElement>('[data-snake-joystick]').forEach(track => {
+    const player = Number(track.dataset.snakeJoystick) as SnakePlayer;
+    let activeDirection: JoystickInputDirection | undefined;
+    bindVirtualJoystick(track, vector => {
+      const state = digitalJoystickState(vector, 'cardinal');
+      const direction = (Object.keys(state) as JoystickInputDirection[]).find(candidate => state[candidate]);
+      if (direction && direction !== activeDirection) turn(player, direction);
+      activeDirection = direction;
     });
   });
   modeButtons.forEach(button => button.addEventListener('click', () => {

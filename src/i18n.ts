@@ -120,6 +120,10 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
     'Joystickul este în dreapta. Mută joystickul în stânga și schimbă poziția butonului pentru bombă.',
   'Joystick is on the left. Move joystick to the right and swap the bomb button.':
     'Joystickul este în stânga. Mută joystickul în dreapta și schimbă poziția butonului pentru bombă.',
+  'Mint movement joystick': 'Joystick de mișcare Mint',
+  'Coral movement joystick': 'Joystick de mișcare Coral',
+  'Mint driving joystick': 'Joystick de condus Mint',
+  'Coral driving joystick': 'Joystick de condus Coral',
   'Outsmart bots or invite a friend into a fast explosive maze battle.':
     'Păcălește boții sau invită un prieten într-o luptă rapidă printr-un labirint exploziv.',
   "Build mills, capture rival pieces, and master Romania's classic strategy board game.":

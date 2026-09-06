@@ -1,5 +1,6 @@
 import { GameRoomClient } from './game-room.js';
 import { ArcadeResultReporter } from './stats.js';
+import { bindDirectionalJoystick } from './touch-controls.js';
 
 export type SurvivalPlayer = 1 | 2;
 export type SurvivalMode = 'solo' | 'coop';
@@ -392,6 +393,10 @@ export function initSurvivalArena(): void {
       event.preventDefault(); button.setPointerCapture?.(event.pointerId); setPlayerInput(player, action, true);
     });
     button.addEventListener('pointerup', release); button.addEventListener('pointercancel', release); button.addEventListener('lostpointercapture', release);
+  });
+  document.querySelectorAll<HTMLElement>('[data-survival-joystick]').forEach(track => {
+    const player = Number(track.dataset.survivalJoystick) as SurvivalPlayer;
+    bindDirectionalJoystick(track, (direction, pressed) => setPlayerInput(player, direction, pressed));
   });
   modeButtons.forEach(button => button.addEventListener('click', () => {
     const mode = button.dataset.survivalMode;

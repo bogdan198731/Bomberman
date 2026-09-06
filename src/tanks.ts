@@ -1,5 +1,6 @@
 import { GameRoomClient } from './game-room.js';
 import { ArcadeResultReporter } from './stats.js';
+import { bindDirectionalJoystick } from './touch-controls.js';
 
 export type TankPlayer = 1 | 2;
 export type TankMode = 'bot' | 'duel';
@@ -360,6 +361,10 @@ export function initMiniTanks(): void {
     const release = (): void => setPlayerInput(player, action, false);
     button.addEventListener('pointerdown', event => { event.preventDefault(); button.setPointerCapture?.(event.pointerId); setPlayerInput(player, action, true); });
     button.addEventListener('pointerup', release); button.addEventListener('pointercancel', release); button.addEventListener('lostpointercapture', release);
+  });
+  document.querySelectorAll<HTMLElement>('[data-tank-joystick]').forEach(track => {
+    const player = Number(track.dataset.tankJoystick) as TankPlayer;
+    bindDirectionalJoystick(track, (direction, pressed) => setPlayerInput(player, direction, pressed), 'cardinal');
   });
   modeButtons.forEach(button => button.addEventListener('click', () => {
     const mode = button.dataset.tanksMode;
