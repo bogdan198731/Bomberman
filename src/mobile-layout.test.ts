@@ -40,6 +40,16 @@ test('mobile Blast Buddies defaults to joystick right and offers a persistent si
   assert.match(html, /\.mobile-joystick,\s*\.mobile-bomb-button\s*\{[^}]*grid-row:\s*1;/s);
 });
 
+test('short landscape Bomberman keeps the arena visible between overlay controls', () => {
+  assert.match(html, /@media \(orientation: landscape\) and \(max-height: 520px\)/);
+  assert.match(html, /body\[data-view="bomberman"\]\s*\{[^}]*overflow:\s*hidden;/s);
+  assert.match(html, /#gameView \.arena-wrap\s*\{[^}]*width:\s*min\(calc\(100dvh - 48px\), calc\(100vw - 288px\)\);[^}]*margin:\s*44px auto 0;/s);
+  assert.match(html, /#gameView \.scoreboard\s*\{[^}]*position:\s*fixed;[^}]*width:\s*min\(360px, calc\(100vw - 260px\)\);/s);
+  assert.match(html, /#gameView \.mobile-controls:not\(\.hidden\)\s*\{[^}]*position:\s*fixed;[^}]*height:\s*100dvh;[^}]*pointer-events:\s*none;/s);
+  assert.match(html, /#gameView \.mobile-control-actions\s*\{[^}]*position:\s*fixed;[^}]*bottom:\s*6px;/s);
+  assert.match(html, /#bombermanLocalControls:not\(\.hidden\)\s*\{[^}]*position:\s*fixed;[^}]*grid-template-columns:/s);
+});
+
 test('Țintar board includes native fullscreen styling and a mobile fallback', () => {
   assert.match(html, /id="tintarBoardFrame" class="tintar-board-frame"/);
   assert.match(html, /id="tintarBoardActions" class="tintar-board-actions" hidden/);
