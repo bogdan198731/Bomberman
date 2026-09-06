@@ -1,5 +1,6 @@
 import { GameRoomClient } from './game-room.js';
 import { ArcadeResultReporter } from './stats.js';
+import { bindDirectionalJoystick } from './touch-controls.js';
 
 export type RacingPlayer = 1 | 2;
 export type RacingMode = 'bot' | 'duel';
@@ -515,6 +516,13 @@ export function initMicroRacers(): void {
     button.addEventListener('pointerup', release);
     button.addEventListener('pointercancel', release);
     button.addEventListener('lostpointercapture', release);
+  });
+  document.querySelectorAll<HTMLElement>('[data-racing-joystick]').forEach(track => {
+    const player = Number(track.dataset.racingJoystick) as RacingPlayer;
+    bindDirectionalJoystick(track, (direction, pressed) => {
+      const action: RacingAction = direction === 'up' ? 'accelerate' : direction === 'down' ? 'brake' : direction;
+      setPlayerInput(player, action, pressed);
+    });
   });
   modeButtons.forEach(button => button.addEventListener('click', () => {
     if (room?.session().online) return;

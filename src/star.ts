@@ -1,4 +1,5 @@
 import { ArcadeResultReporter } from './stats.js';
+import { bindDirectionalJoystick } from './touch-controls.js';
 
 export type StarPhase = 'ready' | 'playing' | 'finished';
 export type StarMode = 'solo' | 'coop';
@@ -465,6 +466,10 @@ export function initStarDefender(): void {
       event.preventDefault(); button.setPointerCapture?.(event.pointerId); game.setInput(action, true, player);
     });
     button.addEventListener('pointerup', release); button.addEventListener('pointercancel', release); button.addEventListener('lostpointercapture', release);
+  });
+  document.querySelectorAll<HTMLElement>('[data-star-joystick]').forEach(track => {
+    const player = Number(track.dataset.starJoystick) as StarPlayerId;
+    bindDirectionalJoystick(track, (direction, pressed) => game.setInput(direction, pressed, player));
   });
   modeButtons.forEach(button => button.addEventListener('click', () => {
     const mode = button.dataset.starMode;

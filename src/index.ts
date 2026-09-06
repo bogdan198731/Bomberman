@@ -16,7 +16,16 @@ import { initQuickPlay } from './quick-play.js';
 import { initArcadePwa } from './pwa.js';
 import { initArcadeLeaderboard } from './leaderboard.js';
 import { initArcadeCircuit } from './circuit.js';
-import { clampJoystickOffset, joystickDirection, type JoystickDirection } from './touch-controls.js';
+import {
+  BOMBERMAN_TOUCH_LAYOUT_STORAGE_KEY,
+  bindVirtualJoystick,
+  clampJoystickOffset,
+  joystickDirection,
+  normalizeBombermanTouchLayout,
+  swapBombermanTouchLayout,
+  type BombermanTouchLayout,
+  type JoystickDirection,
+} from './touch-controls.js';
 import {
   arcadeInviteShareData,
   clearArcadeInviteUrl,
@@ -1219,6 +1228,7 @@ export function initGame(): void {
     mobileJoystick: document.getElementById('mobileJoystick'),
     mobileJoystickKnob: document.getElementById('mobileJoystickKnob'),
     mobileBombButton: document.getElementById('mobileBombButton') as HTMLButtonElement | null,
+    mobileControlLayoutButton: document.getElementById('mobileControlLayoutButton') as HTMLButtonElement | null,
     mobileRestartButton: document.getElementById('mobileRestartButton'),
     localMobileControls: document.getElementById('bombermanLocalControls'),
     localMobileRestartButton: document.getElementById('bombermanLocalRestartButton'),
@@ -1249,6 +1259,34 @@ export function initGame(): void {
   let activeBotDifficulty: 'easy' | 'normal' | 'hard' | undefined;
   let quickMatching = false;
   const resultReporter = new ArcadeResultReporter('bomberman');
+  let mobileTouchLayout: BombermanTouchLayout = (() => {
+    try {
+      return normalizeBombermanTouchLayout(localStorage.getItem(BOMBERMAN_TOUCH_LAYOUT_STORAGE_KEY));
+    } catch {
+      return normalizeBombermanTouchLayout(undefined);
+    }
+  })();
+
+  function applyMobileTouchLayout(): void {
+    if (elements.mobileControls) elements.mobileControls.dataset.controlLayout = mobileTouchLayout;
+    const button = elements.mobileControlLayoutButton;
+    if (!button) return;
+    const currentSide = mobileTouchLayout === 'joystick-right' ? 'right' : 'left';
+    const nextSide = currentSide === 'right' ? 'left' : 'right';
+    button.dataset.joystickSide = currentSide;
+    button.setAttribute(
+      'aria-label',
+      `Joystick is on the ${currentSide}. Move joystick to the ${nextSide} and swap the bomb button.`,
+    );
+  }
+
+  function saveMobileTouchLayout(): void {
+    try {
+      localStorage.setItem(BOMBERMAN_TOUCH_LAYOUT_STORAGE_KEY, mobileTouchLayout);
+    } catch {
+      // The selected layout still applies for this session when storage is unavailable.
+    }
+  }
 
   function setActiveView(view: 'hub' | 'bomberman' | 'tintar' | 'paddle' | 'snake' | 'tanks' | 'septica' | 'survival' | 'star' | 'racing' | 'blocks' | 'twenty48' | 'sudoku'): void {
     elements.hubView?.classList.toggle('view-hidden', view !== 'hub');
@@ -1537,6 +1575,12 @@ export function initGame(): void {
   elements.restartButton?.addEventListener('click', () => sendPlayerAction(1, { type: 'restart' }));
   elements.mobileRestartButton?.addEventListener('click', () => sendPlayerAction(1, { type: 'restart' }));
   elements.localMobileRestartButton?.addEventListener('click', () => sendPlayerAction(1, { type: 'restart' }));
+  elements.mobileControlLayoutButton?.addEventListener('click', () => {
+    mobileTouchLayout = swapBombermanTouchLayout(mobileTouchLayout);
+    saveMobileTouchLayout();
+    applyMobileTouchLayout();
+  });
+  applyMobileTouchLayout();
 
   const touchTimers = new Map<number, number>();
   function bindTouchControl(
@@ -1673,6 +1717,24 @@ export function initGame(): void {
     };
     const action = actionName ? moves[actionName] : undefined;
     if (action) bindTouchControl(button, action, action.type === 'move', action.type === 'bomb', player);
+  });
+  document.querySelectorAll<HTMLElement>('[data-bomberman-local-joystick]').forEach(track => {
+    const player = Number(track.dataset.bombermanLocalJoystick) as 1 | 2;
+    let direction: JoystickDirection | null = null;
+    let timer: number | undefined;
+    const dispatch = (): void => {
+      if (direction) sendPlayerAction(player, { type: 'move', ...direction });
+    };
+    bindVirtualJoystick(track, vector => {
+      const next = joystickDirection(vector.x, vector.y, 1, .32);
+      if (next?.dx === direction?.dx && next?.dy === direction?.dy) return;
+      if (timer !== undefined) window.clearInterval(timer);
+      timer = undefined;
+      direction = next;
+      if (!direction) return;
+      dispatch();
+      timer = window.setInterval(dispatch, 35);
+    });
   });
 
   const handledKeys = new Set([
