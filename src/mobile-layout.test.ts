@@ -36,6 +36,8 @@ test('mobile Blast Buddies defaults to joystick right and offers a persistent si
   assert.match(html, /\.mobile-controls\[data-control-layout="joystick-right"\] \.mobile-bomb-button\s*\{[^}]*grid-column:\s*1;/s);
   assert.match(html, /\.mobile-controls\[data-control-layout="joystick-left"\] \.mobile-joystick\s*\{[^}]*grid-column:\s*1;/s);
   assert.match(html, /\.mobile-controls\[data-control-layout="joystick-left"\] \.mobile-bomb-button\s*\{[^}]*grid-column:\s*3;/s);
+  assert.match(html, /\.mobile-control-actions\s*\{[^}]*grid-column:\s*2;[^}]*grid-row:\s*1;[^}]*align-self:\s*center;/s);
+  assert.match(html, /\.mobile-joystick,\s*\.mobile-bomb-button\s*\{[^}]*grid-row:\s*1;/s);
 });
 
 test('Țintar board includes native fullscreen styling and a mobile fallback', () => {

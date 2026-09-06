@@ -3556,9 +3556,9 @@
       .mobile-control-actions {
         display: grid;
         grid-column: 2;
-        align-self: end;
+        grid-row: 1;
+        align-self: center;
         gap: 6px;
-        margin-bottom: 5px;
       }
 
       .mobile-layout-button {
@@ -3608,6 +3608,11 @@
         border-bottom-width: 3px;
         filter: brightness(1.1);
         transform: translateY(4px) scale(0.97);
+      }
+
+      .mobile-joystick,
+      .mobile-bomb-button {
+        grid-row: 1;
       }
 
       .mobile-controls[data-control-layout="joystick-right"] .mobile-joystick {
