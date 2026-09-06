@@ -8,6 +8,21 @@ export interface JoystickOffset {
   y: number;
 }
 
+export type BombermanTouchLayout = 'joystick-left' | 'joystick-right';
+
+export const BOMBERMAN_TOUCH_LAYOUT_STORAGE_KEY = 'blast-arcade-bomberman-touch-layout-v1';
+export const DEFAULT_BOMBERMAN_TOUCH_LAYOUT: BombermanTouchLayout = 'joystick-right';
+
+export function normalizeBombermanTouchLayout(value: unknown): BombermanTouchLayout {
+  return value === 'joystick-left' || value === 'joystick-right'
+    ? value
+    : DEFAULT_BOMBERMAN_TOUCH_LAYOUT;
+}
+
+export function swapBombermanTouchLayout(layout: BombermanTouchLayout): BombermanTouchLayout {
+  return layout === 'joystick-right' ? 'joystick-left' : 'joystick-right';
+}
+
 export function joystickDirection(
   deltaX: number,
   deltaY: number,

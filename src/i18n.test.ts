@@ -10,6 +10,7 @@ test('Romanian translations cover shared arcade and revenge actions', () => {
     translateArcadeText('Movement joystick. Drag and hold to move, or use arrow keys.', 'ro'),
     'Joystick de mișcare. Trage și ține apăsat pentru a te deplasa sau folosește săgețile.',
   );
+  assert.equal(translateArcadeText('Swap sides', 'ro'), 'Schimbă părțile');
   assert.equal(translateArcadeText('Play revenge match', 'en'), 'Play revenge match');
 });
 

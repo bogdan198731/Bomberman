@@ -3452,7 +3452,7 @@
         z-index: 4;
         bottom: 0;
         display: grid;
-        grid-template-columns: minmax(172px, 1fr) auto minmax(94px, 0.65fr);
+        grid-template-columns: minmax(94px, 0.65fr) auto minmax(172px, 1fr);
         align-items: center;
         gap: 16px;
         padding: 12px max(14px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
@@ -3541,8 +3541,7 @@
       }
 
       .mobile-round-button {
-        align-self: end;
-        margin-bottom: 5px;
+        margin: 0;
         padding: 9px 10px;
         border: 1px solid rgba(255, 255, 255, 0.13);
         border-radius: 10px;
@@ -3552,6 +3551,36 @@
         font-size: 0.68rem;
         font-weight: 850;
         white-space: nowrap;
+      }
+
+      .mobile-control-actions {
+        display: grid;
+        grid-column: 2;
+        align-self: end;
+        gap: 6px;
+        margin-bottom: 5px;
+      }
+
+      .mobile-layout-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        min-height: 31px;
+        padding: 6px 8px;
+        border: 1px solid rgba(77, 224, 147, 0.28);
+        border-radius: 10px;
+        color: #a9f3ca;
+        background: rgba(77, 224, 147, 0.08);
+        touch-action: manipulation;
+        font-size: 0.64rem;
+        font-weight: 900;
+        white-space: nowrap;
+      }
+
+      .mobile-layout-button:active {
+        background: rgba(77, 224, 147, 0.18);
+        transform: translateY(1px);
       }
 
       .mobile-bomb-button {
@@ -3579,6 +3608,30 @@
         border-bottom-width: 3px;
         filter: brightness(1.1);
         transform: translateY(4px) scale(0.97);
+      }
+
+      .mobile-controls[data-control-layout="joystick-right"] .mobile-joystick {
+        grid-column: 3;
+        justify-self: end;
+      }
+
+      .mobile-controls[data-control-layout="joystick-right"] .mobile-bomb-button {
+        grid-column: 1;
+        justify-self: start;
+      }
+
+      .mobile-controls[data-control-layout="joystick-left"] {
+        grid-template-columns: minmax(172px, 1fr) auto minmax(94px, 0.65fr);
+      }
+
+      .mobile-controls[data-control-layout="joystick-left"] .mobile-joystick {
+        grid-column: 1;
+        justify-self: start;
+      }
+
+      .mobile-controls[data-control-layout="joystick-left"] .mobile-bomb-button {
+        grid-column: 3;
+        justify-self: end;
       }
     }
 
@@ -4212,9 +4265,13 @@
       }
 
       .mobile-controls:not(.hidden) {
-        grid-template-columns: 118px minmax(0, 1fr) 78px;
+        grid-template-columns: 78px minmax(0, 1fr) 118px;
         gap: 7px;
         padding-top: 11px;
+      }
+
+      .mobile-controls[data-control-layout="joystick-left"] {
+        grid-template-columns: 118px minmax(0, 1fr) 78px;
       }
 
       .mobile-joystick {
@@ -6348,7 +6405,7 @@
         </div>
       </footer>
 
-      <div id="mobileControls" class="mobile-controls hidden" aria-label="Touch game controls">
+      <div id="mobileControls" class="mobile-controls hidden" aria-label="Touch game controls" data-control-layout="joystick-right">
         <span id="mobilePlayerLabel" class="mobile-player-label">Your controls</span>
         <div id="mobileJoystick" class="mobile-joystick" role="group" tabindex="0" aria-label="Movement joystick. Drag and hold to move, or use arrow keys." data-direction="idle">
           <span class="mobile-joystick-arrow up" aria-hidden="true">▲</span>
@@ -6357,7 +6414,12 @@
           <span class="mobile-joystick-arrow left" aria-hidden="true">◀</span>
           <span id="mobileJoystickKnob" class="mobile-joystick-knob" aria-hidden="true"></span>
         </div>
-        <button id="mobileRestartButton" class="mobile-round-button" type="button">New round</button>
+        <div class="mobile-control-actions">
+          <button id="mobileRestartButton" class="mobile-round-button" type="button">New round</button>
+          <button id="mobileControlLayoutButton" class="mobile-layout-button" type="button" aria-label="Joystick is on the right. Move joystick to the left and swap the bomb button." data-joystick-side="right">
+            <span aria-hidden="true">⇄</span><span>Swap sides</span>
+          </button>
+        </div>
         <button id="mobileBombButton" class="mobile-bomb-button" type="button" aria-label="Place bomb">Bomb</button>
       </div>
 

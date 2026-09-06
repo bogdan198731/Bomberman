@@ -115,6 +115,11 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Create a room or enter an invitation code.': 'Creează o cameră sau introdu un cod de invitație.',
   'Movement joystick. Drag and hold to move, or use arrow keys.':
     'Joystick de mișcare. Trage și ține apăsat pentru a te deplasa sau folosește săgețile.',
+  'Swap sides': 'Schimbă părțile',
+  'Joystick is on the right. Move joystick to the left and swap the bomb button.':
+    'Joystickul este în dreapta. Mută joystickul în stânga și schimbă poziția butonului pentru bombă.',
+  'Joystick is on the left. Move joystick to the right and swap the bomb button.':
+    'Joystickul este în stânga. Mută joystickul în dreapta și schimbă poziția butonului pentru bombă.',
   'Outsmart bots or invite a friend into a fast explosive maze battle.':
     'Păcălește boții sau invită un prieten într-o luptă rapidă printr-un labirint exploziv.',
   "Build mills, capture rival pieces, and master Romania's classic strategy board game.":

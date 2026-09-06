@@ -29,6 +29,15 @@ test('mobile Blast Buddies uses a drag-and-hold virtual joystick', () => {
   assert.equal((html.match(/data-bomberman-player=/g) ?? []).length, 10);
 });
 
+test('mobile Blast Buddies defaults to joystick right and offers a persistent side swap', () => {
+  assert.match(html, /id="mobileControls"[^>]*data-control-layout="joystick-right"/);
+  assert.match(html, /id="mobileControlLayoutButton"[^>]*data-joystick-side="right"/);
+  assert.match(html, /\.mobile-controls\[data-control-layout="joystick-right"\] \.mobile-joystick\s*\{[^}]*grid-column:\s*3;/s);
+  assert.match(html, /\.mobile-controls\[data-control-layout="joystick-right"\] \.mobile-bomb-button\s*\{[^}]*grid-column:\s*1;/s);
+  assert.match(html, /\.mobile-controls\[data-control-layout="joystick-left"\] \.mobile-joystick\s*\{[^}]*grid-column:\s*1;/s);
+  assert.match(html, /\.mobile-controls\[data-control-layout="joystick-left"\] \.mobile-bomb-button\s*\{[^}]*grid-column:\s*3;/s);
+});
+
 test('Țintar board includes native fullscreen styling and a mobile fallback', () => {
   assert.match(html, /id="tintarBoardFrame" class="tintar-board-frame"/);
   assert.match(html, /id="tintarBoardActions" class="tintar-board-actions" hidden/);
