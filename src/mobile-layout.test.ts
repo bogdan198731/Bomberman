@@ -72,6 +72,9 @@ test('Țintar board includes native fullscreen styling and a mobile fallback', (
   assert.match(html, /\.tintar-board-frame\.is-fullscreen-fallback\s*\{[^}]*position:\s*fixed;[^}]*inset:\s*0;/s);
   assert.match(html, /width:\s*min\(100vw, 100dvh, 1200px\)/);
   assert.match(html, /\.tintar-board-frame\.is-fullscreen-layout \.tintar-point\s*\{[^}]*width:\s*clamp\(29px, 7\.5vw, 56px\)/s);
+  assert.match(html, /@media \(orientation: portrait\) and \(max-width: 820px\)/);
+  assert.match(html, /--tintar-portrait-toolbar-space:\s*max\(120px, calc\(env\(safe-area-inset-top\) \+ 96px\)\)/);
+  assert.match(html, /\.tintar-board-frame\.is-fullscreen-layout \.tintar-board\s*\{[^}]*width:\s*100vw;[^}]*height:\s*calc\(100dvh - var\(--tintar-portrait-toolbar-space\) - var\(--tintar-portrait-bottom-space\)\);[^}]*aspect-ratio:\s*auto;/s);
 });
 
 test('Țintar board includes a non-blocking reduced-motion winner celebration', () => {
