@@ -135,6 +135,8 @@ test('mobile Țintar keeps a live turn prompt beside the board', () => {
   assert.match(html, /id="tintarBoardPhase">Placement phase<\/strong>/);
   assert.match(html, /@media \(max-width: 760px\)[\s\S]*?\.tintar-board-status \{ display: grid; \}/);
   assert.match(tintarSource, /boardStatusElement\.textContent = statusText/);
+  assert.match(tintarSource, /const extendedTapRadius = Math\.max\(22, Math\.min\(34,/);
+  assert.match(tintarSource, /nearestDistance <= extendedTapRadius\) playPoint\(nearestPoint\)/);
 });
 
 test('Țintar board includes a non-blocking reduced-motion winner celebration', () => {

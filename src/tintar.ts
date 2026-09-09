@@ -527,6 +527,27 @@ export function initTintar(): void {
     pointButtons.push(button);
   });
 
+  boardElement.addEventListener('click', event => {
+    if (event.target instanceof Element && event.target.closest('.tintar-point')) return;
+    const bounds = boardElement.getBoundingClientRect();
+    if (!bounds.width || !bounds.height) return;
+    const tapX = event.clientX - bounds.left;
+    const tapY = event.clientY - bounds.top;
+    let nearestPoint = -1;
+    let nearestDistance = Infinity;
+    TINTAR_POINTS.forEach(([left, top], point) => {
+      const pointX = left / 100 * bounds.width;
+      const pointY = top / 100 * bounds.height;
+      const distance = Math.hypot(pointX - tapX, pointY - tapY);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestPoint = point;
+      }
+    });
+    const extendedTapRadius = Math.max(22, Math.min(34, Math.min(bounds.width, bounds.height) * .075));
+    if (nearestPoint >= 0 && nearestDistance <= extendedTapRadius) playPoint(nearestPoint);
+  });
+
   function render(): void {
     const legalTargets = game.selectedPoint === null ? [] : game.legalDestinations(game.selectedPoint);
     pointButtons.forEach((button, point) => {
