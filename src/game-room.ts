@@ -51,6 +51,8 @@ export class GameRoomClient {
   private onlineActions: HTMLElement;
   private joinedActions: HTMLElement;
   private codeElement: HTMLElement;
+  private compactToggle: HTMLButtonElement;
+  private summaryElement: HTMLElement;
 
   constructor(options: GameRoomClientOptions) {
     this.options = options;
@@ -66,27 +68,33 @@ export class GameRoomClient {
     const modeButtons = this.offlineModes.map(mode => `
           <button class="game-room-mode-tab" type="button" role="tab" aria-selected="false" data-room-mode="${mode.id}"${mode.description ? ` title="${mode.description}"` : ''}>${mode.label}</button>`).join('');
     this.mount.innerHTML = `
-      <div class="game-room-heading">
-        <div class="game-room-copy">
-          <strong>Choose a mode</strong>
-          <span data-room-status>Pick how you want to play.</span>
+      <button class="game-room-compact-toggle" type="button" aria-expanded="false" data-room-toggle>
+        <span><small>Play mode</small><strong data-room-summary>Choose a mode</strong></span>
+        <span class="game-room-change-label">Change <b aria-hidden="true">⌄</b></span>
+      </button>
+      <div class="game-room-content" data-room-content>
+        <div class="game-room-heading">
+          <div class="game-room-copy">
+            <strong>Choose a mode</strong>
+            <span data-room-status>Pick how you want to play.</span>
+          </div>
+          <div class="game-room-mode-tabs" role="tablist" aria-label="Play mode">
+            ${modeButtons}
+            <button class="game-room-mode-tab online" type="button" role="tab" aria-selected="false" data-room-mode="online">Online</button>
+          </div>
         </div>
-        <div class="game-room-mode-tabs" role="tablist" aria-label="Play mode">
-          ${modeButtons}
-          <button class="game-room-mode-tab online" type="button" role="tab" aria-selected="false" data-room-mode="online">Online</button>
-        </div>
-      </div>
-      <div class="game-room-online" data-room-online hidden>
-        <div class="game-room-actions" data-room-local>
-          <button class="game-room-matchmake" type="button" data-room-matchmake>Quick Match</button>
-          <button type="button" data-room-create>Create code</button>
-          <label class="game-room-join"><span class="sr-only">Room code</span><input type="text" inputmode="text" maxlength="5" placeholder="CODE" autocomplete="off" data-room-input><button type="button" data-room-join>Join</button></label>
-        </div>
-        <div class="game-room-actions" data-room-joined hidden>
-          <span class="game-room-code">Code <b data-room-code>-----</b></span>
-          <button type="button" data-room-copy>Copy link</button>
-          <button type="button" data-room-share>Share</button>
-          <button type="button" data-room-leave>Leave</button>
+        <div class="game-room-online" data-room-online hidden>
+          <div class="game-room-actions" data-room-local>
+            <button class="game-room-matchmake" type="button" data-room-matchmake>Quick Match</button>
+            <button type="button" data-room-create>Create code</button>
+            <label class="game-room-join"><span class="sr-only">Room code</span><input type="text" inputmode="text" maxlength="5" placeholder="CODE" autocomplete="off" data-room-input><button type="button" data-room-join>Join</button></label>
+          </div>
+          <div class="game-room-actions" data-room-joined hidden>
+            <span class="game-room-code">Code <b data-room-code>-----</b></span>
+            <button type="button" data-room-copy>Copy link</button>
+            <button type="button" data-room-share>Share</button>
+            <button type="button" data-room-leave>Leave</button>
+          </div>
         </div>
       </div>`;
     this.statusElement = this.mount.querySelector<HTMLElement>('[data-room-status]')!;
@@ -95,6 +103,8 @@ export class GameRoomClient {
     this.onlineActions = this.mount.querySelector<HTMLElement>('[data-room-local]')!;
     this.joinedActions = this.mount.querySelector<HTMLElement>('[data-room-joined]')!;
     this.codeElement = this.mount.querySelector<HTMLElement>('[data-room-code]')!;
+    this.compactToggle = this.mount.querySelector<HTMLButtonElement>('[data-room-toggle]')!;
+    this.summaryElement = this.mount.querySelector<HTMLElement>('[data-room-summary]')!;
     this.bindUi();
     this.selectMode(this.initialOfflineMode, false);
     this.mount.closest('main')?.querySelector('[data-back-to-hub]')?.addEventListener('click', () => {
@@ -142,6 +152,9 @@ export class GameRoomClient {
   }
 
   private bindUi(): void {
+    this.compactToggle.addEventListener('click', () => {
+      this.setCompact(this.mount.dataset.roomCollapsed !== 'true');
+    });
     this.mount.querySelectorAll<HTMLButtonElement>('[data-room-mode]').forEach(button => {
       button.addEventListener('click', () => {
         const mode = button.dataset.roomMode;
@@ -298,17 +311,26 @@ export class GameRoomClient {
 
   private selectMode(mode: GameRoomOfflineModeId | 'online', announce: boolean): void {
     this.mount.dataset.roomSelectedMode = mode;
+    const selectedMode = this.offlineModes.find(candidate => candidate.id === mode);
+    this.summaryElement.textContent = mode === 'online' ? 'Online' : selectedMode?.label ?? 'Choose a mode';
     this.mount.querySelectorAll<HTMLButtonElement>('[data-room-mode]').forEach(button => {
       const selected = button.dataset.roomMode === mode;
       button.classList.toggle('active', selected);
       button.setAttribute('aria-selected', String(selected));
     });
     this.onlinePanel.hidden = mode !== 'online';
+    this.setCompact(mode !== 'online');
     if (!announce) {
-      const selected = this.offlineModes.find(candidate => candidate.id === mode);
       this.statusElement.textContent = mode === 'online'
         ? 'Quick match, create an invite, or join with a code.'
-        : selected?.description ?? 'Ready to play on this device.';
+        : selectedMode?.description ?? 'Ready to play on this device.';
     }
+  }
+
+  private setCompact(collapsed: boolean): void {
+    this.mount.dataset.roomCollapsed = String(collapsed);
+    this.compactToggle.setAttribute('aria-expanded', String(!collapsed));
+    const changeLabel = this.compactToggle.querySelector<HTMLElement>('.game-room-change-label');
+    if (changeLabel) changeLabel.lastElementChild!.textContent = collapsed ? '⌄' : '⌃';
   }
 }

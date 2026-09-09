@@ -29,6 +29,9 @@ test('multiplayer games share a mode-first room selector', () => {
   assert.match(gameRoomSource, /class="game-room-mode-tabs"[^>]*role="tablist"/);
   assert.match(gameRoomSource, /data-room-mode="online"/);
   assert.match(gameRoomSource, /data-room-online hidden/);
+  assert.match(gameRoomSource, /class="game-room-compact-toggle"[^>]*data-room-toggle/);
+  assert.match(gameRoomSource, /this\.setCompact\(mode !== 'online'\)/);
+  assert.match(html, /\.game-room-panel\[data-room-collapsed="true"\] \.game-room-content\s*\{\s*display:\s*none;/s);
   assert.equal((gameRoomSource.match(/offlineModes/g) ?? []).length >= 6, true);
   assert.match(html, /\.room-mode-managed \.snake-modes\s*\{\s*display:\s*none;/s);
 });
