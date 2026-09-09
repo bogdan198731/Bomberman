@@ -4945,6 +4945,58 @@
         border-top: 1px solid var(--panel-border);
       }
 
+      /* Keep live controls physically attached to the playfield on phones. */
+      :is(#paddleView, #snakeView, #tanksView, #survivalView, #starView, #racingView, #blocksView) .paddle-shell {
+        display: flex;
+        flex-direction: column;
+      }
+
+      :is(#paddleView, #snakeView, #tanksView, #survivalView, #starView, #racingView, #blocksView) .snake-toolbar { order: 0; }
+      :is(#paddleView, #snakeView, #tanksView, #survivalView, #starView, #racingView, #blocksView) .paddle-scorebar { order: 1; }
+
+      :is(#paddleView, #snakeView, #tanksView, #survivalView, #starView, #racingView, #blocksView)
+      :is(.paddle-arena, .snake-arena, .tanks-arena, .survival-arena, .star-arena, .racing-arena, .blocks-arena) { order: 2; }
+
+      :is(#paddleView, #snakeView, #tanksView, #survivalView, #starView, #racingView, #blocksView)
+      :is(.paddle-touch-controls, .snake-touch-controls, .tanks-touch-controls) {
+        order: 3;
+        border-top: 1px solid var(--panel-border);
+        border-bottom: 1px solid var(--panel-border);
+      }
+
+      :is(#paddleView, #snakeView, #tanksView, #survivalView, #starView, #racingView, #blocksView) .paddle-statusbar {
+        order: 4;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 9px;
+        border-top: 0;
+        border-bottom: 0;
+        background: rgba(255,255,255,.025);
+        text-align: left;
+      }
+
+      :is(#paddleView, #snakeView, #tanksView, #survivalView, #starView, #racingView, #blocksView) .paddle-statusbar span {
+        line-height: 1.35;
+      }
+
+      :is(#paddleView, #snakeView, #tanksView, #survivalView, #starView, #racingView, #blocksView) .paddle-statusbar .paddle-serve {
+        min-width: 108px;
+        padding-inline: 12px;
+      }
+
+      :is(#paddleView, #snakeView, #tanksView, #survivalView, #starView, #racingView, #blocksView) .paddle-footer {
+        order: 5;
+        padding-top: 0;
+        background: rgba(255,255,255,.025);
+      }
+
+      :is(#paddleView, #snakeView, #tanksView, #survivalView, #starView, #racingView, #blocksView) .paddle-restart {
+        width: 100%;
+        color: var(--muted);
+        background: transparent;
+      }
+
       .back-to-hub,
       .settings-nav-button,
       .paddle-serve,

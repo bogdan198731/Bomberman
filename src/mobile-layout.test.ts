@@ -102,6 +102,14 @@ test('real-time mobile games use shared virtual joysticks', () => {
   }
 });
 
+test('mobile real-time games keep gameplay controls next to the playfield', () => {
+  const affectedViews = ':is(#paddleView, #snakeView, #tanksView, #survivalView, #starView, #racingView, #blocksView)';
+  assert.match(html, new RegExp(`${affectedViews.replace(/[()#.,]/g, '\\$&')} \\.paddle-shell \\{[\\s\\S]*?flex-direction: column;`));
+  assert.match(html, /:is\(\.paddle-touch-controls, \.snake-touch-controls, \.tanks-touch-controls\) \{[\s\S]*?order: 3;/);
+  assert.match(html, /#blocksView\) \.paddle-statusbar \{[\s\S]*?order: 4;/);
+  assert.match(html, /#blocksView\) \.paddle-footer \{[\s\S]*?order: 5;/);
+});
+
 test('Block Drop prioritizes one large human board on mobile', () => {
   assert.match(blocksSource, /const singleBoardMobile = mobile && \(game\.mode === 'bot' \|\| Boolean\(room\?\.session\(\)\.online\)\)/);
   assert.match(blocksSource, /setCanvasSize\(mobile \? 360 : 900, mobile \? \(singleBoardMobile \? 510 : 390\) : 600\)/);
