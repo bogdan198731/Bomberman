@@ -1230,6 +1230,8 @@ export function initGame(): void {
     copyRoomButton: document.getElementById('copyRoomButton'),
     shareRoomButton: document.getElementById('shareRoomButton'),
     botButtons: document.querySelectorAll<HTMLButtonElement>('[data-bot-difficulty]'),
+    lobbyModeButtons: document.querySelectorAll<HTMLButtonElement>('[data-bomberman-lobby-mode]'),
+    lobbyModePanels: document.querySelectorAll<HTMLElement>('[data-bomberman-mode-panel]'),
     mobileControls: document.getElementById('mobileControls'),
     mobilePlayerLabel: document.getElementById('mobilePlayerLabel'),
     mobileJoystick: document.getElementById('mobileJoystick'),
@@ -1293,6 +1295,20 @@ export function initGame(): void {
     } catch {
       // The selected layout still applies for this session when storage is unavailable.
     }
+  }
+
+  function selectBombermanLobbyMode(mode: 'local' | 'bot' | 'online'): void {
+    elements.lobbyModeButtons.forEach(button => {
+      const selected = button.dataset.bombermanLobbyMode === mode;
+      button.classList.toggle('active', selected);
+      button.setAttribute('aria-selected', String(selected));
+    });
+    elements.lobbyModePanels.forEach(panel => {
+      panel.hidden = panel.dataset.bombermanModePanel !== mode;
+    });
+    if (mode === 'local') showLobbyMessage('Two players can share this device.');
+    else if (mode === 'bot') showLobbyMessage('Choose a bot difficulty to start.');
+    else showLobbyMessage('Quick match, create an invite, or join with a code.');
   }
 
   function setActiveView(view: 'hub' | 'bomberman' | 'tintar' | 'paddle' | 'snake' | 'tanks' | 'septica' | 'survival' | 'star' | 'racing' | 'blocks' | 'twenty48' | 'sudoku'): void {
@@ -1418,6 +1434,7 @@ export function initGame(): void {
       | { type: 'join'; roomCode: string }
       | { type: 'createBot'; difficulty: 'easy' | 'normal' | 'hard' }
   ): void {
+    selectBombermanLobbyMode(message.type === 'createBot' ? 'bot' : 'online');
     localMode = false;
     localRoom = undefined;
     elements.localMobileControls?.classList.add('hidden');
@@ -1499,6 +1516,24 @@ export function initGame(): void {
   elements.createRoomButton?.addEventListener('click', () => connectAndSend({ type: 'create' }));
   elements.quickMatchButton?.addEventListener('click', () => connectAndSend({ type: 'quickMatch' }));
   elements.playLocalButton?.addEventListener('click', () => { void startLocalMatch(); });
+  elements.lobbyModeButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const mode = button.dataset.bombermanLobbyMode;
+      if (mode !== 'local' && mode !== 'bot' && mode !== 'online') return;
+      if (mode !== 'online' && localPlayerId) {
+        const previousSocket = socket;
+        socket = undefined;
+        previousSocket?.close();
+        localPlayerId = undefined;
+        activeRoomCode = '';
+        activeBotDifficulty = undefined;
+        quickMatching = false;
+        history.replaceState(null, '', clearArcadeInviteUrl(location.href));
+        syncUi();
+      }
+      selectBombermanLobbyMode(mode);
+    });
+  });
   elements.launchGameButtons.forEach(button => {
     button.addEventListener('click', () => {
       const game = button.dataset.launchGame;
@@ -1521,7 +1556,7 @@ export function initGame(): void {
       elements.roomReady?.classList.add('hidden');
       elements.mobileControls?.classList.add('hidden');
       elements.localMobileControls?.classList.add('hidden');
-      showLobbyMessage('Choose a bot difficulty, create a room, or enter an invitation code.');
+      selectBombermanLobbyMode('local');
       setActiveView('hub');
     });
   });
@@ -1771,8 +1806,10 @@ export function initGame(): void {
     }
   });
 
+  selectBombermanLobbyMode('local');
   const inviteFromUrl = parseArcadeInvite(location.search);
   if (inviteFromUrl?.game === 'bomberman' && elements.roomCodeInput) {
+    selectBombermanLobbyMode('online');
     elements.roomCodeInput.value = inviteFromUrl.roomCode;
     connectAndSend({ type: 'join', roomCode: inviteFromUrl.roomCode });
   }

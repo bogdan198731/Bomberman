@@ -362,7 +362,10 @@ export function initPaddleClash(): void {
     room = new GameRoomClient({
       game: 'paddle',
       mount: roomMount,
-      onPlayLocal: () => { game.restart(); syncUi(); render(); },
+      offlineModes: [
+        { id: 'local', label: 'Local 2P', description: 'Two players share this device.', onSelect: () => { game.restart(); syncUi(); render(); } },
+      ],
+      initialOfflineMode: 'local',
       onSessionChange: session => {
         if (session.online && !session.ready && session.playerId === 1) {
           game.setInput(2, 'up', false); game.setInput(2, 'down', false);

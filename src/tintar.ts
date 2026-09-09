@@ -590,7 +590,7 @@ export function initTintar(): void {
   }
 
   function startBotMatch(difficulty: TintarBotDifficulty): void {
-    room?.leave();
+    if (room?.session().online) room.leave();
     setBotDifficulty(difficulty);
     matchStarted = true;
     game.reset();
@@ -634,9 +634,14 @@ export function initTintar(): void {
     room = new GameRoomClient({
       game: 'tintar',
       mount: roomMount,
-      onPlayLocal: () => { setBotDifficulty(null); matchStarted = true; game.reset(); render(); },
+      offlineModes: [
+        { id: 'local', label: 'Local 2P', description: 'Two players share the same board.', onSelect: () => { setBotDifficulty(null); matchStarted = true; game.reset(); render(); } },
+        { id: 'bot', label: 'Vs bot', description: 'Play Mint against the Coral bot.', onSelect: () => startBotMatch('normal') },
+      ],
+      initialOfflineMode: 'local',
       onSessionChange: session => {
         if (session.online) setBotDifficulty(null);
+        else { setBotDifficulty(null); matchStarted = true; game.reset(); }
         if (session.ready) matchStarted = true;
         if (session.ready && session.playerId === 1) {
           game.reset();

@@ -3220,6 +3220,22 @@
       gap: 7px;
     }
 
+    .bomberman-mode-tabs {
+      width: 100%;
+      margin-bottom: 12px;
+      grid-auto-columns: minmax(0, 1fr);
+    }
+
+    .lobby-mode-panel {
+      display: grid;
+      gap: 9px;
+    }
+
+    .lobby-mode-panel[hidden] { display: none; }
+
+    .lobby-mode-panel.online { grid-template-columns: 1fr 1fr; }
+    .lobby-mode-panel.online .join-row { grid-column: 1 / -1; }
+
     .bot-button {
       min-height: 43px;
       padding: 8px 5px;
@@ -3287,10 +3303,6 @@
       flex: 1;
       content: "";
       background: rgba(255, 255, 255, 0.09);
-    }
-
-    .lobby-scroll-hint {
-      display: none;
     }
 
     .connection-message {
@@ -4230,25 +4242,6 @@
 
       .lobby-divider {
         margin: 10px 0;
-      }
-
-      .lobby-scroll-hint {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        margin: 8px 0 -2px;
-        color: #91a0b7;
-        font-size: 0.66rem;
-        font-weight: 850;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-      }
-
-      .lobby-scroll-hint::after {
-        content: "\2193";
-        color: var(--p1);
-        font-size: 0.95rem;
       }
 
       .game-footer {
@@ -5809,16 +5802,70 @@
     }
 
     .game-room-panel {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 18px;
+      display: grid;
+      gap: 10px;
       margin: 0 0 14px;
       padding: 12px 14px;
       border: 1px solid rgba(85,217,255,.2);
       border-radius: 16px;
       background: linear-gradient(100deg, rgba(85,217,255,.08), rgba(160,100,255,.055));
       box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+    }
+
+    .game-room-heading,
+    .game-room-online {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .game-room-online {
+      padding-top: 10px;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+
+    .game-room-online[hidden] { display: none; }
+
+    .game-room-mode-tabs {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(92px, 1fr);
+      gap: 6px;
+      padding: 4px;
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 13px;
+      background: rgba(4,9,17,.38);
+    }
+
+    .game-room-mode-tab {
+      min-height: 38px;
+      padding: 0 12px;
+      border: 1px solid transparent;
+      border-radius: 9px;
+      color: var(--muted);
+      background: transparent;
+      cursor: pointer;
+      font-size: .74rem;
+      font-weight: 900;
+      white-space: nowrap;
+      transition: color 150ms ease, border-color 150ms ease, background 150ms ease, transform 150ms ease;
+    }
+
+    .game-room-mode-tab:hover { color: var(--ink); background: rgba(255,255,255,.06); }
+
+    .game-room-mode-tab.active {
+      border-color: rgba(84,227,142,.34);
+      color: #092416;
+      background: var(--p1);
+      box-shadow: 0 5px 16px rgba(84,227,142,.12);
+    }
+
+    .game-room-mode-tab.online.active {
+      border-color: rgba(200,166,255,.38);
+      color: #180b2b;
+      background: linear-gradient(135deg, #dab8ff, #a064ff);
+      box-shadow: 0 5px 16px rgba(160,100,255,.16);
     }
 
     .game-room-copy strong,
@@ -5836,6 +5883,14 @@
       color: var(--muted);
       font-size: .76rem;
       font-weight: 720;
+    }
+
+    .room-mode-managed .snake-modes { display: none; }
+
+    .room-mode-managed .tintar-bot-panel { display: none; }
+
+    .room-mode-managed [data-game-room="tintar"][data-room-selected-mode="bot"] + .tintar-bot-panel {
+      display: flex;
     }
 
     .game-room-actions {
@@ -5922,10 +5977,14 @@
     @media (max-width: 760px) {
       .game-room-panel {
         align-items: stretch;
-        flex-direction: column;
         gap: 10px;
+        padding: 11px;
       }
 
+      .game-room-heading,
+      .game-room-online { align-items: stretch; flex-direction: column; }
+      .game-room-mode-tabs { width: 100%; grid-auto-columns: minmax(0, 1fr); }
+      .game-room-mode-tab { min-width: 0; padding: 0 5px; }
       .game-room-actions { justify-content: stretch; flex-wrap: wrap; }
       .game-room-actions > button,
       .game-room-join,
@@ -6751,32 +6810,38 @@
           <div class="lobby-panel">
             <h2>Choose how to play</h2>
             <p>Share this device, battle a smart bot, or challenge a friend online.</p>
+            <div class="game-room-mode-tabs bomberman-mode-tabs" role="tablist" aria-label="Blast Buddies play mode">
+              <button class="game-room-mode-tab active" type="button" role="tab" aria-selected="true" data-bomberman-lobby-mode="local">Local 2P</button>
+              <button class="game-room-mode-tab" type="button" role="tab" aria-selected="false" data-bomberman-lobby-mode="bot">Vs bot</button>
+              <button class="game-room-mode-tab online" type="button" role="tab" aria-selected="false" data-bomberman-lobby-mode="online">Online</button>
+            </div>
             <div id="lobbyActions">
-              <button id="playLocalButton" class="lobby-button" type="button">Play local 2P</button>
-              <div class="lobby-divider">or challenge a bot</div>
-              <div class="bot-heading">Single player vs bot</div>
-              <div class="bot-options" aria-label="Bot difficulty">
-                <button class="bot-button" type="button" data-bot-difficulty="easy">Easy</button>
-                <button class="bot-button" type="button" data-bot-difficulty="normal">Normal</button>
-                <button class="bot-button" type="button" data-bot-difficulty="hard">Hard</button>
+              <div class="lobby-mode-panel" data-bomberman-mode-panel="local">
+                <button id="playLocalButton" class="lobby-button" type="button">Start local match</button>
               </div>
-              <div class="lobby-scroll-hint" aria-hidden="true">Swipe for online play</div>
-              <div class="lobby-divider">or play online</div>
-              <button id="quickMatchButton" class="lobby-button quick-match-button" type="button">Quick Match</button>
-              <div class="lobby-divider">or create a private room</div>
-              <button id="createRoomButton" class="lobby-button" type="button">Create invite code</button>
-              <div class="lobby-divider">or join a friend</div>
-              <div class="join-row">
-                <input
-                  id="roomCodeInput"
-                  class="room-input"
-                  type="text"
-                  maxlength="5"
-                  autocomplete="off"
-                  aria-label="Room code"
-                  placeholder="CODE"
-                >
-                <button id="joinRoomButton" class="lobby-button secondary" type="button">Join</button>
+              <div class="lobby-mode-panel" data-bomberman-mode-panel="bot" hidden>
+                <div class="bot-heading">Choose bot difficulty</div>
+                <div class="bot-options" aria-label="Bot difficulty">
+                  <button class="bot-button" type="button" data-bot-difficulty="easy">Easy</button>
+                  <button class="bot-button" type="button" data-bot-difficulty="normal">Normal</button>
+                  <button class="bot-button" type="button" data-bot-difficulty="hard">Hard</button>
+                </div>
+              </div>
+              <div class="lobby-mode-panel online" data-bomberman-mode-panel="online" hidden>
+                <button id="quickMatchButton" class="lobby-button quick-match-button" type="button">Quick Match</button>
+                <button id="createRoomButton" class="lobby-button" type="button">Create invite code</button>
+                <div class="join-row">
+                  <input
+                    id="roomCodeInput"
+                    class="room-input"
+                    type="text"
+                    maxlength="5"
+                    autocomplete="off"
+                    aria-label="Room code"
+                    placeholder="CODE"
+                  >
+                  <button id="joinRoomButton" class="lobby-button secondary" type="button">Join</button>
+                </div>
               </div>
             </div>
             <div id="roomReady" class="hidden">

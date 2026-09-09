@@ -383,9 +383,14 @@ export function initMiniTanks(): void {
     room = new GameRoomClient({
       game: 'tanks',
       mount: roomMount,
-      onPlayLocal: () => { game.restart('duel'); syncUi(); render(); },
+      offlineModes: [
+        { id: 'local', label: 'Local 2P', description: 'Two tank crews share this device.', onSelect: () => { game.restart('duel'); syncUi(); render(); } },
+        { id: 'bot', label: 'Vs bot', description: 'Battle the Coral computer tank.', onSelect: () => { game.restart('bot'); syncUi(); render(); } },
+      ],
+      initialOfflineMode: 'bot',
       onSessionChange: session => {
-        if (session.online && !session.ready && session.playerId === 1) {
+        if (!session.online) game.restart('bot');
+        else if (!session.ready && session.playerId === 1) {
           (['up', 'down', 'left', 'right', 'fire'] as Array<keyof TankInput>).forEach(action => game.setInput(2, action, false));
         }
         if (session.ready && session.playerId === 1) {

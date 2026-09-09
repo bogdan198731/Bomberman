@@ -13,10 +13,21 @@ export interface GameRoomSession {
   playerId: RelayPlayerId | null;
 }
 
+export type GameRoomOfflineModeId = 'local' | 'solo' | 'bot';
+
+export interface GameRoomOfflineMode {
+  id: GameRoomOfflineModeId;
+  label: string;
+  description?: string;
+  onSelect: () => void;
+}
+
 interface GameRoomClientOptions {
   game: OnlineGameId;
   mount: HTMLElement;
-  onPlayLocal: () => void;
+  onPlayLocal?: () => void;
+  offlineModes?: readonly GameRoomOfflineMode[];
+  initialOfflineMode?: GameRoomOfflineModeId;
   onSessionChange: (session: GameRoomSession) => void;
   onRemoteAction: (action: Record<string, unknown>, from: RelayPlayerId) => void;
   onState: (state: Record<string, unknown>) => void;
@@ -32,9 +43,12 @@ export class GameRoomClient {
   private ready = false;
   private quickMatching = false;
   private lastStateSentAt = 0;
+  private offlineModes: readonly GameRoomOfflineMode[];
+  private initialOfflineMode: GameRoomOfflineModeId;
   private statusElement: HTMLElement;
   private input: HTMLInputElement;
-  private localActions: HTMLElement;
+  private onlinePanel: HTMLElement;
+  private onlineActions: HTMLElement;
   private joinedActions: HTMLElement;
   private codeElement: HTMLElement;
 
@@ -42,36 +56,54 @@ export class GameRoomClient {
     this.options = options;
     this.game = options.game;
     this.mount = options.mount;
-    this.mount.classList.add('game-room-panel');
+    this.offlineModes = options.offlineModes?.length
+      ? options.offlineModes
+      : [{ id: 'local', label: 'Local 2P', description: 'Two players on this device.', onSelect: options.onPlayLocal ?? (() => {}) }];
+    this.initialOfflineMode = options.initialOfflineMode ?? this.offlineModes[0].id;
+    if (!this.offlineModes.some(mode => mode.id === this.initialOfflineMode)) this.initialOfflineMode = this.offlineModes[0].id;
+    this.mount.classList.add('game-room-panel', 'arcade-mode-panel');
+    this.mount.closest('main')?.classList.add('room-mode-managed');
+    const modeButtons = this.offlineModes.map(mode => `
+          <button class="game-room-mode-tab" type="button" role="tab" aria-selected="false" data-room-mode="${mode.id}"${mode.description ? ` title="${mode.description}"` : ''}>${mode.label}</button>`).join('');
     this.mount.innerHTML = `
-      <div class="game-room-copy">
-        <strong>Online room</strong>
-        <span data-room-status>Play locally, or create an invite code for a friend.</span>
+      <div class="game-room-heading">
+        <div class="game-room-copy">
+          <strong>Choose a mode</strong>
+          <span data-room-status>Pick how you want to play.</span>
+        </div>
+        <div class="game-room-mode-tabs" role="tablist" aria-label="Play mode">
+          ${modeButtons}
+          <button class="game-room-mode-tab online" type="button" role="tab" aria-selected="false" data-room-mode="online">Online</button>
+        </div>
       </div>
-      <div class="game-room-actions" data-room-local>
-        <button class="game-room-primary" type="button" data-room-play-local>Play local</button>
-        <button class="game-room-matchmake" type="button" data-room-matchmake>Quick Match</button>
-        <button type="button" data-room-create>Create code</button>
-        <label class="game-room-join"><span class="sr-only">Room code</span><input type="text" inputmode="text" maxlength="5" placeholder="CODE" autocomplete="off" data-room-input><button type="button" data-room-join>Join</button></label>
-      </div>
-      <div class="game-room-actions" data-room-joined hidden>
-        <span class="game-room-code">Code <b data-room-code>-----</b></span>
-        <button type="button" data-room-copy>Copy link</button>
-        <button type="button" data-room-share>Share</button>
-        <button type="button" data-room-leave>Leave</button>
+      <div class="game-room-online" data-room-online hidden>
+        <div class="game-room-actions" data-room-local>
+          <button class="game-room-matchmake" type="button" data-room-matchmake>Quick Match</button>
+          <button type="button" data-room-create>Create code</button>
+          <label class="game-room-join"><span class="sr-only">Room code</span><input type="text" inputmode="text" maxlength="5" placeholder="CODE" autocomplete="off" data-room-input><button type="button" data-room-join>Join</button></label>
+        </div>
+        <div class="game-room-actions" data-room-joined hidden>
+          <span class="game-room-code">Code <b data-room-code>-----</b></span>
+          <button type="button" data-room-copy>Copy link</button>
+          <button type="button" data-room-share>Share</button>
+          <button type="button" data-room-leave>Leave</button>
+        </div>
       </div>`;
     this.statusElement = this.mount.querySelector<HTMLElement>('[data-room-status]')!;
     this.input = this.mount.querySelector<HTMLInputElement>('[data-room-input]')!;
-    this.localActions = this.mount.querySelector<HTMLElement>('[data-room-local]')!;
+    this.onlinePanel = this.mount.querySelector<HTMLElement>('[data-room-online]')!;
+    this.onlineActions = this.mount.querySelector<HTMLElement>('[data-room-local]')!;
     this.joinedActions = this.mount.querySelector<HTMLElement>('[data-room-joined]')!;
     this.codeElement = this.mount.querySelector<HTMLElement>('[data-room-code]')!;
     this.bindUi();
+    this.selectMode(this.initialOfflineMode, false);
     this.mount.closest('main')?.querySelector('[data-back-to-hub]')?.addEventListener('click', () => {
       this.leave();
     });
     const invite = parseArcadeInvite(location.search);
     if (invite?.game === this.game) {
       this.input.value = invite.roomCode;
+      this.selectMode('online', false);
       this.joinFromInput();
     }
   }
@@ -103,34 +135,27 @@ export class GameRoomClient {
   }
 
   leave(): void {
-    const socket = this.socket;
-    this.socket = null;
-    socket?.close();
-    this.roomCode = '';
-    this.playerId = null;
-    this.ready = false;
-    this.quickMatching = false;
-    this.localActions.hidden = false;
-    this.joinedActions.hidden = true;
-    this.statusElement.textContent = 'Play locally, or create an invite code for a friend.';
+    this.disconnect();
+    this.selectMode(this.initialOfflineMode, false);
     history.replaceState(null, '', clearArcadeInviteUrl(location.href));
     this.options.onSessionChange(this.session());
   }
 
   private bindUi(): void {
-    this.mount.querySelector('[data-room-play-local]')?.addEventListener('click', () => {
-      const socket = this.socket;
-      this.socket = null;
-      socket?.close();
-      this.roomCode = '';
-      this.playerId = null;
-      this.ready = false;
-      this.quickMatching = false;
-      this.localActions.hidden = false;
-      this.joinedActions.hidden = true;
-      this.statusElement.textContent = 'Local two-player mode ready on this device.';
-      history.replaceState(null, '', clearArcadeInviteUrl(location.href));
-      this.options.onPlayLocal();
+    this.mount.querySelectorAll<HTMLButtonElement>('[data-room-mode]').forEach(button => {
+      button.addEventListener('click', () => {
+        const mode = button.dataset.roomMode;
+        if (mode === 'online') {
+          this.selectMode('online', false);
+          return;
+        }
+        const offlineMode = this.offlineModes.find(candidate => candidate.id === mode);
+        if (!offlineMode) return;
+        this.disconnect();
+        history.replaceState(null, '', clearArcadeInviteUrl(location.href));
+        this.selectMode(offlineMode.id, false);
+        offlineMode.onSelect();
+      });
     });
     this.mount.querySelector('[data-room-matchmake]')?.addEventListener('click', () => this.connect({ type: 'quickMatchGameRoom', game: this.game }));
     this.mount.querySelector('[data-room-create]')?.addEventListener('click', () => this.connect({ type: 'createGameRoom', game: this.game }));
@@ -187,6 +212,7 @@ export class GameRoomClient {
 
   private connect(firstMessage: Record<string, unknown>): void {
     if (this.socket) return;
+    this.selectMode('online', false);
     this.quickMatching = firstMessage.type === 'quickMatchGameRoom';
     this.statusElement.textContent = this.quickMatching ? 'Looking for a Quick Match opponent…' : 'Connecting to the arcade server…';
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -203,9 +229,9 @@ export class GameRoomClient {
       this.playerId = null;
       this.ready = false;
       this.quickMatching = false;
-      this.localActions.hidden = false;
+      this.onlineActions.hidden = false;
       this.joinedActions.hidden = true;
-      this.statusElement.textContent = wasOnline ? 'The online room closed. Local play is still available.' : 'Connection closed. Try again.';
+      this.statusElement.textContent = wasOnline ? 'The online room closed. Choose a room option to reconnect.' : 'Connection closed. Try again.';
       this.options.onSessionChange(this.session());
     });
   }
@@ -226,7 +252,7 @@ export class GameRoomClient {
       this.quickMatching = data.quickMatch === true;
       this.codeElement.textContent = this.roomCode;
       history.replaceState(null, '', arcadeInviteShareData(location.href, this.game, this.roomCode).url);
-      this.localActions.hidden = true;
+      this.onlineActions.hidden = true;
       this.joinedActions.hidden = false;
       this.statusElement.textContent = this.quickMatching
         ? this.playerId === 1 ? 'Searching for a Quick Match opponent…' : 'Opponent found. Preparing the match…'
@@ -255,6 +281,34 @@ export class GameRoomClient {
     }
     if (data.type === 'gameState' && data.game === this.game && data.state && typeof data.state === 'object') {
       this.options.onState(data.state as Record<string, unknown>);
+    }
+  }
+
+  private disconnect(): void {
+    const socket = this.socket;
+    this.socket = null;
+    socket?.close();
+    this.roomCode = '';
+    this.playerId = null;
+    this.ready = false;
+    this.quickMatching = false;
+    this.onlineActions.hidden = false;
+    this.joinedActions.hidden = true;
+  }
+
+  private selectMode(mode: GameRoomOfflineModeId | 'online', announce: boolean): void {
+    this.mount.dataset.roomSelectedMode = mode;
+    this.mount.querySelectorAll<HTMLButtonElement>('[data-room-mode]').forEach(button => {
+      const selected = button.dataset.roomMode === mode;
+      button.classList.toggle('active', selected);
+      button.setAttribute('aria-selected', String(selected));
+    });
+    this.onlinePanel.hidden = mode !== 'online';
+    if (!announce) {
+      const selected = this.offlineModes.find(candidate => candidate.id === mode);
+      this.statusElement.textContent = mode === 'online'
+        ? 'Quick match, create an invite, or join with a code.'
+        : selected?.description ?? 'Ready to play on this device.';
     }
   }
 }

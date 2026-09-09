@@ -543,7 +543,11 @@ export function initMicroRacers(): void {
     room = new GameRoomClient({
       game: 'racing',
       mount: roomMount,
-      onPlayLocal: () => { game.restart('duel'); syncUi(); render(); },
+      offlineModes: [
+        { id: 'local', label: 'Local race', description: 'Two drivers share this device.', onSelect: () => { game.restart('duel'); syncUi(); render(); } },
+        { id: 'bot', label: 'Vs bot', description: 'Race the Coral computer driver.', onSelect: () => { game.restart('bot'); syncUi(); render(); } },
+      ],
+      initialOfflineMode: 'bot',
       onSessionChange: session => {
         if (!session.online) game.restart('bot');
         else if (game.mode !== 'duel') game.restart('duel');

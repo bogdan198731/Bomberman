@@ -415,9 +415,14 @@ export function initSurvivalArena(): void {
     room = new GameRoomClient({
       game: 'survival',
       mount: roomMount,
-      onPlayLocal: () => { game.restart('coop'); syncUi(); render(); },
+      offlineModes: [
+        { id: 'local', label: 'Local co-op', description: 'Two players survive together on this device.', onSelect: () => { game.restart('coop'); syncUi(); render(); } },
+        { id: 'solo', label: 'Solo', description: 'Hold the arena alone.', onSelect: () => { game.restart('solo'); syncUi(); render(); } },
+      ],
+      initialOfflineMode: 'solo',
       onSessionChange: session => {
-        if (session.online && !session.ready && session.playerId === 1) {
+        if (!session.online) game.restart('solo');
+        else if (!session.ready && session.playerId === 1) {
           (['up', 'down', 'left', 'right', 'fire'] as Array<keyof SurvivalInput>).forEach(action => game.setInput(2, action, false));
         }
         if (session.ready && session.playerId === 1) {

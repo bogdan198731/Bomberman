@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const indexSource = readFileSync(new URL('../src/index.ts', import.meta.url), 'utf8');
+const gameRoomSource = readFileSync(new URL('../src/game-room.ts', import.meta.url), 'utf8');
 const mobileStart = html.indexOf('@media (max-width: 700px)');
 const nextMediaQuery = html.indexOf('@media', mobileStart + 1);
 const mobileStyles = html.slice(
@@ -11,14 +12,24 @@ const mobileStyles = html.slice(
   nextMediaQuery === -1 ? html.length : nextMediaQuery,
 );
 
-test('mobile Blast Buddies lobby keeps online controls reachable', () => {
+test('mobile Blast Buddies lobby exposes compact Local, Bot, and Online modes', () => {
   assert.notEqual(mobileStart, -1, 'expected the mobile breakpoint to exist');
   assert.match(
     mobileStyles,
     /\.lobby-overlay\s*\{[^}]*display:\s*flex;[^}]*overflow-y:\s*auto;[^}]*touch-action:\s*pan-y;/s,
   );
   assert.match(mobileStyles, /\.lobby-panel\s*\{[^}]*flex:\s*0 0 auto;/s);
-  assert.match(html, /class="lobby-scroll-hint"[^>]*>Swipe for online play<\/div>/);
+  assert.equal((html.match(/data-bomberman-lobby-mode=/g) ?? []).length, 3);
+  assert.match(html, /data-bomberman-mode-panel="online" hidden>[\s\S]*?id="createRoomButton"[\s\S]*?id="joinRoomButton"/);
+  assert.doesNotMatch(html, /lobby-scroll-hint/);
+});
+
+test('multiplayer games share a mode-first room selector', () => {
+  assert.match(gameRoomSource, /class="game-room-mode-tabs"[^>]*role="tablist"/);
+  assert.match(gameRoomSource, /data-room-mode="online"/);
+  assert.match(gameRoomSource, /data-room-online hidden/);
+  assert.equal((gameRoomSource.match(/offlineModes/g) ?? []).length >= 6, true);
+  assert.match(html, /\.room-mode-managed \.snake-modes\s*\{\s*display:\s*none;/s);
 });
 
 test('mobile Blast Buddies uses a drag-and-hold virtual joystick', () => {

@@ -575,7 +575,11 @@ export function initBlockDrop(): void {
     room = new GameRoomClient({
       game: 'blocks',
       mount: roomMount,
-      onPlayLocal: () => { game.restart('duel'); syncUi(); render(); },
+      offlineModes: [
+        { id: 'local', label: 'Local duel', description: 'Two builders share this device.', onSelect: () => { game.restart('duel'); syncUi(); render(); } },
+        { id: 'bot', label: 'Vs bot', description: 'Outbuild the Coral computer.', onSelect: () => { game.restart('bot'); syncUi(); render(); } },
+      ],
+      initialOfflineMode: 'bot',
       onSessionChange: session => {
         if (!session.online) game.restart('bot');
         else if (game.mode !== 'duel') game.restart('duel');

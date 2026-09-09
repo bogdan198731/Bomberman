@@ -354,6 +354,16 @@ export function initSeptica(): void {
     }, 520);
   }
 
+  function selectOfflineMode(mode: SepticaOfflineMode): void {
+    window.clearTimeout(settleTimer);
+    window.clearTimeout(botTimer);
+    offlineMode = mode;
+    localHandVisible = false;
+    game.restart();
+    render();
+    scheduleBot();
+  }
+
   passButton?.addEventListener('click', () => {
     const player = localPlayer();
     if (room?.isGuest()) room.sendAction({ type: 'pass' });
@@ -368,12 +378,7 @@ export function initSeptica(): void {
     if (room?.session().online) return;
     const mode = button.dataset.septicaMode;
     if (mode !== 'bot' && mode !== 'local') return;
-    offlineMode = mode;
-    localHandVisible = false;
-    window.clearTimeout(settleTimer);
-    game.restart();
-    render();
-    scheduleBot();
+    selectOfflineMode(mode);
   }));
   document.getElementById('septicaRestartButton')?.addEventListener('click', () => {
     if (room?.isGuest()) room.sendAction({ type: 'restart' });
@@ -390,13 +395,11 @@ export function initSeptica(): void {
     room = new GameRoomClient({
       game: 'septica',
       mount: roomMount,
-      onPlayLocal: () => {
-        window.clearTimeout(settleTimer);
-        offlineMode = 'local';
-        localHandVisible = false;
-        game.restart();
-        render();
-      },
+      offlineModes: [
+        { id: 'local', label: 'Local 2P', description: 'Pass the device between players.', onSelect: () => selectOfflineMode('local') },
+        { id: 'bot', label: 'Vs bot', description: 'Play Mint against the Coral bot.', onSelect: () => selectOfflineMode('bot') },
+      ],
+      initialOfflineMode: 'bot',
       onSessionChange: session => {
         window.clearTimeout(botTimer);
         if (!session.online) {

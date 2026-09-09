@@ -347,15 +347,15 @@ export function initNeonSnake(): void {
     room = new GameRoomClient({
       game: 'snake',
       mount: roomMount,
-      onPlayLocal: () => {
-        accumulator = 0;
-        game.restart('duel');
-        syncUi();
-        render();
-      },
+      offlineModes: [
+        { id: 'local', label: 'Local 2P', description: 'Two snakes share this device.', onSelect: () => { accumulator = 0; game.restart('duel'); syncUi(); render(); } },
+        { id: 'solo', label: 'Solo', description: 'Chase fruit and your own high score.', onSelect: () => { accumulator = 0; game.restart('solo'); syncUi(); render(); } },
+      ],
+      initialOfflineMode: 'solo',
       onSessionChange: session => {
         accumulator = 0;
-        if (session.ready && session.playerId === 1) {
+        if (!session.online) game.restart('solo');
+        else if (session.ready && session.playerId === 1) {
           game.restart('duel');
           room?.broadcastState(snapshot(), true);
         }
