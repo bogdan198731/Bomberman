@@ -366,6 +366,8 @@ export function initStarDefender(): void {
   const wave = document.getElementById('starWave');
   const mintScore = document.getElementById('starMintScore');
   const coralScore = document.getElementById('starCoralScore');
+  const secondaryStat = document.getElementById('starSecondaryStat');
+  const secondaryLabel = document.getElementById('starSecondaryLabel');
   const mintHealth = document.getElementById('starMintHealth');
   const coralHealth = document.getElementById('starCoralHealth');
   const modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-star-mode]');
@@ -375,6 +377,7 @@ export function initStarDefender(): void {
 
   function visible(): boolean { return !view.classList.contains('view-hidden'); }
   function syncUi(): void {
+    const solo = game.mode === 'solo';
     if (status) status.textContent = game.statusText();
     if (threat) {
       const threatLevel = game.threatLevel();
@@ -387,9 +390,11 @@ export function initStarDefender(): void {
     }
     if (wave) wave.textContent = String(game.wave);
     if (mintScore) mintScore.textContent = String(game.players[1].score);
-    if (coralScore) coralScore.textContent = game.mode === 'solo' ? '—' : String(game.players[2].score);
+    if (secondaryLabel) secondaryLabel.textContent = solo ? 'Kills' : 'Coral score';
+    if (coralScore) coralScore.textContent = solo ? String(game.kills) : String(game.players[2].score);
+    secondaryStat?.classList.toggle('solo-stat', solo);
     if (mintHealth) mintHealth.textContent = `${game.players[1].health} hull`;
-    if (coralHealth) coralHealth.textContent = game.mode === 'solo' ? 'Solo' : `${game.players[2].health} hull`;
+    if (coralHealth) coralHealth.textContent = solo ? `Boost in ${4 - game.kills % 4}` : `${game.players[2].health} hull`;
     if (startButton) startButton.textContent = game.phase === 'ready' ? 'Launch' : game.phase === 'finished' ? 'Fly again' : 'Mission live';
     modeButtons.forEach(button => button.classList.toggle('active', button.dataset.starMode === game.mode));
     coralControls?.classList.toggle('solo-hidden', game.mode === 'solo');

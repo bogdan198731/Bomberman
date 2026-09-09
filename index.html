@@ -4694,6 +4694,11 @@
       box-shadow: 0 0 14px rgba(255,107,120,.35);
     }
 
+    .paddle-score-player.coral.solo-stat .paddle-score-swatch {
+      background: var(--gold);
+      box-shadow: 0 0 14px rgba(255,200,87,.32);
+    }
+
     .paddle-score-player span {
       display: block;
       color: var(--muted);
@@ -6080,6 +6085,7 @@
     }
 
     .paddle-score-player.coral .survival-health { color: var(--p2) !important; }
+    .paddle-score-player.coral.solo-stat .survival-health { color: var(--gold) !important; }
     .snake-touch-controls .solo-hidden,
     .tanks-touch-controls .solo-hidden { display: none; }
 
@@ -7743,9 +7749,9 @@
           <div><span>Mint</span><b id="snakeMintScore">0</b></div>
         </div>
         <div class="paddle-score-goal">Neon cells</div>
-        <div class="paddle-score-player coral">
+        <div id="snakeSecondaryStat" class="paddle-score-player coral solo-stat">
           <i class="paddle-score-swatch" aria-hidden="true"></i>
-          <div><span>Coral</span><b id="snakeCoralScore">—</b></div>
+          <div><span id="snakeSecondaryLabel">Length</span><b id="snakeCoralScore">3</b></div>
         </div>
       </div>
 
@@ -7914,7 +7920,7 @@
       <div class="paddle-scorebar">
         <div class="paddle-score-player"><i class="paddle-score-swatch" aria-hidden="true"></i><div><span>Mint score</span><b id="survivalMintScore">0</b><span id="survivalMintHealth" class="survival-health">100 HP</span></div></div>
         <div class="paddle-score-goal">Wave <strong id="survivalWave">0</strong></div>
-        <div class="paddle-score-player coral"><i class="paddle-score-swatch" aria-hidden="true"></i><div><span>Coral score</span><b id="survivalCoralScore">0</b><span id="survivalCoralHealth" class="survival-health">Solo</span></div></div>
+        <div id="survivalSecondaryStat" class="paddle-score-player coral solo-stat"><i class="paddle-score-swatch" aria-hidden="true"></i><div><span id="survivalSecondaryLabel">Kills</span><b id="survivalCoralScore">0</b><span id="survivalCoralHealth" class="survival-health">Auto-aim</span></div></div>
       </div>
       <div class="survival-arena"><canvas id="survivalCanvas" width="900" height="600" aria-label="Neon survival arena"></canvas></div>
       <div class="paddle-statusbar" aria-live="polite">
@@ -7973,7 +7979,7 @@
       <div class="paddle-scorebar">
         <div class="paddle-score-player"><i class="paddle-score-swatch" aria-hidden="true"></i><div><span>Mint score</span><b id="starMintScore">0</b><span id="starMintHealth" class="survival-health">3 hull</span></div></div>
         <div class="paddle-score-goal">Wave <strong id="starWave">0</strong><span id="starThreat" class="star-threat" data-threat="clear">Formation</span></div>
-        <div class="paddle-score-player coral"><i class="paddle-score-swatch" aria-hidden="true"></i><div><span>Coral score</span><b id="starCoralScore">—</b><span id="starCoralHealth" class="survival-health">Solo</span></div></div>
+        <div id="starSecondaryStat" class="paddle-score-player coral solo-stat"><i class="paddle-score-swatch" aria-hidden="true"></i><div><span id="starSecondaryLabel">Kills</span><b id="starCoralScore">0</b><span id="starCoralHealth" class="survival-health">Boost in 4</span></div></div>
       </div>
       <div class="star-arena"><canvas id="starCanvas" width="900" height="600" aria-label="Star Defender space battle"></canvas></div>
       <div class="paddle-statusbar" aria-live="polite">

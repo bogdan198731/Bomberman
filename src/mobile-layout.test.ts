@@ -116,6 +116,14 @@ test('single-player joystick action controls mirror the Blast Buddies thumb layo
   assert.match(html, /> \.joystick-team:has\(\.tank-touch-button\.fire\):not\(\.solo-hidden\) > \.tank-touch-button\.fire \{[\s\S]*?width: 82px;[\s\S]*?height: 82px;[\s\S]*?grid-column: 1;[\s\S]*?border-radius: 50%;/);
 });
 
+test('solo scoreboards replace the inactive Coral slot with useful live stats', () => {
+  assert.match(snakeSource, /secondaryLabel\.textContent = solo \? 'Length' : 'Coral'/);
+  assert.match(snakeSource, /game\.riders\[1\]\.body\.length/);
+  assert.match(readFileSync(new URL('../src/survival.ts', import.meta.url), 'utf8'), /secondaryLabel\.textContent = solo \? 'Kills' : 'Coral score'/);
+  assert.match(readFileSync(new URL('../src/star.ts', import.meta.url), 'utf8'), /solo \? String\(game\.kills\)/);
+  assert.match(html, /\.paddle-score-player\.coral\.solo-stat \.paddle-score-swatch/);
+});
+
 test('Block Drop prioritizes one large human board on mobile', () => {
   assert.match(blocksSource, /const singleBoardMobile = mobile && \(game\.mode === 'bot' \|\| Boolean\(room\?\.session\(\)\.online\)\)/);
   assert.match(blocksSource, /setCanvasSize\(mobile \? 360 : 900, mobile \? \(singleBoardMobile \? 510 : 390\) : 600\)/);

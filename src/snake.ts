@@ -187,6 +187,8 @@ export function initNeonSnake(): void {
   const status = document.getElementById('snakeStatus');
   const mintScore = document.getElementById('snakeMintScore');
   const coralScore = document.getElementById('snakeCoralScore');
+  const secondaryStat = document.getElementById('snakeSecondaryStat');
+  const secondaryLabel = document.getElementById('snakeSecondaryLabel');
   const startButton = document.getElementById('snakeStartButton') as HTMLButtonElement | null;
   const modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-snake-mode]');
   const mintControls = document.getElementById('snakeMintControls');
@@ -238,9 +240,12 @@ export function initNeonSnake(): void {
   }
 
   function syncUi(): void {
+    const solo = game.mode === 'solo';
     if (status) status.textContent = game.statusText();
     if (mintScore) mintScore.textContent = String(game.riders[1].score);
-    if (coralScore) coralScore.textContent = game.mode === 'solo' ? '—' : String(game.riders[2].score);
+    if (secondaryLabel) secondaryLabel.textContent = solo ? 'Length' : 'Coral';
+    if (coralScore) coralScore.textContent = solo ? String(game.riders[1].body.length) : String(game.riders[2].score);
+    secondaryStat?.classList.toggle('solo-stat', solo);
     if (startButton) startButton.textContent = game.phase === 'ready' ? 'Start run' : game.phase === 'finished' ? 'Play again' : 'Running';
     modeButtons.forEach(button => {
       button.classList.toggle('active', button.dataset.snakeMode === game.mode);

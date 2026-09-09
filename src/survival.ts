@@ -269,6 +269,8 @@ export function initSurvivalArena(): void {
   const wave = document.getElementById('survivalWave');
   const mintScore = document.getElementById('survivalMintScore');
   const coralScore = document.getElementById('survivalCoralScore');
+  const secondaryStat = document.getElementById('survivalSecondaryStat');
+  const secondaryLabel = document.getElementById('survivalSecondaryLabel');
   const mintHealth = document.getElementById('survivalMintHealth');
   const coralHealth = document.getElementById('survivalCoralHealth');
   const startButton = document.getElementById('survivalStartButton') as HTMLButtonElement | null;
@@ -320,12 +322,15 @@ export function initSurvivalArena(): void {
 
   function visible(): boolean { return !view.classList.contains('view-hidden'); }
   function syncUi(): void {
+    const solo = game.mode === 'solo';
     if (status) status.textContent = game.statusText();
     if (wave) wave.textContent = String(game.wave);
     if (mintScore) mintScore.textContent = String(game.players[1].score);
-    if (coralScore) coralScore.textContent = String(game.players[2].score);
+    if (secondaryLabel) secondaryLabel.textContent = solo ? 'Kills' : 'Coral score';
+    if (coralScore) coralScore.textContent = solo ? String(Math.floor(game.players[1].score / 10)) : String(game.players[2].score);
+    secondaryStat?.classList.toggle('solo-stat', solo);
     if (mintHealth) mintHealth.textContent = `${Math.ceil(game.players[1].health)} HP`;
-    if (coralHealth) coralHealth.textContent = game.mode === 'solo' ? 'Solo' : `${Math.ceil(game.players[2].health)} HP`;
+    if (coralHealth) coralHealth.textContent = solo ? 'Auto-aim' : `${Math.ceil(game.players[2].health)} HP`;
     if (startButton) startButton.textContent = game.phase === 'ready' ? 'Start run' : game.phase === 'finished' ? 'New run' : 'Run live';
     modeButtons.forEach(button => {
       button.classList.toggle('active', button.dataset.survivalMode === game.mode);
