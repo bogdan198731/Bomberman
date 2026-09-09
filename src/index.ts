@@ -42,6 +42,13 @@ export const EXPLOSION_RADIUS = 2;
 export const PLAYER_MOVE_DURATION = 125;
 export const MIN_PLAYER_MOVE_DURATION = 75;
 
+function arrangeHubContent(): void {
+  const quickPlay = document.getElementById('quickPlayPanel');
+  const gameLibrary = document.getElementById('games');
+  if (!quickPlay || !gameLibrary || quickPlay.nextElementSibling === gameLibrary) return;
+  quickPlay.insertAdjacentElement('afterend', gameLibrary);
+}
+
 export enum PowerUpType {
   BOMB_UP = 'bomb-up',
   FIRE_UP = 'fire-up',
@@ -1795,6 +1802,7 @@ export function initGame(): void {
 
 if (typeof window !== 'undefined') {
   window.addEventListener('DOMContentLoaded', () => {
+    arrangeHubContent();
     initArcadeSettings();
     initArcadePwa();
     initArcadeProfile();

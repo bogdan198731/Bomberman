@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const indexSource = readFileSync(new URL('../src/index.ts', import.meta.url), 'utf8');
 const mobileStart = html.indexOf('@media (max-width: 700px)');
 const nextMediaQuery = html.indexOf('@media', mobileStart + 1);
 const mobileStyles = html.slice(
@@ -128,6 +129,13 @@ test('mobile game library uses compact three-column tiles with a narrow-screen f
   assert.match(mobileStyles, /\.catalog-card-body p,[\s\S]*?\.mode-label\s*\{[^}]*display:\s*none;/s);
   assert.match(mobileStyles, /\.card-play-button\s*\{[^}]*width:\s*100%;[^}]*min-height:\s*34px;/s);
   assert.match(html, /@media \(max-width: 340px\)[\s\S]*?\.game-grid\s*\{[^}]*repeat\(2, minmax\(0, 1fr\)\)/s);
+});
+
+test('hub promotes game discovery directly after Quick Play with a compact responsive hero', () => {
+  assert.match(indexSource, /quickPlay\.insertAdjacentElement\('afterend', gameLibrary\)/);
+  assert.match(html, /\.hub-hero\s*\{[^}]*min-height:\s*460px;[^}]*padding:\s*clamp\(28px, 4\.5vw, 52px\);/s);
+  assert.match(mobileStyles, /\.hub-hero\s*\{[^}]*gap:\s*18px;[^}]*padding:\s*22px 18px;/s);
+  assert.match(mobileStyles, /\.hero-stats\s*\{[^}]*display:\s*none;/s);
 });
 
 test('mobile progression panels expose accessible fold controls and notice badges', () => {
