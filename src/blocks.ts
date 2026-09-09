@@ -444,28 +444,31 @@ export function initBlockDrop(): void {
   }
 
   function drawCell(x: number, y: number, size: number, cell: Exclude<BlockCell, null>, alpha = 1): void {
+    const inset = Math.max(1, Math.round(size * .09));
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.fillStyle = BLOCK_COLORS[cell];
     ctx.shadowColor = BLOCK_COLORS[cell];
-    ctx.shadowBlur = cell === 'G' ? 0 : 9;
-    ctx.fillRect(x + 2, y + 2, size - 4, size - 4);
-    ctx.fillStyle = 'rgba(255,255,255,.2)';
-    ctx.fillRect(x + 4, y + 4, size - 8, 3);
+    ctx.shadowBlur = cell === 'G' ? 0 : Math.max(2, Math.round(size * .38));
+    ctx.fillRect(x + inset, y + inset, size - inset * 2, size - inset * 2);
+    if (size >= 10) {
+      const shineInset = Math.max(inset + 1, Math.round(size * .17));
+      ctx.fillStyle = 'rgba(255,255,255,.2)';
+      ctx.fillRect(x + shineInset, y + shineInset, size - shineInset * 2, Math.max(1, Math.round(size * .12)));
+    }
     ctx.strokeStyle = 'rgba(0,0,0,.32)';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x + 2, y + 2, size - 4, size - 4);
+    ctx.lineWidth = Math.max(1, Math.round(size * .08));
+    ctx.strokeRect(x + inset, y + inset, size - inset * 2, size - inset * 2);
     ctx.restore();
   }
 
-  function drawBoard(player: BlockPlayer, originX: number): void {
-    const originY = 76;
-    const cellSize = 24;
+  function drawBoard(player: BlockPlayer, originX: number, originY = 76, cellSize = 24): void {
+    const panelInset = Math.max(4, Math.round(cellSize * .42));
     ctx.fillStyle = player === 1 ? 'rgba(84,227,142,.08)' : 'rgba(255,107,120,.08)';
-    ctx.fillRect(originX - 10, originY - 10, BLOCK_BOARD_WIDTH * cellSize + 20, BLOCK_BOARD_HEIGHT * cellSize + 20);
+    ctx.fillRect(originX - panelInset, originY - panelInset, BLOCK_BOARD_WIDTH * cellSize + panelInset * 2, BLOCK_BOARD_HEIGHT * cellSize + panelInset * 2);
     ctx.strokeStyle = player === 1 ? 'rgba(84,227,142,.45)' : 'rgba(255,107,120,.45)';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(originX - 10, originY - 10, BLOCK_BOARD_WIDTH * cellSize + 20, BLOCK_BOARD_HEIGHT * cellSize + 20);
+    ctx.lineWidth = Math.max(1, Math.round(cellSize * .12));
+    ctx.strokeRect(originX - panelInset, originY - panelInset, BLOCK_BOARD_WIDTH * cellSize + panelInset * 2, BLOCK_BOARD_HEIGHT * cellSize + panelInset * 2);
     const board = game.boards[player];
     for (let row = 0; row < BLOCK_BOARD_HEIGHT; row += 1) {
       for (let column = 0; column < BLOCK_BOARD_WIDTH; column += 1) {
@@ -483,7 +486,57 @@ export function initBlockDrop(): void {
     }
   }
 
+  function setCanvasSize(width: number, height: number): void {
+    if (canvas.width === width && canvas.height === height) return;
+    canvas.width = width;
+    canvas.height = height;
+  }
+
+  function renderMobileBoards(): void {
+    const session = room?.session();
+    const focusOnePlayer = game.mode === 'bot' || Boolean(session?.online);
+    if (!focusOnePlayer) {
+      drawBoard(1, 17, 65, 14);
+      drawBoard(2, 203, 65, 14);
+      ctx.textAlign = 'center';
+      ctx.font = '900 12px system-ui';
+      ctx.fillStyle = '#54e38e';
+      ctx.fillText('MINT', 87, 40);
+      ctx.fillStyle = '#ff6b78';
+      ctx.fillText('CORAL', 273, 40);
+      ctx.fillStyle = '#9aa8bd';
+      ctx.font = '800 10px system-ui';
+      ctx.fillText(`${game.pendingGarbage[1]} incoming`, 87, 365);
+      ctx.fillText(`${game.pendingGarbage[2]} incoming`, 273, 365);
+      return;
+    }
+
+    const focusedPlayer = session?.online ? (session.playerId ?? 1) as BlockPlayer : 1;
+    const rival = otherPlayer(focusedPlayer);
+    drawBoard(focusedPlayer, 24, 62, 21);
+    drawBoard(rival, 282, 81, 6);
+    ctx.textAlign = 'center';
+    ctx.font = '950 12px system-ui';
+    ctx.fillStyle = focusedPlayer === 1 ? '#54e38e' : '#ff6b78';
+    ctx.fillText('YOUR BOARD', 129, 37);
+    ctx.fillStyle = rival === 1 ? '#54e38e' : '#ff6b78';
+    ctx.fillText('RIVAL', 312, 57);
+    ctx.fillStyle = '#9aa8bd';
+    ctx.font = '800 10px system-ui';
+    ctx.fillText(`${game.pendingGarbage[rival]} incoming`, 312, 221);
+    ctx.fillStyle = '#ffc857';
+    ctx.font = '950 28px system-ui';
+    ctx.fillText(String(game.pendingGarbage[focusedPlayer]), 312, 270);
+    ctx.fillStyle = '#9aa8bd';
+    ctx.font = '850 9px system-ui';
+    ctx.fillText('INCOMING', 312, 286);
+  }
+
   function render(): void {
+    const mobile = window.matchMedia('(max-width: 760px)').matches;
+    const singleBoardMobile = mobile && (game.mode === 'bot' || Boolean(room?.session().online));
+    setCanvasSize(mobile ? 360 : 900, mobile ? (singleBoardMobile ? 510 : 390) : 600);
+    canvas.dataset.mobileLayout = mobile ? (singleBoardMobile ? 'focus' : 'duel') : 'desktop';
     const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
     gradient.addColorStop(0, '#121a2a');
     gradient.addColorStop(1, '#080d16');
@@ -491,33 +544,37 @@ export function initBlockDrop(): void {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.strokeStyle = 'rgba(255,255,255,.03)';
     for (let x = 0; x < canvas.width; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke(); }
-    drawBoard(1, 75);
-    drawBoard(2, 585);
-    ctx.textAlign = 'center';
-    ctx.fillStyle = '#9aa8bd';
-    ctx.font = '850 14px system-ui';
-    ctx.fillText('GARBAGE QUEUE', 450, 205);
-    ctx.fillStyle = '#54e38e';
-    ctx.font = '950 42px system-ui';
-    ctx.fillText(String(game.pendingGarbage[1]), 402, 260);
-    ctx.fillStyle = '#657184';
-    ctx.fillText('⇄', 450, 260);
-    ctx.fillStyle = '#ff6b78';
-    ctx.fillText(String(game.pendingGarbage[2]), 498, 260);
-    ctx.fillStyle = '#ffc857';
-    ctx.font = '900 13px system-ui';
-    ctx.fillText('CLEAR LINES TO ATTACK', 450, 315);
+    if (mobile) {
+      renderMobileBoards();
+    } else {
+      drawBoard(1, 75);
+      drawBoard(2, 585);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#9aa8bd';
+      ctx.font = '850 14px system-ui';
+      ctx.fillText('GARBAGE QUEUE', 450, 205);
+      ctx.fillStyle = '#54e38e';
+      ctx.font = '950 42px system-ui';
+      ctx.fillText(String(game.pendingGarbage[1]), 402, 260);
+      ctx.fillStyle = '#657184';
+      ctx.fillText('⇄', 450, 260);
+      ctx.fillStyle = '#ff6b78';
+      ctx.fillText(String(game.pendingGarbage[2]), 498, 260);
+      ctx.fillStyle = '#ffc857';
+      ctx.font = '900 13px system-ui';
+      ctx.fillText('CLEAR LINES TO ATTACK', 450, 315);
+    }
     if (game.phase === 'ready') {
       ctx.fillStyle = 'rgba(7,10,16,.52)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = '#ffc857';
-      ctx.font = '950 48px system-ui';
-      ctx.fillText('BLOCK DROP DUEL', canvas.width / 2, canvas.height / 2);
+      ctx.font = `950 ${mobile ? 29 : 48}px system-ui`;
+      ctx.fillText(mobile ? 'BLOCK DROP' : 'BLOCK DROP DUEL', canvas.width / 2, canvas.height / 2);
     } else if (game.phase === 'finished') {
       ctx.fillStyle = 'rgba(7,10,16,.68)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = game.winner === 1 ? '#54e38e' : '#ff6b78';
-      ctx.font = '950 54px system-ui';
+      ctx.font = `950 ${mobile ? 34 : 54}px system-ui`;
       ctx.fillText(`${game.winner === 1 ? 'MINT' : 'CORAL'} WINS`, canvas.width / 2, canvas.height / 2);
     }
   }

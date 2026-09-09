@@ -4861,28 +4861,44 @@
 
     @media (max-width: 760px) {
       .paddle-app {
-        padding: 18px 12px 28px;
+        padding: 12px 10px 20px;
       }
+
+      .paddle-app > .topbar { margin-bottom: 8px; }
 
       .paddle-shell {
         border-radius: 18px;
       }
 
       .paddle-scorebar {
-        padding: 12px 14px;
+        gap: 8px;
+        padding: 9px 10px;
       }
+
+      .paddle-score-swatch { height: 28px; }
+      .paddle-score-player { gap: 7px; }
+      .paddle-score-player b { font-size: 1.45rem; }
+      .paddle-score-goal { font-size: .58rem; }
 
       .paddle-statusbar {
         align-items: stretch;
         flex-direction: column;
-        padding: 11px 14px;
+        padding: 8px 10px;
         text-align: center;
       }
 
       .paddle-footer {
         grid-template-columns: 1fr;
-        padding: 10px 14px 14px;
+        padding: 8px 10px 10px;
       }
+
+      .paddle-arena,
+      .snake-arena,
+      .tanks-arena,
+      .survival-arena,
+      .star-arena,
+      .racing-arena,
+      .blocks-arena { padding: 6px; }
 
       .paddle-key-guide {
         display: none;
@@ -6183,6 +6199,7 @@
       .game-room-panel {
         align-items: stretch;
         gap: 0;
+        margin-bottom: 8px;
         padding: 7px;
       }
 
@@ -6226,6 +6243,15 @@
       .game-room-join button { flex: 1; }
       .game-room-join input { width: 76px; }
       .game-room-code { flex: 1; text-align: center; }
+
+      .snake-touch-controls:has(.solo-hidden),
+      .tanks-touch-controls:has(.solo-hidden) { grid-template-columns: 1fr; }
+
+      .snake-touch-controls:has(.solo-hidden) > :not(.solo-hidden),
+      .tanks-touch-controls:has(.solo-hidden) > :not(.solo-hidden) {
+        width: min(100%, 420px);
+        margin-inline: auto;
+      }
     }
 
     /* Keep the playfield—not setup chrome—as the focus on shorter screens. */

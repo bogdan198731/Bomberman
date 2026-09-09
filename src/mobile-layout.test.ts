@@ -100,6 +100,14 @@ test('real-time mobile games use shared virtual joysticks', () => {
   }
 });
 
+test('Block Drop prioritizes one large human board on mobile', () => {
+  assert.match(blocksSource, /const singleBoardMobile = mobile && \(game\.mode === 'bot' \|\| Boolean\(room\?\.session\(\)\.online\)\)/);
+  assert.match(blocksSource, /setCanvasSize\(mobile \? 360 : 900, mobile \? \(singleBoardMobile \? 510 : 390\) : 600\)/);
+  assert.match(blocksSource, /drawBoard\(focusedPlayer, 24, 62, 21\)/);
+  assert.match(blocksSource, /drawBoard\(rival, 282, 81, 6\)/);
+  assert.match(html, /\.blocks-arena \{ padding: 6px; \}/);
+});
+
 test('Țintar board includes native fullscreen styling and a mobile fallback', () => {
   assert.match(html, /id="tintarBoardFrame" class="tintar-board-frame"/);
   assert.match(html, /id="tintarBoardActions" class="tintar-board-actions" hidden/);
