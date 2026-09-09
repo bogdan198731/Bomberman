@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blast-arcade-shell-v26';
+const CACHE_NAME = 'blast-arcade-shell-v27';
 const APP_SHELL = [
   '/',
   '/index.html',

@@ -182,4 +182,15 @@ test('mobile hub adds thumb navigation and a visible horizontal-filter cue', () 
   assert.match(html, /class="catalog-filter-cue" aria-hidden="true">›<\/span>/);
   assert.match(mobileStyles, /\.catalog-filter-cue\s*\{[^}]*display:\s*grid;/s);
   assert.match(indexSource, /function initMobileHubNavigation\(\)/);
+  assert.match(indexSource, /setAttribute\('aria-current', 'page'\)/);
+  assert.match(catalogSource, /function updateFilterCue\(\)/);
+  assert.match(catalogSource, /filterScroller\.scrollLeft \+ filterScroller\.clientWidth/);
+  assert.match(catalogSource, /button\.scrollIntoView/);
+});
+
+test('interface polish includes consistent focus, touch, and twelve-game metadata', () => {
+  assert.match(html, /:where\(button, a, input, select, \[tabindex\]\):focus-visible/);
+  assert.match(html, /@media \(hover: none\)[\s\S]*?\.catalog-card:hover/);
+  assert.match(html, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?animation-duration:\s*0\.001ms/);
+  assert.match(html, /content="Blast Arcade is a mobile-friendly hub with twelve instant browser games/);
 });

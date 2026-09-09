@@ -70,6 +70,9 @@ export function initGameCatalog(): void {
   const search = document.getElementById('catalogSearch') as HTMLInputElement | null;
   const clearSearch = document.getElementById('catalogSearchClear') as HTMLButtonElement | null;
   const filterButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-catalog-filter]'));
+  const filterScroller = document.querySelector<HTMLElement>('.catalog-filters');
+  const filterStrip = document.querySelector<HTMLElement>('.catalog-filter-strip');
+  const filterCue = document.querySelector<HTMLElement>('.catalog-filter-cue');
   const resultCount = document.getElementById('catalogResultCount');
   const emptyState = document.getElementById('catalogEmptyState');
   const resetButton = document.getElementById('catalogResetButton');
@@ -78,6 +81,16 @@ export function initGameCatalog(): void {
 
   let activeFilter: CatalogFilter = 'all';
   let favorites = loadFavorites();
+
+  function updateFilterCue(): void {
+    if (!filterScroller || !filterStrip || !filterCue) return;
+    const overflows = filterScroller.scrollWidth > filterScroller.clientWidth + 2;
+    filterCue.hidden = !overflows;
+    if (!overflows) return;
+    const atEnd = filterScroller.scrollLeft + filterScroller.clientWidth >= filterScroller.scrollWidth - 4;
+    filterStrip.dataset.scrollCue = atEnd ? 'left' : 'right';
+    filterCue.textContent = atEnd ? '‹' : '›';
+  }
 
   function gameFromCard(card: HTMLElement): CatalogGame | null {
     const id = card.dataset.catalogGame;
@@ -115,12 +128,18 @@ export function initGameCatalog(): void {
     if (resultCount) resultCount.textContent = `${visible} game${visible === 1 ? '' : 's'}`;
     if (emptyState) emptyState.hidden = visible !== 0;
     if (clearSearch) clearSearch.hidden = !activeSearch.value;
+    window.requestAnimationFrame(updateFilterCue);
   }
 
   filterButtons.forEach(button => button.addEventListener('click', () => {
     const filter = button.dataset.catalogFilter;
     if (!CATALOG_FILTERS.includes(filter as CatalogFilter)) return;
     activeFilter = filter as CatalogFilter;
+    button.scrollIntoView({
+      behavior: document.documentElement.classList.contains('reduce-motion') ? 'auto' : 'smooth',
+      block: 'nearest',
+      inline: 'center',
+    });
     render();
   }));
   cards.forEach(card => card.querySelector('[data-favorite-game]')?.addEventListener('click', () => {
@@ -155,5 +174,7 @@ export function initGameCatalog(): void {
     favorites = loadFavorites();
     render();
   });
+  filterScroller?.addEventListener('scroll', updateFilterCue, { passive: true });
+  window.addEventListener('resize', updateFilterCue, { passive: true });
   render();
 }

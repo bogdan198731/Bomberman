@@ -9,6 +9,7 @@ test('Romanian translations cover shared arcade and revenge actions', () => {
   assert.equal(translateArcadeText('Games', 'ro'), 'Jocuri');
   assert.equal(translateArcadeText('Choose a mode', 'ro'), 'Alege un mod');
   assert.equal(translateArcadeText('Vs bot', 'ro'), 'Contra bot');
+  assert.equal(translateArcadeText('Two snakes share this device.', 'ro'), 'Doi șerpi împart același dispozitiv.');
   assert.equal(
     translateArcadeText('Movement joystick. Drag and hold to move, or use arrow keys.', 'ro'),
     'Joystick de mișcare. Trage și ține apăsat pentru a te deplasa sau folosește săgețile.',

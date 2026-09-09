@@ -7,14 +7,14 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Blast Arcade">
-  <meta name="description" content="Blast Arcade is a mobile-friendly hub with ten instant browser games for solo, co-op, local, and online play.">
+  <meta name="description" content="Blast Arcade is a mobile-friendly hub with twelve instant browser games for solo, co-op, local, and online play.">
   <meta property="og:title" content="Blast Arcade">
-  <meta property="og:description" content="Ten games. One hub. Play solo, co-op, local, or online instantly in your browser.">
+  <meta property="og:description" content="Twelve games. One hub. Play solo, co-op, local, or online instantly in your browser.">
   <meta property="og:image" content="/public/og-v3.png">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Blast Arcade">
-  <meta name="twitter:description" content="Ten games. One hub. Play. Compete. Repeat.">
+  <meta name="twitter:description" content="Twelve games. One hub. Play. Compete. Repeat.">
   <meta name="twitter:image" content="/public/og-v3.png">
   <link rel="manifest" href="/public/manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="192x192" href="/public/app-icon-192.png">
@@ -36,6 +36,19 @@
 
     * {
       box-sizing: border-box;
+    }
+
+    :where(button, a, input, select, [tabindex]):focus-visible {
+      outline: 3px solid rgba(73, 226, 255, .72);
+      outline-offset: 3px;
+    }
+
+    :where(button, a) {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :where(button:disabled) {
+      cursor: not-allowed;
     }
 
     body {
@@ -1692,6 +1705,7 @@
     }
 
     .catalog-filter-cue { display: none; }
+    .catalog-filter-cue[hidden] { display: none; }
 
     .catalog-filters::-webkit-scrollbar {
       display: none;
@@ -1744,6 +1758,8 @@
       border-color: rgba(255, 255, 255, 0.18);
       transform: translateY(-4px);
     }
+
+    .catalog-card:active { transform: translateY(-1px) scale(.985); }
 
     .catalog-card.featured {
       border-color: rgba(84, 227, 142, 0.22);
@@ -2225,6 +2241,27 @@
       animation-duration: 0.001ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.001ms !important;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+      }
+    }
+
+    @media (hover: none) {
+      .catalog-card:hover,
+      .primary-cta:hover,
+      .secondary-cta:hover,
+      .install-app-button:hover,
+      .card-play-button:hover,
+      .back-to-hub:hover {
+        filter: none;
+        transform: none;
+      }
     }
 
     .game-nav-actions {
@@ -4120,6 +4157,17 @@
         font-size: 1.25rem;
         font-weight: 900;
         pointer-events: none;
+      }
+
+      .catalog-filter-strip[data-scroll-cue="left"] .catalog-filters {
+        padding-right: 0;
+        padding-left: 34px;
+      }
+
+      .catalog-filter-strip[data-scroll-cue="left"] .catalog-filter-cue {
+        right: auto;
+        left: 0;
+        background: linear-gradient(90deg, #0e151f 45%, transparent);
       }
 
       .catalog-filter { min-height: 42px; }

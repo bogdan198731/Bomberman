@@ -53,8 +53,14 @@ function initMobileHubNavigation(): void {
   const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('[data-mobile-hub-link]'));
   if (!links.length) return;
   const select = (targetId: string): void => {
-    links.forEach(link => link.classList.toggle('active', link.dataset.mobileHubLink === targetId));
+    links.forEach(link => {
+      const active = link.dataset.mobileHubLink === targetId;
+      link.classList.toggle('active', active);
+      if (active) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
+    });
   };
+  select('hubView');
   links.forEach(link => link.addEventListener('click', () => select(link.dataset.mobileHubLink ?? 'hubView')));
   const targets = ['quickPlayPanel', 'games', 'profilePanel']
     .map(id => document.getElementById(id))
