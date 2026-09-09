@@ -4944,6 +4944,14 @@
         padding: 12px 14px 16px;
         border-top: 1px solid var(--panel-border);
       }
+
+      .back-to-hub,
+      .settings-nav-button,
+      .paddle-serve,
+      .paddle-restart,
+      .snake-mode-button,
+      .tank-touch-button,
+      .snake-touch-button { min-height: 44px; }
     }
 
     .snake-brand-mark {
@@ -5716,6 +5724,17 @@
     .sudoku-cell.conflict { color: #fff; background: #c63e52; }
     .sudoku-cell:focus-visible { position: relative; z-index: 2; outline: 3px solid var(--gold); outline-offset: -3px; }
 
+    .sudoku-notes {
+      display: grid;
+      width: 100%;
+      height: 100%;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      align-items: center;
+      color: #9feefa;
+      font: 800 clamp(.34rem, 1.45vw, .58rem)/1 system-ui, sans-serif;
+    }
+
     .sudoku-overlay {
       position: absolute;
       inset: 0;
@@ -5770,7 +5789,7 @@
     .sudoku-actions {
       display: grid;
       width: min(100%, 560px);
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 7px;
       margin: 8px auto 0;
     }
@@ -5787,6 +5806,12 @@
     }
 
     .sudoku-actions button.primary { border-color: rgba(84,227,142,.3); color: #07150d; background: var(--p1); }
+    .sudoku-actions button.active {
+      border-color: rgba(73,226,255,.48);
+      color: #06171c;
+      background: #49e2ff;
+      box-shadow: 0 0 0 3px rgba(73,226,255,.12);
+    }
     .sudoku-actions button:disabled { cursor: not-allowed; opacity: .45; }
 
     .sudoku-help {
@@ -5802,12 +5827,13 @@
       .sudoku-toolbar { align-items: stretch; flex-direction: column; gap: 11px; }
       .sudoku-toolbar p { display: none; }
       .sudoku-difficulties { display: grid; grid-template-columns: repeat(3, 1fr); }
-      .sudoku-difficulties button { padding: 0 7px; }
+      .sudoku-difficulties button { min-height: 44px; padding: 0 7px; }
       .sudoku-meta { grid-template-columns: repeat(2, 1fr); }
       .sudoku-meta div { padding: 8px; }
       .sudoku-number-pad { gap: 4px; }
-      .sudoku-number-pad button { min-height: 40px; border-radius: 9px; }
-      .sudoku-actions button { min-height: 38px; }
+      .sudoku-number-pad button { min-height: 44px; border-radius: 9px; }
+      .sudoku-actions { grid-template-columns: repeat(2, 1fr); }
+      .sudoku-actions button { min-height: 44px; }
     }
 
     .block-team {
@@ -6041,6 +6067,35 @@
     }
 
     .star-readout strong { color: #55d9ff; }
+
+    .star-threat {
+      display: block;
+      width: max-content;
+      margin: 4px auto 0;
+      padding: 3px 7px;
+      border: 1px solid rgba(85,217,255,.24);
+      border-radius: 999px;
+      color: #55d9ff;
+      background: rgba(85,217,255,.08);
+      font-size: .53rem;
+      letter-spacing: .08em;
+    }
+
+    .star-threat[data-threat="warning"] {
+      border-color: rgba(255,200,87,.4);
+      color: var(--gold);
+      background: rgba(255,200,87,.12);
+      animation: star-threat-pulse 900ms ease-in-out infinite alternate;
+    }
+
+    .star-threat[data-threat="boss"] {
+      border-color: rgba(255,107,120,.48);
+      color: #ff9aa4;
+      background: rgba(255,107,120,.14);
+      animation: star-threat-pulse 600ms ease-in-out infinite alternate;
+    }
+
+    @keyframes star-threat-pulse { to { filter: brightness(1.35); box-shadow: 0 0 14px currentColor; } }
 
     .star-touch-controls { grid-template-columns: 1fr 1fr; }
 
@@ -6283,6 +6338,9 @@
       .game-room-join button { flex: 1; }
       .game-room-join input { width: 76px; }
       .game-room-code { flex: 1; text-align: center; }
+      .game-room-mode-tab,
+      .game-room-actions button,
+      .game-room-join input { min-height: 44px; }
 
       .snake-touch-controls:has(.solo-hidden),
       .tanks-touch-controls:has(.solo-hidden) { grid-template-columns: 1fr; }
@@ -6386,6 +6444,11 @@
       .twenty48-intro p,
       .twenty48-help { display: none; }
       .twenty48-new-game { width: auto; }
+      .twenty48-intro h2 {
+        max-width: 16ch;
+        font-size: clamp(1.05rem, 5.4vw, 1.35rem);
+        line-height: 1.08;
+      }
     }
 
     @media (orientation: landscape) and (max-height: 520px) {
@@ -7785,7 +7848,7 @@
       </div>
       <div class="paddle-scorebar">
         <div class="paddle-score-player"><i class="paddle-score-swatch" aria-hidden="true"></i><div><span>Mint score</span><b id="starMintScore">0</b><span id="starMintHealth" class="survival-health">3 hull</span></div></div>
-        <div class="paddle-score-goal">Wave <strong id="starWave">0</strong></div>
+        <div class="paddle-score-goal">Wave <strong id="starWave">0</strong><span id="starThreat" class="star-threat" data-threat="clear">Formation</span></div>
         <div class="paddle-score-player coral"><i class="paddle-score-swatch" aria-hidden="true"></i><div><span>Coral score</span><b id="starCoralScore">—</b><span id="starCoralHealth" class="survival-health">Solo</span></div></div>
       </div>
       <div class="star-arena"><canvas id="starCanvas" width="900" height="600" aria-label="Star Defender space battle"></canvas></div>
@@ -8051,6 +8114,7 @@
         <button type="button" data-sudoku-number="9">9</button>
       </div>
       <div class="sudoku-actions">
+        <button id="sudokuNotesButton" type="button" aria-pressed="false" aria-label="Notes mode off"><span aria-hidden="true">✎</span> Notes</button>
         <button id="sudokuEraseButton" type="button"><span aria-hidden="true">⌫</span> Erase</button>
         <button id="sudokuHintButton" type="button"><span aria-hidden="true">◇</span> Hint</button>
         <button class="primary" type="button" data-sudoku-new>New puzzle</button>

@@ -5,6 +5,7 @@ export type StarPhase = 'ready' | 'playing' | 'finished';
 export type StarMode = 'solo' | 'coop';
 export type StarPlayerId = 1 | 2;
 export type StarEnemyKind = 'scout' | 'heavy' | 'boss';
+export type StarThreatLevel = 'clear' | 'warning' | 'boss';
 export type StarPowerUpKind = 'spread' | 'rapid' | 'shield';
 
 export const STAR_WIDTH = 900;
@@ -179,7 +180,15 @@ export class StarDefenderGame {
       : this.activePlayerIds().some(player => this.players[player].rapidTimer > 0)
         ? ' · Rapid fire active'
         : '';
-    return `Wave ${this.wave}: ${this.enemies.length} invader${this.enemies.length === 1 ? '' : 's'} remain${boost}.`;
+    const bossWarning = this.wave % 5 === 4 ? ' · Boss incoming after this wave' : '';
+    return `Wave ${this.wave}: ${this.enemies.length} invader${this.enemies.length === 1 ? '' : 's'} remain${boost}${bossWarning}.`;
+  }
+
+  threatLevel(): StarThreatLevel {
+    if (this.phase !== 'playing') return 'clear';
+    if (this.wave % 5 === 0) return 'boss';
+    if (this.wave % 5 === 4 || this.enemies.some(enemy => enemy.y + enemy.height / 2 >= STAR_HEIGHT * .6)) return 'warning';
+    return 'clear';
   }
 
   private createPlayer(player: StarPlayerId): StarPlayer {
@@ -353,6 +362,7 @@ export function initStarDefender(): void {
   canvas.height = STAR_HEIGHT;
   const game = new StarDefenderGame();
   const status = document.getElementById('starStatus');
+  const threat = document.getElementById('starThreat');
   const wave = document.getElementById('starWave');
   const mintScore = document.getElementById('starMintScore');
   const coralScore = document.getElementById('starCoralScore');
@@ -366,6 +376,15 @@ export function initStarDefender(): void {
   function visible(): boolean { return !view.classList.contains('view-hidden'); }
   function syncUi(): void {
     if (status) status.textContent = game.statusText();
+    if (threat) {
+      const threatLevel = game.threatLevel();
+      threat.dataset.threat = threatLevel;
+      threat.textContent = threatLevel === 'boss'
+        ? 'Boss fight'
+        : threatLevel === 'warning'
+          ? (game.wave % 5 === 4 ? 'Boss next' : 'Danger close')
+          : 'Formation';
+    }
     if (wave) wave.textContent = String(game.wave);
     if (mintScore) mintScore.textContent = String(game.players[1].score);
     if (coralScore) coralScore.textContent = game.mode === 'solo' ? '—' : String(game.players[2].score);

@@ -78,6 +78,17 @@ test('every fifth wave is a command-ship boss fight', () => {
   assert.equal(game.enemies[0].kind, 'boss');
 });
 
+test('Star Defender warns before and during boss waves', () => {
+  const game = new StarDefenderGame(() => .5);
+  game.start();
+  assert.equal(game.threatLevel(), 'clear');
+  game.wave = 4;
+  assert.equal(game.threatLevel(), 'warning');
+  assert.match(game.statusText(), /Boss incoming after this wave/);
+  game.wave = 5;
+  assert.equal(game.threatLevel(), 'boss');
+});
+
 test('a shield absorbs damage before the hull', () => {
   const game = new StarDefenderGame(() => .5);
   game.start();

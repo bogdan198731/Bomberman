@@ -233,6 +233,7 @@ export function initSudoku(): void {
   const overlay = document.getElementById('sudokuOverlay');
   const overlayMessage = document.getElementById('sudokuOverlayMessage');
   const hintButton = document.getElementById('sudokuHintButton') as HTMLButtonElement | null;
+  const notesButton = document.getElementById('sudokuNotesButton') as HTMLButtonElement | null;
   if (!view || !boardElement) return;
   const activeView = view;
   const activeBoard = boardElement;
@@ -240,6 +241,8 @@ export function initSudoku(): void {
   const reporter = new ArcadeResultReporter('sudoku');
   let variant = 0;
   let elapsedSeconds = 0;
+  let notesMode = false;
+  const notes = new Map<number, Set<number>>();
   let status = 'Select a cell and place a number from 1 to 9.';
 
   function visible(): boolean { return !activeView.classList.contains('view-hidden'); }
@@ -274,7 +277,21 @@ export function initSudoku(): void {
       if (row % 3 === 0 && row !== 9) classes.push('box-bottom');
       cell.type = 'button';
       cell.className = classes.join(' ');
-      cell.textContent = value ? String(value) : '';
+      const cellNotes = notes.get(index);
+      if (!value && cellNotes?.size) {
+        cell.classList.add('has-notes');
+        const noteGrid = document.createElement('span');
+        noteGrid.className = 'sudoku-notes';
+        noteGrid.setAttribute('aria-hidden', 'true');
+        for (let note = 1; note <= 9; note += 1) {
+          const noteCell = document.createElement('span');
+          noteCell.textContent = cellNotes.has(note) ? String(note) : '';
+          noteGrid.append(noteCell);
+        }
+        cell.append(noteGrid);
+      } else {
+        cell.textContent = value ? String(value) : '';
+      }
       cell.dataset.sudokuCell = String(index);
       cell.setAttribute('role', 'gridcell');
       cell.setAttribute('aria-rowindex', String(row));
@@ -282,9 +299,10 @@ export function initSudoku(): void {
       cell.setAttribute('aria-selected', String(index === game.selected));
       cell.setAttribute('aria-invalid', String(conflict));
       cell.tabIndex = index === game.selected ? 0 : -1;
+      const notesLabel = cellNotes?.size ? `, notes ${[...cellNotes].sort().join(', ')}` : '';
       cell.setAttribute('aria-label', value
         ? `${game.isGiven(index) ? 'Given' : 'Entered'} ${value}, row ${row}, column ${column}`
-        : `Empty cell, row ${row}, column ${column}`);
+        : `Empty cell, row ${row}, column ${column}${notesLabel}`);
       return cell;
     });
     activeBoard.replaceChildren(...cells);
@@ -304,6 +322,11 @@ export function initSudoku(): void {
         ? `Hint, ${game.hintsRemaining} remaining`
         : 'No hints remaining');
     }
+    if (notesButton) {
+      notesButton.classList.toggle('active', notesMode);
+      notesButton.setAttribute('aria-pressed', String(notesMode));
+      notesButton.setAttribute('aria-label', notesMode ? 'Notes mode on' : 'Notes mode off');
+    }
     if (complete) {
       const score = currentScore();
       const mistakeLabel = game.mistakes === 1 ? 'mistake' : 'mistakes';
@@ -315,7 +338,31 @@ export function initSudoku(): void {
 
   function enter(value: number): void {
     if (!visible()) return;
+    if (notesMode && value > 0) {
+      if (game.phase === 'complete' || game.isGiven(game.selected)) {
+        status = game.isGiven(game.selected) ? 'That number is part of the puzzle.' : status;
+      } else if (game.board[game.selected]) {
+        status = 'Clear the cell before adding notes.';
+      } else {
+        const cellNotes = notes.get(game.selected) ?? new Set<number>();
+        if (cellNotes.has(value)) cellNotes.delete(value); else cellNotes.add(value);
+        if (cellNotes.size) notes.set(game.selected, cellNotes); else notes.delete(game.selected);
+        status = cellNotes.has(value) ? `Note ${value} added.` : `Note ${value} removed.`;
+      }
+      syncUi();
+      return;
+    }
     const result = game.input(value);
+    if (result.changed) {
+      notes.delete(game.selected);
+      if (value > 0) {
+        notes.forEach((cellNotes, index) => {
+          if (!game.isRelated(game.selected, index)) return;
+          cellNotes.delete(value);
+          if (cellNotes.size === 0) notes.delete(index);
+        });
+      }
+    }
     if (!result.changed) {
       status = game.isGiven(game.selected) ? 'That number is part of the puzzle.' : status;
     } else if (result.completed) {
@@ -334,6 +381,8 @@ export function initSudoku(): void {
     variant += 1;
     game.reset(difficulty, variant);
     elapsedSeconds = 0;
+    notesMode = false;
+    notes.clear();
     status = 'Select a cell and place a number from 1 to 9.';
     reporter.report(false);
     syncUi();
@@ -352,8 +401,17 @@ export function initSudoku(): void {
     button.addEventListener('click', () => enter(Number(button.dataset.sudokuNumber)));
   });
   document.getElementById('sudokuEraseButton')?.addEventListener('click', () => enter(0));
+  notesButton?.addEventListener('click', () => {
+    notesMode = !notesMode;
+    status = notesMode ? 'Notes mode on — add possible numbers.' : 'Notes mode off — enter final numbers.';
+    syncUi();
+  });
   hintButton?.addEventListener('click', () => {
-    if (game.hint() !== null) status = game.phase === 'complete' ? 'Puzzle complete!' : 'Hint placed — keep going.';
+    const target = game.hint();
+    if (target !== null) {
+      notes.delete(target);
+      status = game.phase === 'complete' ? 'Puzzle complete!' : 'Hint placed — keep going.';
+    }
     else if (game.phase !== 'complete') status = 'No hints remaining for this puzzle.';
     syncUi();
   });
@@ -369,6 +427,13 @@ export function initSudoku(): void {
     if (!visible() || event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement
       || event.target instanceof HTMLSelectElement) return;
     if (/^[1-9]$/.test(event.key)) { event.preventDefault(); enter(Number(event.key)); return; }
+    if (event.key.toLowerCase() === 'n') {
+      event.preventDefault();
+      notesMode = !notesMode;
+      status = notesMode ? 'Notes mode on — add possible numbers.' : 'Notes mode off — enter final numbers.';
+      syncUi();
+      return;
+    }
     if (event.key === 'Backspace' || event.key === 'Delete' || event.key === '0') { event.preventDefault(); enter(0); return; }
     const moves: Record<string, readonly [number, number]> = {
       ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1],

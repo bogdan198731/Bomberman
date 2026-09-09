@@ -10,6 +10,7 @@ const snakeSource = readFileSync(new URL('../src/snake.ts', import.meta.url), 'u
 const tanksSource = readFileSync(new URL('../src/tanks.ts', import.meta.url), 'utf8');
 const racingSource = readFileSync(new URL('../src/racing.ts', import.meta.url), 'utf8');
 const blocksSource = readFileSync(new URL('../src/blocks.ts', import.meta.url), 'utf8');
+const sudokuSource = readFileSync(new URL('../src/sudoku.ts', import.meta.url), 'utf8');
 const mobileStart = html.indexOf('@media (max-width: 700px)');
 const nextMediaQuery = html.indexOf('@media', mobileStart + 1);
 const mobileStyles = html.slice(
@@ -106,6 +107,13 @@ test('Block Drop prioritizes one large human board on mobile', () => {
   assert.match(blocksSource, /drawBoard\(focusedPlayer, 24, 62, 21\)/);
   assert.match(blocksSource, /drawBoard\(rival, 282, 81, 6\)/);
   assert.match(html, /\.blocks-arena \{ padding: 6px; \}/);
+});
+
+test('mobile controls meet a 44px minimum and Sudoku supports pencil notes', () => {
+  assert.match(html, /\.game-room-mode-tab,[\s\S]*?\.game-room-join input \{ min-height: 44px; \}/);
+  assert.match(html, /id="sudokuNotesButton"[^>]*aria-pressed="false"[^>]*aria-label="Notes mode off"/);
+  assert.match(html, /\.sudoku-notes\s*\{[^}]*grid-template-columns: repeat\(3, 1fr\)/s);
+  assert.match(sudokuSource, /const notes = new Map<number, Set<number>>\(\)/);
 });
 
 test('Țintar board includes native fullscreen styling and a mobile fallback', () => {

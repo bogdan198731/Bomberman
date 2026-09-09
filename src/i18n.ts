@@ -334,6 +334,16 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Given number selected.': 'Ai selectat un număr dat.',
   'Choose a number for this cell.': 'Alege un număr pentru această celulă.',
   'Hint placed — keep going.': 'Indiciu plasat — continuă.',
+  'Notes': 'Notițe',
+  'Notes mode off': 'Mod notițe oprit',
+  'Notes mode on': 'Mod notițe pornit',
+  'Notes mode on — add possible numbers.': 'Mod notițe pornit — adaugă numere posibile.',
+  'Notes mode off — enter final numbers.': 'Mod notițe oprit — introdu numerele finale.',
+  'Clear the cell before adding notes.': 'Șterge celula înainte de a adăuga notițe.',
+  'Formation': 'Formație',
+  'Boss next': 'Urmează boss-ul',
+  'Boss fight': 'Luptă cu boss-ul',
+  'Danger close': 'Pericol aproape',
   'No hints remaining': 'Nu mai sunt indicii',
   'No hints remaining for this puzzle.': 'Nu mai sunt indicii pentru acest puzzle.',
   'Finish a match in all 12 games.': 'Termină un meci în toate cele 12 jocuri.',
@@ -418,6 +428,10 @@ function translateRomanianPattern(value: string): string | null {
   if (match) return `${match[1] === 'Given' ? 'Număr dat' : 'Număr introdus'} ${match[2]}, rândul ${match[3]}, coloana ${match[4]}`;
   match = value.match(/^Empty cell, row (\d+), column (\d+)$/);
   if (match) return `Celulă goală, rândul ${match[1]}, coloana ${match[2]}`;
+  match = value.match(/^Note (\d+) (added|removed)\.$/);
+  if (match) return `Notița ${match[1]} a fost ${match[2] === 'added' ? 'adăugată' : 'ștearsă'}.`;
+  match = value.match(/^Empty cell, row (\d+), column (\d+), notes (.+)$/);
+  if (match) return `Celulă goală, rândul ${match[1]}, coloana ${match[2]}, notițe ${match[3]}`;
   match = value.match(/^(Empty point|Mint piece|Coral piece), position (\d+)$/);
   if (match) {
     const occupant = match[1] === 'Empty point' ? 'Punct liber' : match[1] === 'Mint piece' ? 'Piesă Mint' : 'Piesă Coral';
