@@ -6,6 +6,7 @@ const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const indexSource = readFileSync(new URL('../src/index.ts', import.meta.url), 'utf8');
 const gameRoomSource = readFileSync(new URL('../src/game-room.ts', import.meta.url), 'utf8');
 const catalogSource = readFileSync(new URL('../src/catalog.ts', import.meta.url), 'utf8');
+const tintarSource = readFileSync(new URL('../src/tintar.ts', import.meta.url), 'utf8');
 const snakeSource = readFileSync(new URL('../src/snake.ts', import.meta.url), 'utf8');
 const tanksSource = readFileSync(new URL('../src/tanks.ts', import.meta.url), 'utf8');
 const racingSource = readFileSync(new URL('../src/racing.ts', import.meta.url), 'utf8');
