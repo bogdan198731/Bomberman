@@ -110,6 +110,12 @@ test('mobile real-time games keep gameplay controls next to the playfield', () =
   assert.match(html, /#blocksView\) \.paddle-footer \{[\s\S]*?order: 5;/);
 });
 
+test('single-player joystick action controls mirror the Blast Buddies thumb layout', () => {
+  assert.match(html, /> \.joystick-team:has\(\.tank-touch-button\.fire\):not\(\.solo-hidden\) \{[\s\S]*?grid-template-columns: 82px minmax\(8px, 1fr\) minmax\(104px, 112px\);/);
+  assert.match(html, /> \.joystick-team:has\(\.tank-touch-button\.fire\):not\(\.solo-hidden\) > \.arcade-joystick \{[\s\S]*?grid-column: 3;[\s\S]*?justify-self: end;/);
+  assert.match(html, /> \.joystick-team:has\(\.tank-touch-button\.fire\):not\(\.solo-hidden\) > \.tank-touch-button\.fire \{[\s\S]*?width: 82px;[\s\S]*?height: 82px;[\s\S]*?grid-column: 1;[\s\S]*?border-radius: 50%;/);
+});
+
 test('Block Drop prioritizes one large human board on mobile', () => {
   assert.match(blocksSource, /const singleBoardMobile = mobile && \(game\.mode === 'bot' \|\| Boolean\(room\?\.session\(\)\.online\)\)/);
   assert.match(blocksSource, /setCanvasSize\(mobile \? 360 : 900, mobile \? \(singleBoardMobile \? 510 : 390\) : 600\)/);

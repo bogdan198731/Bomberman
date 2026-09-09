@@ -6402,6 +6402,59 @@
         width: min(100%, 420px);
         margin-inline: auto;
       }
+
+      /* Match Blast Buddies' one-handed action-left, joystick-right layout. */
+      .tanks-touch-controls:has(.solo-hidden)
+      > .joystick-team:has(.tank-touch-button.fire):not(.solo-hidden) {
+        display: grid;
+        max-width: 360px;
+        grid-template-columns: 82px minmax(8px, 1fr) minmax(104px, 112px);
+        grid-template-rows: auto auto;
+        align-items: center;
+        gap: 8px 10px;
+      }
+
+      .tanks-touch-controls:has(.solo-hidden)
+      > .joystick-team:has(.tank-touch-button.fire):not(.solo-hidden) > strong {
+        grid-column: 1 / -1;
+        grid-row: 1;
+      }
+
+      .tanks-touch-controls:has(.solo-hidden)
+      > .joystick-team:has(.tank-touch-button.fire):not(.solo-hidden) > .arcade-joystick {
+        width: min(112px, 32vw);
+        grid-column: 3;
+        grid-row: 2;
+        justify-self: end;
+      }
+
+      .tanks-touch-controls:has(.solo-hidden)
+      > .joystick-team:has(.tank-touch-button.fire):not(.solo-hidden) > .tank-touch-button.fire {
+        display: grid;
+        width: 82px;
+        height: 82px;
+        grid-column: 1;
+        grid-row: 2;
+        place-items: center;
+        justify-self: start;
+        padding: 0;
+        border: 3px solid rgba(255,255,255,.72);
+        border-bottom-width: 7px;
+        border-radius: 50%;
+        color: #250b0e;
+        background: linear-gradient(#ff8790, #ed4658);
+        box-shadow: 0 8px 24px rgba(237,70,88,.3);
+        font-size: .72rem;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+      }
+
+      .tanks-touch-controls:has(.solo-hidden)
+      > .joystick-team:has(.tank-touch-button.fire):not(.solo-hidden) > .tank-touch-button.fire:active {
+        border-bottom-width: 3px;
+        filter: brightness(1.1);
+        transform: translateY(4px) scale(.97);
+      }
     }
 
     /* Keep the playfield—not setup chrome—as the focus on shorter screens. */
