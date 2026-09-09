@@ -1573,6 +1573,9 @@
       left: max(18px, env(safe-area-inset-left));
       bottom: max(18px, env(safe-area-inset-bottom));
       max-width: min(420px, calc(100vw - 36px));
+      display: flex;
+      align-items: center;
+      gap: 12px;
       padding: 14px 17px;
       border: 1px solid rgba(73, 226, 255, 0.34);
       border-radius: 14px;
@@ -1580,6 +1583,23 @@
       background: linear-gradient(135deg, #b4f6ff, #49e2ff);
       box-shadow: 0 18px 50px rgba(0, 0, 0, 0.42);
       font-size: 0.74rem;
+      font-weight: 900;
+    }
+
+    .pwa-toast[hidden] { display: none; }
+
+    .pwa-toast span { flex: 1; }
+
+    .pwa-toast button {
+      min-height: 38px;
+      padding: 0 12px;
+      flex: 0 0 auto;
+      border: 1px solid rgba(6,21,27,.2);
+      border-radius: 10px;
+      color: #fff;
+      background: #102737;
+      cursor: pointer;
+      font-size: .7rem;
       font-weight: 900;
     }
 
@@ -4229,6 +4249,13 @@
         color: #092416;
       }
 
+      .pwa-toast {
+        right: 12px;
+        bottom: calc(80px + env(safe-area-inset-bottom));
+        left: 12px;
+        max-width: none;
+      }
+
       .settings-panel {
         width: 100%;
         height: min(88vh, 720px);
@@ -6711,7 +6738,10 @@
 
     <div id="progressionToast" class="progression-toast" role="status" aria-live="polite" hidden></div>
     <div id="circuitToast" class="circuit-toast" role="status" aria-live="polite" hidden></div>
-    <div id="pwaToast" class="pwa-toast" role="status" aria-live="polite" hidden></div>
+    <div id="pwaToast" class="pwa-toast" role="status" aria-live="polite" hidden>
+      <span id="pwaToastMessage"></span>
+      <button id="pwaRefreshButton" type="button" hidden>Refresh now</button>
+    </div>
 
     <section id="games" class="catalog-section" aria-labelledby="gamesTitle">
       <div class="catalog-heading">

@@ -21,13 +21,24 @@ export function connectivityPresentation(online: boolean): { label: string; mess
     : { label: 'Offline play', message: 'You are offline. Solo and local games remain available.' };
 }
 
+export function shouldOfferServiceWorkerUpdate(hadController: boolean, workerState: string): boolean {
+  return hadController && workerState === 'installed';
+}
+
 export function initArcadePwa(): void {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
   const installButton = document.getElementById('installAppButton') as HTMLButtonElement | null;
   const connectivity = document.getElementById('connectivityStatus');
   const connectivityLabel = document.getElementById('connectivityLabel');
   const toast = document.getElementById('pwaToast');
+  const toastMessage = document.getElementById('pwaToastMessage');
+  const refreshButton = document.getElementById('pwaRefreshButton') as HTMLButtonElement | null;
   let deferredPrompt: BeforeInstallPromptEvent | null = null;
+  let pendingUpdateWorker: ServiceWorker | null = null;
+  let updateActivated = false;
+  let refreshRequested = false;
+  let hadController = Boolean(navigator.serviceWorker?.controller);
+  let lastUpdateCheck = 0;
   let toastTimer = 0;
 
   const standaloneQuery = window.matchMedia('(display-mode: standalone)');
@@ -41,12 +52,23 @@ export function initArcadePwa(): void {
     return isIosDevice(navigator.userAgent, navigator.platform, navigator.maxTouchPoints);
   }
 
-  function showToast(message: string, duration: number = 5_000): void {
+  function showToast(message: string, duration: number = 5_000, offerRefresh: boolean = false): void {
     if (!toast) return;
-    toast.textContent = message;
+    if (toastMessage) toastMessage.textContent = message;
+    else toast.textContent = message;
+    if (refreshButton) {
+      refreshButton.hidden = !offerRefresh;
+      refreshButton.disabled = false;
+      refreshButton.textContent = 'Refresh now';
+    }
     toast.hidden = false;
     window.clearTimeout(toastTimer);
-    toastTimer = window.setTimeout(() => { toast.hidden = true; }, duration);
+    if (duration > 0) toastTimer = window.setTimeout(() => { toast.hidden = true; }, duration);
+  }
+
+  function offerUpdate(worker: ServiceWorker | null): void {
+    pendingUpdateWorker = worker;
+    showToast('A new arcade version is ready.', 0, true);
   }
 
   function renderInstallButton(): void {
@@ -94,9 +116,45 @@ export function initArcadePwa(): void {
     }
   });
 
+  refreshButton?.addEventListener('click', () => {
+    refreshRequested = true;
+    refreshButton.disabled = true;
+    refreshButton.textContent = 'Refreshing…';
+    if (pendingUpdateWorker) pendingUpdateWorker.postMessage({ type: 'SKIP_WAITING' });
+    else if (updateActivated) location.reload();
+  });
+
   if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController) {
+        hadController = true;
+        return;
+      }
+      updateActivated = true;
+      pendingUpdateWorker = null;
+      if (refreshRequested) location.reload();
+      else offerUpdate(null);
+    });
     window.addEventListener('load', () => {
-      void navigator.serviceWorker.register('/service-worker.js').catch(() => {
+      void navigator.serviceWorker.register('/service-worker.js', { updateViaCache: 'none' }).then(registration => {
+        const watchWorker = (worker: ServiceWorker | null): void => {
+          if (!worker) return;
+          worker.addEventListener('statechange', () => {
+            if (shouldOfferServiceWorkerUpdate(hadController, worker.state)) offerUpdate(worker);
+          });
+        };
+        if (registration.waiting && hadController) offerUpdate(registration.waiting);
+        registration.addEventListener('updatefound', () => watchWorker(registration.installing));
+        const checkForUpdate = (): void => {
+          if (!navigator.onLine || document.visibilityState === 'hidden' || Date.now() - lastUpdateCheck < 60_000) return;
+          lastUpdateCheck = Date.now();
+          void registration.update().catch(() => { /* Retry when the app becomes active again. */ });
+        };
+        checkForUpdate();
+        document.addEventListener('visibilitychange', checkForUpdate);
+        window.addEventListener('online', checkForUpdate);
+        window.setInterval(checkForUpdate, 30 * 60_000);
+      }).catch(() => {
         /* Installation is progressive enhancement; the arcade still works online. */
       });
     }, { once: true });
