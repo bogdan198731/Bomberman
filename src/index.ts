@@ -1354,7 +1354,11 @@ export function initGame(): void {
     elements.twenty48View?.classList.toggle('view-hidden', view !== 'twenty48');
     elements.sudokuView?.classList.toggle('view-hidden', view !== 'sudoku');
     document.body.dataset.view = view;
-    if (view !== 'hub') window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (view !== 'hub') {
+      const resetGameScroll = (): void => window.scrollTo({ top: 0, behavior: 'auto' });
+      resetGameScroll();
+      requestAnimationFrame(resetGameScroll);
+    }
   }
 
   canvas.width = initialMap.width * CELL_SIZE;

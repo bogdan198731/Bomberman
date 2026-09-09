@@ -244,6 +244,14 @@ test('mobile hub adds thumb navigation and a visible horizontal-filter cue', () 
   assert.match(catalogSource, /button\.scrollIntoView/);
 });
 
+test('game launches reset scroll immediately and mobile hub actions meet touch targets', () => {
+  assert.match(indexSource, /window\.scrollTo\(\{ top: 0, behavior: 'auto' \}\)/);
+  assert.match(indexSource, /requestAnimationFrame\(resetGameScroll\)/);
+  assert.match(html, /\.quick-play-filter,[\s\S]*?\.leaderboard-tab \{ min-height: 44px; \}/);
+  assert.match(html, /\.favorite-button \{[\s\S]*?width: 44px;[\s\S]*?height: 44px;/);
+  assert.match(html, /\.leaderboard-tabs::\-webkit-scrollbar \{ display: none; \}/);
+});
+
 test('interface polish includes consistent focus, touch, and twelve-game metadata', () => {
   assert.match(html, /:where\(button, a, input, select, \[tabindex\]\):focus-visible/);
   assert.match(html, /@media \(hover: none\)[\s\S]*?\.catalog-card:hover/);
