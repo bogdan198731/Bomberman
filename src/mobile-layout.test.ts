@@ -149,9 +149,12 @@ test('mobile game library uses compact three-column tiles with a narrow-screen f
   assert.match(mobileStyles, /\.game-glyph\s*\{[^}]*font-size:\s*1\.75rem;/s);
   assert.match(mobileStyles, /\.cover-label\s*\{[^}]*display:\s*none;/s);
   assert.match(mobileStyles, /\.catalog-card-body p,[\s\S]*?\.mode-label\s*\{[^}]*display:\s*none;/s);
-  assert.match(mobileStyles, /\.catalog-card-footer\s*\{[^}]*display:\s*none;/s);
-  assert.match(catalogSource, /card\.tabIndex = 0/);
-  assert.match(catalogSource, /card\.addEventListener\('click',[\s\S]*?launchButton\.click\(\)/);
+  assert.match(mobileStyles, /\.catalog-card-footer\s*\{[^}]*display:\s*block;/s);
+  assert.match(mobileStyles, /\.card-play-button\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;[^}]*width:\s*100%;[^}]*height:\s*100%;/s);
+  assert.equal((html.match(/class="card-play-button"[^>]*aria-label="Play /g) ?? []).length, 12);
+  assert.doesNotMatch(catalogSource, /card\.tabIndex = 0/);
+  assert.match(catalogSource, /const activateCard[\s\S]*?launchButton\.click\(\)/);
+  assert.match(catalogSource, /card\.addEventListener\('click', event => activateCard\(event\.target\)\)/);
   assert.match(html, /@media \(max-width: 340px\)[\s\S]*?\.game-grid\s*\{[^}]*repeat\(2, minmax\(0, 1fr\)\)/s);
 });
 

@@ -1745,6 +1745,7 @@
     }
 
     .catalog-card {
+      position: relative;
       min-width: 0;
       padding: 10px;
       border: 1px solid var(--panel-border);
@@ -4183,8 +4184,10 @@
       }
 
       .game-cover {
+        z-index: 3;
         min-height: 76px;
         border-radius: 10px;
+        pointer-events: none;
       }
 
       .game-glyph {
@@ -4210,6 +4213,7 @@
       .favorite-button {
         top: 5px;
         right: 5px;
+        pointer-events: auto;
         width: 32px;
         height: 32px;
         border-radius: 8px;
@@ -4238,7 +4242,37 @@
       }
 
       .catalog-card-footer {
-        display: none;
+        display: block;
+      }
+
+      .card-play-button {
+        position: absolute;
+        z-index: 2;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        padding: 0;
+        border: 0;
+        border-radius: inherit;
+        color: transparent;
+        background: transparent;
+        box-shadow: none;
+        font-size: 0;
+        transform: none;
+      }
+
+      .card-play-button:hover,
+      .card-play-button:active {
+        color: transparent;
+        background: transparent;
+        box-shadow: none;
+        transform: none;
+      }
+
+      .card-play-button:focus-visible {
+        outline: 3px solid rgba(73, 226, 255, .72);
+        outline-offset: -3px;
       }
 
       .catalog-card-body h3::after {
@@ -6831,7 +6865,7 @@
             <p>Outsmart bots or invite a friend into a fast explosive maze battle.</p>
             <div class="catalog-card-footer">
               <span class="mode-label">Bot · Local · Online PvP</span>
-              <button class="card-play-button" type="button" data-launch-game="bomberman">Play now</button>
+              <button class="card-play-button" type="button" data-launch-game="bomberman" aria-label="Play Blast Buddies">Play now</button>
             </div>
           </div>
         </article>
@@ -6847,7 +6881,7 @@
             <p>Build mills, capture rival pieces, and master Romania's classic strategy board game.</p>
             <div class="catalog-card-footer">
               <span class="mode-label">Bot · Local · Online 2P</span>
-              <button class="card-play-button" type="button" data-launch-game="tintar">Play now</button>
+              <button class="card-play-button" type="button" data-launch-game="tintar" aria-label="Play Țintar">Play now</button>
             </div>
           </div>
         </article>
@@ -6863,7 +6897,7 @@
             <p>A quick-fire paddle duel with accelerating rallies, sharp angles, and local rivalry.</p>
             <div class="catalog-card-footer">
               <span class="mode-label">Local · Online 2P</span>
-              <button class="card-play-button" type="button" data-launch-game="paddle">Play now</button>
+              <button class="card-play-button" type="button" data-launch-game="paddle" aria-label="Play Paddle Clash">Play now</button>
             </div>
           </div>
         </article>
@@ -6879,7 +6913,7 @@
             <p>Chase glowing cells in a solo high-score run or survive a local two-snake duel.</p>
             <div class="catalog-card-footer">
               <span class="mode-label">Solo · Local · Online</span>
-              <button class="card-play-button" type="button" data-launch-game="snake">Play now</button>
+              <button class="card-play-button" type="button" data-launch-game="snake" aria-label="Play Neon Snake Arena">Play now</button>
             </div>
           </div>
         </article>
@@ -6895,7 +6929,7 @@
             <p>Break cover, bank one-bounce shots, and battle a bot or a friend to five rounds.</p>
             <div class="catalog-card-footer">
               <span class="mode-label">Bot · Local · Online</span>
-              <button class="card-play-button" type="button" data-launch-game="tanks">Play now</button>
+              <button class="card-play-button" type="button" data-launch-game="tanks" aria-label="Play Mini Tanks">Play now</button>
             </div>
           </div>
         </article>
@@ -6911,7 +6945,7 @@
             <p>Drift around a neon circuit, collect turbo bolts, and race a bot or friend through three laps.</p>
             <div class="catalog-card-footer">
               <span class="mode-label">Bot · Local · Online</span>
-              <button class="card-play-button" type="button" data-launch-game="racing">Play now</button>
+              <button class="card-play-button" type="button" data-launch-game="racing" aria-label="Play Micro Racers">Play now</button>
             </div>
           </div>
         </article>
@@ -6927,7 +6961,7 @@
             <p>Build clean stacks, clear lines, and bury a bot or friend under incoming garbage blocks.</p>
             <div class="catalog-card-footer">
               <span class="mode-label">Bot · Local · Online</span>
-              <button class="card-play-button" type="button" data-launch-game="blocks">Play now</button>
+              <button class="card-play-button" type="button" data-launch-game="blocks" aria-label="Play Block Drop Duel">Play now</button>
             </div>
           </div>
         </article>
@@ -6943,7 +6977,7 @@
             <p>Slide matching numbers together, build clever combos, and create the legendary 2048 tile.</p>
             <div class="catalog-card-footer">
               <span class="mode-label">Solo puzzle</span>
-              <button class="card-play-button" type="button" data-launch-game="twenty48">Play now</button>
+              <button class="card-play-button" type="button" data-launch-game="twenty48" aria-label="Play 2048">Play now</button>
             </div>
           </div>
         </article>
@@ -6959,7 +6993,7 @@
             <p>Complete every row, column, and 3×3 box across three carefully tuned difficulty levels.</p>
             <div class="catalog-card-footer">
               <span class="mode-label">Solo puzzle</span>
-              <button class="card-play-button" type="button" data-launch-game="sudoku">Play now</button>
+              <button class="card-play-button" type="button" data-launch-game="sudoku" aria-label="Play Sudoku">Play now</button>
             </div>
           </div>
         </article>
@@ -6975,7 +7009,7 @@
             <p>Cut with sevens, capture aces and tens, and outplay the Coral dealer.</p>
             <div class="catalog-card-footer">
               <span class="mode-label">Bot · Local · Online 2P</span>
-              <button class="card-play-button" type="button" data-launch-game="septica">Play now</button>
+              <button class="card-play-button" type="button" data-launch-game="septica" aria-label="Play Șeptică">Play now</button>
             </div>
           </div>
         </article>
@@ -6991,7 +7025,7 @@
             <p>Hold the center, auto-aim at neon crawlers, and power up through endless waves.</p>
             <div class="catalog-card-footer">
               <span class="mode-label">Solo · Local · Online co-op</span>
-              <button class="card-play-button" type="button" data-launch-game="survival">Play now</button>
+              <button class="card-play-button" type="button" data-launch-game="survival" aria-label="Play Survival Arena">Play now</button>
             </div>
           </div>
         </article>
@@ -7007,7 +7041,7 @@
             <p>Break invader formations, collect weapon boosts, and challenge a command ship every fifth wave.</p>
             <div class="catalog-card-footer">
               <span class="mode-label">Solo · Local co-op</span>
-              <button class="card-play-button" type="button" data-launch-game="star">Play now</button>
+              <button class="card-play-button" type="button" data-launch-game="star" aria-label="Play Star Defender">Play now</button>
             </div>
           </div>
         </article>

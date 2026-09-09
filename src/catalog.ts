@@ -152,18 +152,11 @@ export function initGameCatalog(): void {
     const game = gameFromCard(card);
     const launchButton = card.querySelector<HTMLButtonElement>('[data-launch-game]');
     if (!game || !launchButton) return;
-    card.tabIndex = 0;
-    card.setAttribute('aria-label', `Open ${game.title}`);
     const activateCard = (target: EventTarget | null): void => {
       if (target instanceof Element && target.closest('button, a, input, select, textarea')) return;
       launchButton.click();
     };
     card.addEventListener('click', event => activateCard(event.target));
-    card.addEventListener('keydown', event => {
-      if (event.target !== card || event.key !== 'Enter' && event.key !== ' ') return;
-      event.preventDefault();
-      launchButton.click();
-    });
   });
   activeSearch.addEventListener('input', render);
   activeSearch.addEventListener('search', render);

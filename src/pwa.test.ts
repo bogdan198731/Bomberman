@@ -41,3 +41,9 @@ test('service-worker updates wait for the player and refresh through controller 
   assert.match(workerSource, /event\.data\?\.type === 'SKIP_WAITING'/);
   assert.doesNotMatch(workerSource, /cache\.addAll\(APP_SHELL\)\)\.then\(\(\) => self\.skipWaiting/);
 });
+
+test('service worker refreshes app files before using its offline cache', () => {
+  assert.match(workerSource, /const cacheKey = request\.mode === 'navigate' \? '\/' : request/);
+  assert.match(workerSource, /fetch\(request\)[\s\S]*?\.catch\(\(\) => caches\.match\(cacheKey\)/);
+  assert.doesNotMatch(workerSource, /caches\.match\(request\)\.then\(cached => cached \|\| fetch\(request\)/);
+});
