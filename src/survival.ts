@@ -273,6 +273,7 @@ export function initSurvivalArena(): void {
   const coralHealth = document.getElementById('survivalCoralHealth');
   const startButton = document.getElementById('survivalStartButton') as HTMLButtonElement | null;
   const modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-survival-mode]');
+  const mintControls = document.getElementById('survivalMintControls');
   const coralControls = document.getElementById('survivalCoralControls');
   const roomMount = document.querySelector<HTMLElement>('[data-game-room="survival"]');
   let room: GameRoomClient | null = null;
@@ -330,8 +331,9 @@ export function initSurvivalArena(): void {
       button.classList.toggle('active', button.dataset.survivalMode === game.mode);
       button.disabled = Boolean(room?.session().online);
     });
-    coralControls?.classList.toggle('solo-hidden', game.mode === 'solo');
     const session = room?.session();
+    mintControls?.classList.toggle('solo-hidden', Boolean(session?.online && session.playerId === 2));
+    coralControls?.classList.toggle('solo-hidden', session?.online ? session.playerId !== 2 : game.mode === 'solo');
     const trackedPlayer = (session?.online ? session.playerId : 1) ?? 1;
     const runScore = !session?.online && game.mode === 'coop'
       ? game.players[1].score + game.players[2].score

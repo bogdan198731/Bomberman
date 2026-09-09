@@ -5927,8 +5927,8 @@
     }
 
     .paddle-score-player.coral .survival-health { color: var(--p2) !important; }
-    .survival-touch-controls .solo-hidden,
-    .star-touch-controls .solo-hidden { display: none; }
+    .snake-touch-controls .solo-hidden,
+    .tanks-touch-controls .solo-hidden { display: none; }
 
     .star-brand-mark {
       position: relative;
@@ -7493,7 +7493,7 @@
       </footer>
 
       <div class="snake-touch-controls" aria-label="Touch snake controls">
-        <div class="snake-dpad">
+        <div id="snakeMintControls" class="snake-dpad">
           <strong>Mint</strong>
           <div class="arcade-joystick" data-snake-joystick="1" role="group" tabindex="0" aria-label="Mint movement joystick">
             <span class="arcade-joystick-arrow up" aria-hidden="true">▲</span>
@@ -7503,7 +7503,7 @@
             <span class="arcade-joystick-knob" data-joystick-knob aria-hidden="true"></span>
           </div>
         </div>
-        <div class="snake-dpad coral">
+        <div id="snakeCoralControls" class="snake-dpad coral solo-hidden">
           <strong>Coral</strong>
           <div class="arcade-joystick" data-snake-joystick="2" role="group" tabindex="0" aria-label="Coral movement joystick">
             <span class="arcade-joystick-arrow up" aria-hidden="true">▲</span>
@@ -7552,7 +7552,7 @@
         <div class="paddle-key-guide coral">Coral: <kbd>Arrows</kbd> + <kbd>Enter</kbd></div>
       </footer>
       <div class="tanks-touch-controls" aria-label="Touch tank controls">
-        <div class="tank-touch-team joystick-team">
+        <div id="tanksMintControls" class="tank-touch-team joystick-team">
           <strong>Mint</strong>
           <div class="arcade-joystick" data-tank-joystick="1" role="group" tabindex="0" aria-label="Mint movement joystick">
             <span class="arcade-joystick-arrow up" aria-hidden="true">▲</span>
@@ -7563,7 +7563,7 @@
           </div>
           <button class="tank-touch-button fire" type="button" data-tank-player="1" data-tank-action="fire">Fire</button>
         </div>
-        <div class="tank-touch-team joystick-team coral">
+        <div id="tanksCoralControls" class="tank-touch-team joystick-team coral solo-hidden">
           <strong>Coral</strong>
           <div class="arcade-joystick" data-tank-joystick="2" role="group" tabindex="0" aria-label="Coral movement joystick">
             <span class="arcade-joystick-arrow up" aria-hidden="true">▲</span>
@@ -7655,7 +7655,7 @@
         <div class="paddle-key-guide coral">Coral: <kbd>Arrows</kbd> + <kbd>Enter</kbd></div>
       </footer>
       <div class="tanks-touch-controls survival-touch-controls" aria-label="Touch survival controls">
-        <div class="tank-touch-team joystick-team">
+        <div id="survivalMintControls" class="tank-touch-team joystick-team">
           <strong>Mint</strong>
           <div class="arcade-joystick" data-survival-joystick="1" role="group" tabindex="0" aria-label="Mint movement joystick">
             <span class="arcade-joystick-arrow up" aria-hidden="true">▲</span>
@@ -7781,7 +7781,7 @@
         <div class="paddle-key-guide coral">Coral: <kbd>Arrows</kbd></div>
       </footer>
       <div class="tanks-touch-controls racing-touch-controls" aria-label="Touch racing controls">
-        <div class="tank-touch-team joystick-team racing-team">
+        <div id="racingMintControls" class="tank-touch-team joystick-team racing-team">
           <strong>Mint</strong>
           <div class="arcade-joystick" data-racing-joystick="1" role="group" tabindex="0" aria-label="Mint driving joystick">
             <span class="arcade-joystick-arrow up" aria-hidden="true">GO</span>
@@ -7791,7 +7791,7 @@
             <span class="arcade-joystick-knob" data-joystick-knob aria-hidden="true"></span>
           </div>
         </div>
-        <div class="tank-touch-team joystick-team racing-team coral">
+        <div id="racingCoralControls" class="tank-touch-team joystick-team racing-team coral solo-hidden">
           <strong>Coral</strong>
           <div class="arcade-joystick" data-racing-joystick="2" role="group" tabindex="0" aria-label="Coral driving joystick">
             <span class="arcade-joystick-arrow up" aria-hidden="true">GO</span>
@@ -7846,7 +7846,7 @@
         <div class="paddle-key-guide coral">Coral: <kbd>Arrows</kbd> · drop <kbd>Enter</kbd></div>
       </footer>
       <div class="tanks-touch-controls block-touch-controls" aria-label="Touch Block Drop controls">
-        <div class="tank-touch-team block-team">
+        <div id="blocksMintControls" class="tank-touch-team block-team">
           <strong>Mint</strong>
           <button class="tank-touch-button block-left" type="button" data-blocks-player="1" data-blocks-action="left" aria-label="Move Mint piece left">←</button>
           <button class="tank-touch-button block-rotate" type="button" data-blocks-player="1" data-blocks-action="rotate" aria-label="Rotate Mint piece">↻</button>
@@ -7854,7 +7854,7 @@
           <button class="tank-touch-button block-down" type="button" data-blocks-player="1" data-blocks-action="down" aria-label="Soft drop Mint piece">↓</button>
           <button class="tank-touch-button block-drop" type="button" data-blocks-player="1" data-blocks-action="drop" aria-label="Hard drop Mint piece">Drop</button>
         </div>
-        <div class="tank-touch-team block-team coral">
+        <div id="blocksCoralControls" class="tank-touch-team block-team coral solo-hidden">
           <strong>Coral</strong>
           <button class="tank-touch-button block-left" type="button" data-blocks-player="2" data-blocks-action="left" aria-label="Move Coral piece left">←</button>
           <button class="tank-touch-button block-rotate" type="button" data-blocks-player="2" data-blocks-action="rotate" aria-label="Rotate Coral piece">↻</button>

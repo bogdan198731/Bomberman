@@ -379,6 +379,8 @@ export function initBlockDrop(): void {
   const coralLines = document.getElementById('blocksCoralLines');
   const startButton = document.getElementById('blocksStartButton') as HTMLButtonElement | null;
   const modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-blocks-mode]');
+  const mintControls = document.getElementById('blocksMintControls');
+  const coralControls = document.getElementById('blocksCoralControls');
   const roomMount = document.querySelector<HTMLElement>('[data-game-room="blocks"]');
   let room: GameRoomClient | null = null;
   const resultReporter = new ArcadeResultReporter('blocks');
@@ -431,6 +433,9 @@ export function initBlockDrop(): void {
       button.classList.toggle('active', button.dataset.blocksMode === game.mode);
       button.disabled = Boolean(room?.session().online) || game.phase === 'playing';
     });
+    const touchSession = room?.session();
+    mintControls?.classList.toggle('solo-hidden', Boolean(touchSession?.online && touchSession.playerId === 2));
+    coralControls?.classList.toggle('solo-hidden', touchSession?.online ? touchSession.playerId !== 2 : game.mode === 'bot');
     const trackedPlayer = (room?.session().online ? room.session().playerId : 1) ?? 1;
     resultReporter.report(game.phase === 'finished', {
       outcome: game.winner === trackedPlayer ? 'win' : 'loss',

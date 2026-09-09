@@ -299,6 +299,8 @@ export function initMicroRacers(): void {
   const coralSpeed = document.getElementById('racingCoralSpeed');
   const startButton = document.getElementById('racingStartButton') as HTMLButtonElement | null;
   const modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-racing-mode]');
+  const mintControls = document.getElementById('racingMintControls');
+  const coralControls = document.getElementById('racingCoralControls');
   const roomMount = document.querySelector<HTMLElement>('[data-game-room="racing"]');
   let room: GameRoomClient | null = null;
   const resultReporter = new ArcadeResultReporter('racing');
@@ -349,6 +351,9 @@ export function initMicroRacers(): void {
       button.classList.toggle('active', button.dataset.racingMode === game.mode);
       button.disabled = Boolean(room?.session().online) || game.phase === 'countdown' || game.phase === 'racing';
     });
+    const touchSession = room?.session();
+    mintControls?.classList.toggle('solo-hidden', Boolean(touchSession?.online && touchSession.playerId === 2));
+    coralControls?.classList.toggle('solo-hidden', touchSession?.online ? touchSession.playerId !== 2 : game.mode === 'bot');
     const trackedPlayer = (room?.session().online ? room.session().playerId : 1) ?? 1;
     resultReporter.report(game.phase === 'finished', {
       outcome: game.winner === trackedPlayer ? 'win' : 'loss',

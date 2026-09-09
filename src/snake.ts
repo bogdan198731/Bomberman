@@ -189,6 +189,8 @@ export function initNeonSnake(): void {
   const coralScore = document.getElementById('snakeCoralScore');
   const startButton = document.getElementById('snakeStartButton') as HTMLButtonElement | null;
   const modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-snake-mode]');
+  const mintControls = document.getElementById('snakeMintControls');
+  const coralControls = document.getElementById('snakeCoralControls');
   const roomMount = document.querySelector<HTMLElement>('[data-game-room="snake"]');
   let room: GameRoomClient | null = null;
   const resultReporter = new ArcadeResultReporter('snake');
@@ -244,6 +246,9 @@ export function initNeonSnake(): void {
       button.classList.toggle('active', button.dataset.snakeMode === game.mode);
       button.disabled = Boolean(room?.session().online);
     });
+    const touchSession = room?.session();
+    mintControls?.classList.toggle('solo-hidden', Boolean(touchSession?.online && touchSession.playerId === 2));
+    coralControls?.classList.toggle('solo-hidden', touchSession?.online ? touchSession.playerId !== 2 : game.mode === 'solo');
     const trackedPlayer = (room?.session().online ? room.session().playerId : 1) ?? 1;
     resultReporter.report(game.phase === 'finished', {
       outcome: game.mode === 'solo' ? 'complete' : game.winner === 0 ? 'draw' : game.winner === trackedPlayer ? 'win' : 'loss',

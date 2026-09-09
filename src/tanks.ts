@@ -253,6 +253,8 @@ export function initMiniTanks(): void {
   const coralScore = document.getElementById('tanksCoralScore');
   const launchButton = document.getElementById('tanksLaunchButton') as HTMLButtonElement | null;
   const modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-tanks-mode]');
+  const mintControls = document.getElementById('tanksMintControls');
+  const coralControls = document.getElementById('tanksCoralControls');
   const roomMount = document.querySelector<HTMLElement>('[data-game-room="tanks"]');
   let room: GameRoomClient | null = null;
   const resultReporter = new ArcadeResultReporter('tanks');
@@ -306,6 +308,9 @@ export function initMiniTanks(): void {
       button.classList.toggle('active', button.dataset.tanksMode === game.mode);
       button.disabled = Boolean(room?.session().online);
     });
+    const touchSession = room?.session();
+    mintControls?.classList.toggle('solo-hidden', Boolean(touchSession?.online && touchSession.playerId === 2));
+    coralControls?.classList.toggle('solo-hidden', touchSession?.online ? touchSession.playerId !== 2 : game.mode === 'bot');
     const trackedPlayer = (room?.session().online ? room.session().playerId : 1) ?? 1;
     resultReporter.report(game.phase === 'finished', {
       outcome: game.matchWinner === trackedPlayer ? 'win' : 'loss',

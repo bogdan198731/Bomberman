@@ -6,6 +6,10 @@ const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const indexSource = readFileSync(new URL('../src/index.ts', import.meta.url), 'utf8');
 const gameRoomSource = readFileSync(new URL('../src/game-room.ts', import.meta.url), 'utf8');
 const catalogSource = readFileSync(new URL('../src/catalog.ts', import.meta.url), 'utf8');
+const snakeSource = readFileSync(new URL('../src/snake.ts', import.meta.url), 'utf8');
+const tanksSource = readFileSync(new URL('../src/tanks.ts', import.meta.url), 'utf8');
+const racingSource = readFileSync(new URL('../src/racing.ts', import.meta.url), 'utf8');
+const blocksSource = readFileSync(new URL('../src/blocks.ts', import.meta.url), 'utf8');
 const mobileStart = html.indexOf('@media (max-width: 700px)');
 const nextMediaQuery = html.indexOf('@media', mobileStart + 1);
 const mobileStyles = html.slice(
@@ -88,6 +92,12 @@ test('real-time mobile games use shared virtual joysticks', () => {
   assert.equal((html.match(/data-paddle-direction=/g) ?? []).length, 0);
   assert.equal((html.match(/data-snake-direction=/g) ?? []).length, 0);
   assert.equal((html.match(/data-racing-action=/g) ?? []).length, 0);
+  for (const id of ['snakeCoralControls', 'tanksCoralControls', 'racingCoralControls', 'blocksCoralControls']) {
+    assert.match(html, new RegExp(`id="${id}"[^>]*solo-hidden`));
+  }
+  for (const source of [snakeSource, tanksSource, racingSource, blocksSource]) {
+    assert.match(source, /touchSession\?\.online \? touchSession\.playerId !== 2/);
+  }
 });
 
 test('Țintar board includes native fullscreen styling and a mobile fallback', () => {
