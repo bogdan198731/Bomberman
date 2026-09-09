@@ -32,6 +32,16 @@ test('multiplayer games share a mode-first room selector', () => {
   assert.match(html, /\.room-mode-managed \.snake-modes\s*\{\s*display:\s*none;/s);
 });
 
+test('active game screens reserve short viewports for the playfield', () => {
+  assert.match(html, /@media \(min-width: 761px\) and \(max-height: 920px\)/);
+  assert.match(html, /#gameView \.arena-wrap\s*\{[^}]*width:\s*min\(680px, calc\(100dvh - 220px\), calc\(100% - 32px\)\);/s);
+  assert.match(html, /\.paddle-shell\s*\{[^}]*width:\s*min\(100%, 900px\);[^}]*margin-inline:\s*auto;/s);
+  assert.match(html, /\.sudoku-board-stage\s*\{[^}]*width:\s*min\(100%, calc\(100dvh - 390px\)\);/s);
+  assert.match(html, /\.room-mode-managed \.snake-toolbar\s*\{\s*display:\s*none;/s);
+  assert.match(html, /\.tintar-board-frame\s*\{\s*order:\s*-1;/s);
+  assert.match(html, /\.game-room-heading \.game-room-copy\s*\{\s*display:\s*none;/s);
+});
+
 test('mobile Blast Buddies uses a drag-and-hold virtual joystick', () => {
   assert.match(html, /id="mobileJoystick" class="mobile-joystick"[^>]*tabindex="0"[^>]*data-direction="idle"/);
   assert.match(html, /id="mobileJoystickKnob" class="mobile-joystick-knob"/);
