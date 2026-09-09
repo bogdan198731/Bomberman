@@ -1665,6 +1665,14 @@
       scrollbar-width: none;
     }
 
+    .catalog-filter-strip {
+      position: relative;
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    .catalog-filter-cue { display: none; }
+
     .catalog-filters::-webkit-scrollbar {
       display: none;
     }
@@ -1708,6 +1716,7 @@
       border: 1px solid var(--panel-border);
       border-radius: 22px;
       background: rgba(23, 30, 43, 0.78);
+      cursor: pointer;
       transition: border-color 160ms ease, transform 160ms ease;
     }
 
@@ -1718,6 +1727,12 @@
 
     .catalog-card.featured {
       border-color: rgba(84, 227, 142, 0.22);
+    }
+
+    .catalog-card:focus-visible {
+      border-color: rgba(73,226,255,.58);
+      outline: 3px solid rgba(73,226,255,.2);
+      outline-offset: 3px;
     }
 
     .game-cover {
@@ -1992,6 +2007,8 @@
       color: #718097;
       font-size: 0.76rem;
     }
+
+    .mobile-hub-nav { display: none; }
 
     body.settings-open {
       overflow: hidden;
@@ -3654,7 +3671,8 @@
 
     @media (max-width: 700px) {
       .hub {
-        padding: 18px 14px 30px;
+        padding: 14px 12px calc(92px + env(safe-area-inset-bottom));
+        scroll-padding-bottom: calc(84px + env(safe-area-inset-bottom));
       }
 
       .hub-topbar {
@@ -3710,7 +3728,7 @@
 
       .hub-hero h1 {
         margin: 8px 0 13px;
-        font-size: clamp(2.45rem, 12vw, 3.2rem);
+        font-size: clamp(2.15rem, 10.8vw, 2.85rem);
         line-height: 0.95;
       }
 
@@ -3747,7 +3765,7 @@
       }
 
       .catalog-section {
-        padding-top: 30px;
+        padding-top: 24px;
       }
 
       .profile-panel {
@@ -3759,9 +3777,9 @@
       .mobile-fold-toggle {
         display: grid;
         width: 100%;
-        min-height: 66px;
-        padding: 11px 14px;
-        grid-template-columns: 40px minmax(0, 1fr) auto 22px;
+        min-height: 58px;
+        padding: 9px 12px;
+        grid-template-columns: 36px minmax(0, 1fr) auto 20px;
         align-items: center;
         gap: 10px;
         border: 0;
@@ -3781,8 +3799,8 @@
 
       .mobile-fold-icon {
         display: grid;
-        width: 40px;
-        height: 40px;
+        width: 36px;
+        height: 36px;
         place-items: center;
         border: 1px solid rgba(84, 227, 142, 0.27);
         border-radius: 12px;
@@ -3797,6 +3815,12 @@
         border-color: rgba(255, 200, 87, 0.35);
         color: #261803;
         background: linear-gradient(135deg, #ffe08d, var(--gold));
+      }
+
+      .mobile-fold-icon.weekly {
+        border-color: rgba(73,226,255,.36);
+        color: #06171c;
+        background: linear-gradient(135deg, #a4f5ff, #49e2ff);
       }
 
       .mobile-fold-icon.milestones {
@@ -3896,6 +3920,7 @@
       }
 
       .daily-challenge-card,
+      .weekly-quest-card,
       .achievement-cabinet,
       .activity-panel {
         padding: 0;
@@ -3903,6 +3928,7 @@
       }
 
       .daily-fold-content,
+      .weekly-fold-content,
       .achievement-fold-content,
       .activity-fold-content {
         padding: 2px 16px 16px;
@@ -4034,8 +4060,11 @@
       }
 
       .catalog-heading p {
-        margin-top: 12px;
+        display: none;
       }
+
+      .catalog-heading { margin-bottom: 16px; }
+      .catalog-heading h2 { font-size: 1.55rem; }
 
       .catalog-tools {
         display: grid;
@@ -4049,13 +4078,35 @@
       }
 
       .catalog-filters {
-        margin-right: -14px;
-        padding-right: 14px;
+        padding-right: 34px;
       }
+
+      .catalog-filter-strip {
+        margin-right: -12px;
+        overflow: hidden;
+      }
+
+      .catalog-filter-cue {
+        position: absolute;
+        z-index: 2;
+        top: 0;
+        right: 0;
+        display: grid;
+        width: 34px;
+        height: 100%;
+        place-items: center;
+        color: #dce6f3;
+        background: linear-gradient(90deg, transparent, #0e151f 55%);
+        font-size: 1.25rem;
+        font-weight: 900;
+        pointer-events: none;
+      }
+
+      .catalog-filter { min-height: 42px; }
 
       .game-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 8px;
+        gap: 7px;
       }
 
       .catalog-card {
@@ -4064,12 +4115,12 @@
       }
 
       .game-cover {
-        min-height: 82px;
+        min-height: 76px;
         border-radius: 10px;
       }
 
       .game-glyph {
-        font-size: 2rem;
+        font-size: 1.75rem;
       }
 
       .twenty48-cover .game-glyph {
@@ -4091,8 +4142,8 @@
       .favorite-button {
         top: 5px;
         right: 5px;
-        width: 28px;
-        height: 28px;
+        width: 32px;
+        height: 32px;
         border-radius: 8px;
         font-size: 0.86rem;
       }
@@ -4105,7 +4156,7 @@
         display: -webkit-box;
         min-height: 1.9em;
         overflow: hidden;
-        font-size: 0.78rem;
+        font-size: 0.74rem;
         line-height: 1.08;
         text-align: center;
         white-space: normal;
@@ -4119,25 +4170,63 @@
       }
 
       .catalog-card-footer {
-        display: block;
-        margin-top: 7px;
+        display: none;
       }
 
-      .card-play-button {
-        width: 100%;
-        min-height: 34px;
-        padding: 0 5px;
-        border-radius: 9px;
-        font-size: 0.64rem;
+      .catalog-card-body h3::after {
+        margin-left: 4px;
+        content: "›";
+        color: var(--p1);
       }
 
       .hub-footer {
-        display: block;
+        display: none;
       }
 
-      .hub-footer span {
-        display: block;
-        margin-bottom: 5px;
+      .mobile-hub-nav {
+        position: fixed;
+        z-index: 55;
+        right: max(10px, env(safe-area-inset-right));
+        bottom: max(8px, env(safe-area-inset-bottom));
+        left: max(10px, env(safe-area-inset-left));
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 4px;
+        padding: 6px;
+        border: 1px solid rgba(255,255,255,.12);
+        border-radius: 18px;
+        background: rgba(16,23,34,.94);
+        box-shadow: 0 14px 42px rgba(0,0,0,.48);
+        backdrop-filter: blur(16px);
+      }
+
+      .mobile-hub-nav a {
+        display: grid;
+        min-width: 0;
+        min-height: 48px;
+        place-items: center;
+        align-content: center;
+        gap: 2px;
+        border-radius: 12px;
+        color: #94a2b5;
+        font-size: .58rem;
+        font-weight: 850;
+        text-decoration: none;
+      }
+
+      .mobile-hub-nav a span {
+        color: #c8d3e1;
+        font-size: 1rem;
+        line-height: 1;
+      }
+
+      .mobile-hub-nav a.active {
+        color: #092416;
+        background: var(--p1);
+      }
+
+      .mobile-hub-nav a.active span {
+        color: #092416;
       }
 
       .settings-panel {
@@ -6531,16 +6620,24 @@
             <button id="dailyChallengeLaunch" class="daily-challenge-launch" type="button" data-launch-game="bomberman">Play Blast Buddies</button>
           </div>
         </article>
-        <article class="weekly-quest-card" aria-labelledby="weeklyQuestTitle">
-          <div class="progression-heading">
+        <article class="weekly-quest-card mobile-fold-section" aria-labelledby="weeklyQuestTitle">
+          <button class="mobile-fold-toggle" type="button" data-mobile-fold-target="weeklyQuestFoldBody" aria-expanded="false" aria-controls="weeklyQuestFoldBody">
+            <span class="mobile-fold-icon weekly" aria-hidden="true">✓</span>
+            <span class="mobile-fold-label"><strong>Weekly quests</strong><small>Three longer goals</small></span>
+            <span id="weeklyFoldNotice" class="mobile-fold-notice" aria-hidden="true">0/3</span>
+            <span class="mobile-fold-chevron" aria-hidden="true">⌄</span>
+          </button>
+          <div class="progression-heading mobile-fold-desktop-heading">
             <div>
               <span class="catalog-kicker">Longer goals</span>
               <h2 id="weeklyQuestTitle">Weekly quests</h2>
             </div>
             <small id="weeklyQuestReset">Ends Sunday</small>
           </div>
-          <div class="daily-progress-copy"><span>Quest board</span><span id="weeklyQuestCount">0/3 complete</span></div>
-          <div id="weeklyQuestList" class="weekly-quest-list" aria-label="Weekly quest progress"></div>
+          <div id="weeklyQuestFoldBody" class="mobile-fold-content weekly-fold-content">
+            <div class="daily-progress-copy"><span>Quest board</span><span id="weeklyQuestCount">0/3 complete</span></div>
+            <div id="weeklyQuestList" class="weekly-quest-list" aria-label="Weekly quest progress"></div>
+          </div>
         </article>
       </div>
       <article class="achievement-cabinet mobile-fold-section" aria-labelledby="achievementTitle">
@@ -6631,12 +6728,15 @@
           <input id="catalogSearch" type="search" placeholder="Search games" autocomplete="off" aria-label="Search games">
           <button id="catalogSearchClear" class="catalog-search-clear" type="button" aria-label="Clear game search" hidden>×</button>
         </label>
-        <div class="catalog-filters" role="group" aria-label="Filter games by play mode">
-          <button class="catalog-filter active" type="button" data-catalog-filter="all" aria-pressed="true">All games</button>
-          <button class="catalog-filter" type="button" data-catalog-filter="solo" aria-pressed="false">Solo</button>
-          <button class="catalog-filter" type="button" data-catalog-filter="local" aria-pressed="false">Local 2P</button>
-          <button class="catalog-filter" type="button" data-catalog-filter="online" aria-pressed="false">Online</button>
-          <button class="catalog-filter" type="button" data-catalog-filter="favorites" aria-pressed="false">★ Favorites</button>
+        <div class="catalog-filter-strip">
+          <div class="catalog-filters" role="group" aria-label="Filter games by play mode">
+            <button class="catalog-filter active" type="button" data-catalog-filter="all" aria-pressed="true">All games</button>
+            <button class="catalog-filter" type="button" data-catalog-filter="solo" aria-pressed="false">Solo</button>
+            <button class="catalog-filter" type="button" data-catalog-filter="local" aria-pressed="false">Local 2P</button>
+            <button class="catalog-filter" type="button" data-catalog-filter="online" aria-pressed="false">Online</button>
+            <button class="catalog-filter" type="button" data-catalog-filter="favorites" aria-pressed="false">★ Favorites</button>
+          </div>
+          <span class="catalog-filter-cue" aria-hidden="true">›</span>
         </div>
         <span id="catalogResultCount" class="catalog-result-count" aria-live="polite">12 games</span>
       </div>
@@ -6840,6 +6940,13 @@
         <button id="catalogResetButton" type="button">Show all games</button>
       </div>
     </section>
+
+    <nav class="mobile-hub-nav" aria-label="Arcade sections">
+      <a class="active" href="#hubView" data-mobile-hub-link="hubView"><span aria-hidden="true">⌂</span>Home</a>
+      <a href="#games" data-mobile-hub-link="games"><span aria-hidden="true">▦</span>Games</a>
+      <a href="#quickPlayPanel" data-mobile-hub-link="quickPlayPanel"><span aria-hidden="true">⚡</span>Quick</a>
+      <a href="#profilePanel" data-mobile-hub-link="profilePanel"><span aria-hidden="true">♟</span>Profile</a>
+    </nav>
 
     <footer class="hub-footer">
       <span>Blast Arcade · Play instantly in your browser</span>

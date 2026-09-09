@@ -482,6 +482,7 @@ export function initArcadeProfile(): void {
   const recentActivityCount = document.getElementById('recentActivityCount');
   const profileFoldNotice = document.getElementById('profileFoldNotice');
   const dailyFoldNotice = document.getElementById('dailyFoldNotice');
+  const weeklyFoldNotice = document.getElementById('weeklyFoldNotice');
   const achievementFoldNotice = document.getElementById('achievementFoldNotice');
   const activityFoldNotice = document.getElementById('activityFoldNotice');
   const mobileFoldButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-mobile-fold-target]'));
@@ -576,6 +577,10 @@ export function initArcadeProfile(): void {
     }
     const weekly = profile.weeklyQuests!;
     if (weeklyQuestCount) weeklyQuestCount.textContent = `${weekly.completed.length}/${WEEKLY_QUESTS.length} complete`;
+    if (weeklyFoldNotice) {
+      weeklyFoldNotice.textContent = weekly.completed.length === WEEKLY_QUESTS.length ? '✓' : `${weekly.completed.length}/${WEEKLY_QUESTS.length}`;
+      weeklyFoldNotice.classList.toggle('complete', weekly.completed.length === WEEKLY_QUESTS.length);
+    }
     if (weeklyQuestReset) {
       const weekEnd = new Date(`${weekly.week}T00:00:00`);
       weekEnd.setDate(weekEnd.getDate() + 6);

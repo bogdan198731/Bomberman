@@ -49,6 +49,28 @@ function arrangeHubContent(): void {
   quickPlay.insertAdjacentElement('afterend', gameLibrary);
 }
 
+function initMobileHubNavigation(): void {
+  const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('[data-mobile-hub-link]'));
+  if (!links.length) return;
+  const select = (targetId: string): void => {
+    links.forEach(link => link.classList.toggle('active', link.dataset.mobileHubLink === targetId));
+  };
+  links.forEach(link => link.addEventListener('click', () => select(link.dataset.mobileHubLink ?? 'hubView')));
+  const targets = ['quickPlayPanel', 'games', 'profilePanel']
+    .map(id => document.getElementById(id))
+    .filter((target): target is HTMLElement => Boolean(target));
+  if (typeof IntersectionObserver === 'undefined') return;
+  const observer = new IntersectionObserver(entries => {
+    const visible = entries
+      .filter(entry => entry.isIntersecting)
+      .sort((left, right) => right.intersectionRatio - left.intersectionRatio)[0];
+    if (visible?.target.id) select(visible.target.id);
+    else if (window.scrollY < 120) select('hubView');
+  }, { rootMargin: '-8% 0px -68% 0px', threshold: [0, .15, .4] });
+  targets.forEach(target => observer.observe(target));
+  window.addEventListener('scroll', () => { if (window.scrollY < 120) select('hubView'); }, { passive: true });
+}
+
 export enum PowerUpType {
   BOMB_UP = 'bomb-up',
   FIRE_UP = 'fire-up',
@@ -1840,6 +1862,7 @@ export function initGame(): void {
 if (typeof window !== 'undefined') {
   window.addEventListener('DOMContentLoaded', () => {
     arrangeHubContent();
+    initMobileHubNavigation();
     initArcadeSettings();
     initArcadePwa();
     initArcadeProfile();

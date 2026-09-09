@@ -5,6 +5,7 @@ import test from 'node:test';
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const indexSource = readFileSync(new URL('../src/index.ts', import.meta.url), 'utf8');
 const gameRoomSource = readFileSync(new URL('../src/game-room.ts', import.meta.url), 'utf8');
+const catalogSource = readFileSync(new URL('../src/catalog.ts', import.meta.url), 'utf8');
 const mobileStart = html.indexOf('@media (max-width: 700px)');
 const nextMediaQuery = html.indexOf('@media', mobileStart + 1);
 const mobileStyles = html.slice(
@@ -143,12 +144,14 @@ test('Țintar exposes three responsive single-player bot levels', () => {
 });
 
 test('mobile game library uses compact three-column tiles with a narrow-screen fallback', () => {
-  assert.match(mobileStyles, /\.game-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\);[^}]*gap:\s*8px;/s);
-  assert.match(mobileStyles, /\.game-cover\s*\{[^}]*min-height:\s*82px;/s);
-  assert.match(mobileStyles, /\.game-glyph\s*\{[^}]*font-size:\s*2rem;/s);
+  assert.match(mobileStyles, /\.game-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\);[^}]*gap:\s*7px;/s);
+  assert.match(mobileStyles, /\.game-cover\s*\{[^}]*min-height:\s*76px;/s);
+  assert.match(mobileStyles, /\.game-glyph\s*\{[^}]*font-size:\s*1\.75rem;/s);
   assert.match(mobileStyles, /\.cover-label\s*\{[^}]*display:\s*none;/s);
   assert.match(mobileStyles, /\.catalog-card-body p,[\s\S]*?\.mode-label\s*\{[^}]*display:\s*none;/s);
-  assert.match(mobileStyles, /\.card-play-button\s*\{[^}]*width:\s*100%;[^}]*min-height:\s*34px;/s);
+  assert.match(mobileStyles, /\.catalog-card-footer\s*\{[^}]*display:\s*none;/s);
+  assert.match(catalogSource, /card\.tabIndex = 0/);
+  assert.match(catalogSource, /card\.addEventListener\('click',[\s\S]*?launchButton\.click\(\)/);
   assert.match(html, /@media \(max-width: 340px\)[\s\S]*?\.game-grid\s*\{[^}]*repeat\(2, minmax\(0, 1fr\)\)/s);
 });
 
@@ -160,12 +163,23 @@ test('hub promotes game discovery directly after Quick Play with a compact respo
 });
 
 test('mobile progression panels expose accessible fold controls and notice badges', () => {
-  assert.equal((html.match(/data-mobile-fold-target=/g) ?? []).length, 4);
+  assert.equal((html.match(/data-mobile-fold-target=/g) ?? []).length, 5);
   assert.match(html, /data-mobile-fold-target="profilePanelBody"[^>]*aria-expanded="false"[^>]*aria-controls="profilePanelBody"/);
   assert.match(html, /data-mobile-fold-target="dailyChallengeFoldBody"[^>]*aria-expanded="false"/);
   assert.match(html, /id="dailyFoldNotice" class="mobile-fold-notice alert"/);
+  assert.match(html, /data-mobile-fold-target="weeklyQuestFoldBody"[^>]*aria-expanded="false"/);
+  assert.match(html, /id="weeklyFoldNotice" class="mobile-fold-notice"/);
   assert.match(html, /data-mobile-fold-target="achievementFoldBody"[^>]*aria-expanded="false"/);
   assert.match(html, /data-mobile-fold-target="activityFoldBody"[^>]*aria-expanded="false"/);
-  assert.match(mobileStyles, /\.mobile-fold-toggle\s*\{[^}]*display:\s*grid;[^}]*min-height:\s*66px;/s);
+  assert.match(mobileStyles, /\.mobile-fold-toggle\s*\{[^}]*display:\s*grid;[^}]*min-height:\s*58px;/s);
   assert.match(mobileStyles, /\.mobile-fold-toggle\[aria-expanded="false"\][\s\S]*?\.mobile-fold-content\s*\{[^}]*display:\s*none;/s);
+});
+
+test('mobile hub adds thumb navigation and a visible horizontal-filter cue', () => {
+  assert.equal((html.match(/data-mobile-hub-link=/g) ?? []).length, 4);
+  assert.match(mobileStyles, /\.mobile-hub-nav\s*\{[^}]*position:\s*fixed;[^}]*grid-template-columns:\s*repeat\(4, 1fr\);/s);
+  assert.match(mobileStyles, /\.mobile-hub-nav a\s*\{[^}]*min-height:\s*48px;/s);
+  assert.match(html, /class="catalog-filter-cue" aria-hidden="true">›<\/span>/);
+  assert.match(mobileStyles, /\.catalog-filter-cue\s*\{[^}]*display:\s*grid;/s);
+  assert.match(indexSource, /function initMobileHubNavigation\(\)/);
 });
