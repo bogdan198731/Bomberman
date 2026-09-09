@@ -223,6 +223,18 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Match complete': 'Meci încheiat',
   'Play revenge match': 'Joacă revanșa',
   'Waiting for Mint…': 'Se așteaptă Mint…',
+  'Draw — each player captured four points.': 'Egalitate — fiecare a capturat patru puncte.',
+  'The cards stay on the table for a moment…': 'Cărțile rămân o clipă pe masă…',
+  'Coral is thinking…': 'Coral se gândește…',
+  'You were cut. Continue with a 7 or the opening rank, or concede the trick.':
+    'Ai fost tăiat. Continuă cu un 7 sau aceeași figură, ori cedează masa.',
+  'Your turn: lead a new trick.': 'Rândul tău: deschide o mână nouă.',
+  'Play any card. A 7 or the opening rank cuts.': 'Joacă orice carte. Un 7 sau aceeași figură taie.',
+  'Your turn: play any card. A 7 or the opening rank cuts.':
+    'Rândul tău: joacă orice carte. Un 7 sau aceeași figură taie.',
+  'Concede trick': 'Cedează masa',
+  'Shuffle again': 'Amestecă din nou',
+  'Cards remaining:': 'Cărți rămase:',
   'Online room': 'Cameră online',
   'Quick match, create an invite, or join with a code.': 'Joacă rapid, creează o invitație sau intră cu un cod.',
   'Two players share this device.': 'Doi jucători folosesc același dispozitiv.',
@@ -366,6 +378,12 @@ function translateRomanianPattern(value: string): string | null {
   if (match) return `${match[1]} câștigă meciul!`;
   match = value.match(/^(Mint|Coral) wins!$/);
   if (match) return `${match[1]} câștigă!`;
+  match = value.match(/^(Mint|Coral) wins the game!$/);
+  if (match) return `${match[1]} câștigă partida!`;
+  match = value.match(/^(Mint|Coral) is choosing a card…$/);
+  if (match) return `${match[1]} își alege cartea…`;
+  match = value.match(/^Pass the device to (Mint|Coral), then reveal the hand\.$/);
+  if (match) return `Dă dispozitivul lui ${match[1]}, apoi arată cărțile.`;
   match = value.match(/^Coral Bot · (Easy|Normal|Hard)$/);
   if (match) {
     const difficulty = match[1] === 'Easy' ? 'Ușor' : match[1] === 'Hard' ? 'Greu' : 'Normal';

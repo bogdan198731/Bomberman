@@ -121,6 +121,13 @@ test('Țintar board includes native fullscreen styling and a mobile fallback', (
   assert.match(html, /\.tintar-board-frame\.is-fullscreen-layout \.tintar-board\s*\{[^}]*width:\s*100vw;[^}]*height:\s*calc\(100dvh - var\(--tintar-portrait-toolbar-space\) - var\(--tintar-portrait-bottom-space\)\);[^}]*aspect-ratio:\s*auto;/s);
 });
 
+test('mobile Țintar keeps a live turn prompt beside the board', () => {
+  assert.match(html, /id="tintarBoardStatus">Mint: place a piece\.<\/span>/);
+  assert.match(html, /id="tintarBoardPhase">Placement phase<\/strong>/);
+  assert.match(html, /@media \(max-width: 760px\)[\s\S]*?\.tintar-board-status \{ display: grid; \}/);
+  assert.match(tintarSource, /boardStatusElement\.textContent = statusText/);
+});
+
 test('Țintar board includes a non-blocking reduced-motion winner celebration', () => {
   assert.match(html, /id="tintarVictoryOverlay" class="tintar-victory-overlay"[^>]*role="dialog"[^>]*hidden/);
   assert.match(html, /\.tintar-victory-overlay\s*\{[^}]*pointer-events:\s*none;/s);

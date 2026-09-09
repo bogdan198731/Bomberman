@@ -360,12 +360,15 @@ export function initTintar(): void {
   const game = new TintarGame();
   const statusElement = document.getElementById('tintarStatus');
   const phaseElement = document.getElementById('tintarPhase');
+  const boardStatusElement = document.getElementById('tintarBoardStatus');
+  const boardPhaseElement = document.getElementById('tintarBoardPhase');
   const mintHandElement = document.getElementById('tintarMintHand');
   const mintBoardElement = document.getElementById('tintarMintBoard');
   const coralHandElement = document.getElementById('tintarCoralHand');
   const coralBoardElement = document.getElementById('tintarCoralBoard');
   const coralNameElement = document.getElementById('tintarCoralName');
   const turnMarker = document.getElementById('tintarTurnMarker');
+  const boardTurnMarker = document.getElementById('tintarBoardTurnMarker');
   const boardFrame = document.getElementById('tintarBoardFrame') as HTMLElement | null;
   const boardActions = document.getElementById('tintarBoardActions');
   const fullscreenButton = document.getElementById('tintarFullscreenButton') as HTMLButtonElement | null;
@@ -538,26 +541,27 @@ export function initTintar(): void {
       button.setAttribute('aria-pressed', game.selectedPoint === point ? 'true' : 'false');
     });
 
-    if (statusElement) {
-      statusElement.textContent = botDifficulty && game.currentPlayer === 2 && game.phase !== 'finished'
-        ? `Coral bot (${botLabels[botDifficulty]}) is thinking…`
-        : game.statusText();
-    }
-    if (phaseElement) {
-      phaseElement.textContent = game.phase === 'placing'
-        ? 'Placement phase'
-        : game.phase === 'moving'
-          ? 'Movement phase'
-          : game.phase === 'removing'
-            ? 'Mill formed'
-            : 'Match finished';
-    }
+    const statusText = botDifficulty && game.currentPlayer === 2 && game.phase !== 'finished'
+      ? `Coral bot (${botLabels[botDifficulty]}) is thinking…`
+      : game.statusText();
+    const phaseText = game.phase === 'placing'
+      ? 'Placement phase'
+      : game.phase === 'moving'
+        ? 'Movement phase'
+        : game.phase === 'removing'
+          ? 'Mill formed'
+          : 'Match finished';
+    if (statusElement) statusElement.textContent = statusText;
+    if (boardStatusElement) boardStatusElement.textContent = statusText;
+    if (phaseElement) phaseElement.textContent = phaseText;
+    if (boardPhaseElement) boardPhaseElement.textContent = phaseText;
     if (mintHandElement) mintHandElement.textContent = String(game.piecesToPlace[1]);
     if (mintBoardElement) mintBoardElement.textContent = String(game.pieceCount(1));
     if (coralHandElement) coralHandElement.textContent = String(game.piecesToPlace[2]);
     if (coralBoardElement) coralBoardElement.textContent = String(game.pieceCount(2));
     if (coralNameElement) coralNameElement.textContent = botDifficulty ? `Coral Bot · ${botLabels[botDifficulty]}` : 'Coral';
     turnMarker?.classList.toggle('coral', game.currentPlayer === 2);
+    boardTurnMarker?.classList.toggle('coral', game.currentPlayer === 2);
     if (boardActions) boardActions.hidden = !matchStarted;
     if (game.phase === 'finished' && game.winner !== null && game.winner !== 0) {
       if (lastRenderedPhase !== 'finished') showVictoryEffect(game.winner);

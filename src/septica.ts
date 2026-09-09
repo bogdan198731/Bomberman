@@ -138,14 +138,14 @@ export class SepticaGame {
 
   statusText(): string {
     if (this.phase === 'finished') {
-      if (this.winner === 0) return 'Egalitate — fiecare a capturat patru puncte.';
-      return `${this.winner === 1 ? 'Mint' : 'Coral'} câștigă partida!`;
+      if (this.winner === 0) return 'Draw — each player captured four points.';
+      return `${this.winner === 1 ? 'Mint' : 'Coral'} wins the game!`;
     }
-    if (this.phase === 'settling') return 'Cărțile rămân o clipă pe masă…';
-    if (this.currentPlayer === 2) return 'Coral se gândește…';
-    if (this.phase === 'continue-choice') return 'Ai fost tăiat. Continuă cu un 7 sau aceeași figură, ori cedează masa.';
-    if (this.table.length === 0) return 'Rândul tău: deschide o mână nouă.';
-    return 'Joacă orice carte. Un 7 sau aceeași figură taie.';
+    if (this.phase === 'settling') return 'The cards stay on the table for a moment…';
+    if (this.currentPlayer === 2) return 'Coral is thinking…';
+    if (this.phase === 'continue-choice') return 'You were cut. Continue with a 7 or the opening rank, or concede the trick.';
+    if (this.table.length === 0) return 'Your turn: lead a new trick.';
+    return 'Play any card. A 7 or the opening rank cuts.';
   }
 
   private collectTrick(): void {
@@ -247,11 +247,11 @@ export function initSeptica(): void {
 
   function onlineStatus(player: SepticaPlayer): string {
     if (game.phase === 'finished') return game.statusText();
-    if (game.phase === 'settling') return 'Cărțile rămân o clipă pe masă…';
-    if (game.currentPlayer !== player) return `${game.currentPlayer === 1 ? 'Mint' : 'Coral'} își alege cartea…`;
-    if (game.phase === 'continue-choice') return 'Ai fost tăiat. Continuă cu un 7 sau aceeași figură, ori cedează masa.';
-    if (game.table.length === 0) return 'Rândul tău: deschide o mână nouă.';
-    return 'Rândul tău: joacă orice carte. Un 7 sau aceeași figură taie.';
+    if (game.phase === 'settling') return 'The cards stay on the table for a moment…';
+    if (game.currentPlayer !== player) return `${game.currentPlayer === 1 ? 'Mint' : 'Coral'} is choosing a card…`;
+    if (game.phase === 'continue-choice') return 'You were cut. Continue with a 7 or the opening rank, or concede the trick.';
+    if (game.table.length === 0) return 'Your turn: lead a new trick.';
+    return 'Your turn: play any card. A 7 or the opening rank cuts.';
   }
 
   function broadcastState(): void {

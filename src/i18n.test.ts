@@ -23,6 +23,9 @@ test('Romanian translations cover shared arcade and revenge actions', () => {
 test('Romanian translations preserve whitespace and localize dynamic Țintar messages', () => {
   assert.equal(translateArcadeText('  Mint: place a piece (4 left).  ', 'ro'), '  Mint: așază o piesă (4 rămase).  ');
   assert.equal(translateArcadeText('Coral wins the match!', 'ro'), 'Coral câștigă meciul!');
+  assert.equal(translateArcadeText('Mint wins the game!', 'ro'), 'Mint câștigă partida!');
+  assert.equal(translateArcadeText('Your turn: lead a new trick.', 'ro'), 'Rândul tău: deschide o mână nouă.');
+  assert.equal(translateArcadeText('Coral is choosing a card…', 'ro'), 'Coral își alege cartea…');
   assert.equal(translateArcadeText('Empty point, position 7', 'ro'), 'Punct liber, poziția 7');
   assert.equal(translateArcadeText('Coral Bot · Hard', 'ro'), 'Bot Coral · Greu');
   assert.equal(translateArcadeText('Coral bot (Normal) is thinking…', 'ro'), 'Botul Coral (Normal) se gândește…');

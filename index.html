@@ -2464,6 +2464,39 @@
       display: none;
     }
 
+    .tintar-board-status {
+      display: none;
+      width: min(100%, 620px);
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 8px;
+      padding: 9px 11px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px;
+      background: rgba(6,11,18,.78);
+      box-shadow: 0 8px 24px rgba(0,0,0,.2);
+    }
+
+    .tintar-board-status div { min-width: 0; }
+    .tintar-board-status strong {
+      display: block;
+      color: var(--gold);
+      font-size: .59rem;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .tintar-board-status span:last-child {
+      display: block;
+      overflow: hidden;
+      color: var(--ink);
+      font-size: .76rem;
+      font-weight: 820;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     .tintar-fullscreen-button {
       display: inline-flex;
       min-height: 42px;
@@ -5897,6 +5930,13 @@
       .septica-hand .septica-card + .septica-card { margin-left: -12px; }
       .septica-table { min-height: 125px; }
       .septica-deck-readout { text-align: center; }
+
+      #septicaView .paddle-shell { display: flex; flex-direction: column; }
+      #septicaView .snake-toolbar { order: 1; }
+      #septicaView .paddle-scorebar { order: 2; }
+      #septicaView .paddle-statusbar { order: 3; }
+      #septicaView .septica-felt { order: 4; }
+      #septicaView .paddle-footer { order: 5; }
     }
 
     .survival-brand-mark {
@@ -6328,6 +6368,7 @@
 
       .tintar-shell { display: flex; flex-direction: column; }
       .tintar-board-frame { order: -1; }
+      .tintar-board-status { display: grid; }
       .tintar-panel > .catalog-kicker,
       .tintar-panel > h2,
       .tintar-panel > p { display: none; }
@@ -6620,6 +6661,17 @@
       .tintar-board-frame.is-fullscreen-layout .tintar-board-actions {
         top: max(14px, env(safe-area-inset-top));
         right: max(10px, env(safe-area-inset-right));
+      }
+
+      .tintar-board-frame:fullscreen .tintar-board-status,
+      .tintar-board-frame.is-fullscreen-layout .tintar-board-status {
+        position: absolute;
+        z-index: 5;
+        top: max(14px, env(safe-area-inset-top));
+        left: max(10px, env(safe-area-inset-left));
+        display: grid;
+        width: min(58vw, 235px);
+        margin: 0;
       }
 
       .tintar-board-frame:fullscreen .tintar-board,
@@ -7365,6 +7417,13 @@
       </aside>
 
       <div id="tintarBoardFrame" class="tintar-board-frame">
+        <div class="tintar-board-status" aria-live="polite">
+          <i id="tintarBoardTurnMarker" class="tintar-turn-dot" aria-hidden="true"></i>
+          <div>
+            <strong id="tintarBoardPhase">Placement phase</strong>
+            <span id="tintarBoardStatus">Mint: place a piece.</span>
+          </div>
+        </div>
         <div id="tintarBoardActions" class="tintar-board-actions" hidden>
           <button
             id="tintarFullscreenButton"
@@ -7634,14 +7693,14 @@
         <div id="septicaHand" class="septica-hand" aria-label="Your cards"></div>
       </div>
       <div class="paddle-statusbar" aria-live="polite">
-        <span id="septicaStatus">Rândul tău: deschide o mână nouă.</span>
+        <span id="septicaStatus">Your turn: lead a new trick.</span>
         <button id="septicaRevealButton" class="paddle-serve" type="button" hidden>Reveal hand</button>
-        <button id="septicaPassButton" class="paddle-serve" type="button" hidden>Cedează masa</button>
+        <button id="septicaPassButton" class="paddle-serve" type="button" hidden>Concede trick</button>
       </div>
       <footer class="paddle-footer">
         <div class="paddle-key-guide">Tap or click a highlighted card</div>
-        <button id="septicaRestartButton" class="paddle-restart" type="button">Amestecă din nou</button>
-        <div class="septica-deck-readout">Cărți rămase: <strong id="septicaDeckCount">24</strong></div>
+        <button id="septicaRestartButton" class="paddle-restart" type="button">Shuffle again</button>
+        <div class="septica-deck-readout">Cards remaining: <strong id="septicaDeckCount">24</strong></div>
       </footer>
     </section>
   </main>
