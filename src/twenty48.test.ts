@@ -7,6 +7,7 @@ import {
   hasWonTwenty48,
   mergeTwenty48Line,
   moveTwenty48,
+  shouldConfirmTwenty48Reset,
   Twenty48Game,
 } from './twenty48.js';
 
@@ -16,6 +17,13 @@ test('2048 starts with exactly two tiles', () => {
   assert.equal(board.filter(Boolean).length, 2);
   assert.equal(board[0], 2);
   assert.equal(board[15], 4);
+});
+
+test('2048 asks before discarding an active run with completed moves', () => {
+  assert.equal(shouldConfirmTwenty48Reset('playing', 0), false);
+  assert.equal(shouldConfirmTwenty48Reset('playing', 1), true);
+  assert.equal(shouldConfirmTwenty48Reset('won', 12), false);
+  assert.equal(shouldConfirmTwenty48Reset('over', 12), false);
 });
 
 test('line merging combines each tile only once', () => {

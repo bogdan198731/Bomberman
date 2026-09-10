@@ -215,6 +215,12 @@ export class SudokuGame {
   }
 }
 
+export function shouldConfirmSudokuReset(game: Pick<SudokuGame, 'board' | 'puzzle' | 'phase' | 'mistakes' | 'hints'>, noteCount = 0): boolean {
+  if (game.phase !== 'playing') return false;
+  return game.mistakes > 0 || game.hints > 0 || noteCount > 0
+    || game.board.some((value, index) => game.puzzle[index] === 0 && value !== 0);
+}
+
 function formatSudokuTime(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
   const seconds = (totalSeconds % 60).toString().padStart(2, '0');
@@ -388,6 +394,12 @@ export function initSudoku(): void {
     syncUi();
   }
 
+  function requestReset(difficulty: SudokuDifficulty = game.difficulty): void {
+    if (shouldConfirmSudokuReset(game, notes.size)
+      && !window.confirm('Start a new Sudoku puzzle? Your current entries, notes, and score will be lost.')) return;
+    reset(difficulty);
+  }
+
   activeBoard.addEventListener('click', event => {
     const cell = event.target instanceof Element
       ? event.target.closest<HTMLElement>('[data-sudoku-cell]')
@@ -415,11 +427,11 @@ export function initSudoku(): void {
     else if (game.phase !== 'complete') status = 'No hints remaining for this puzzle.';
     syncUi();
   });
-  document.querySelectorAll<HTMLElement>('[data-sudoku-new]').forEach(button => button.addEventListener('click', () => reset()));
+  document.querySelectorAll<HTMLElement>('[data-sudoku-new]').forEach(button => button.addEventListener('click', () => requestReset()));
   document.querySelectorAll<HTMLButtonElement>('[data-sudoku-difficulty]').forEach(button => {
     button.addEventListener('click', () => {
       const difficulty = button.dataset.sudokuDifficulty;
-      if (difficulty === 'easy' || difficulty === 'medium' || difficulty === 'hard') reset(difficulty);
+      if (difficulty === 'easy' || difficulty === 'medium' || difficulty === 'hard') requestReset(difficulty);
     });
   });
 

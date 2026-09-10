@@ -6,6 +6,7 @@ import {
   SUDOKU_DIFFICULTY_RULES,
   SUDOKU_PUZZLES,
   sudokuCompletionScore,
+  shouldConfirmSudokuReset,
   SudokuGame,
   transformSudokuPuzzle,
 } from './sudoku.js';
@@ -19,6 +20,18 @@ test('all Sudoku definitions contain valid solutions and matching clues', () => 
       if (value) assert.equal(value, solution[index]);
     });
   });
+});
+
+test('Sudoku protects entered values, notes, mistakes, and used hints from accidental reset', () => {
+  const game = new SudokuGame('easy');
+  assert.equal(shouldConfirmSudokuReset(game), false);
+  assert.equal(shouldConfirmSudokuReset(game, 1), true);
+  const editable = game.puzzle.findIndex(value => value === 0);
+  game.select(editable);
+  game.input(game.solution[editable]);
+  assert.equal(shouldConfirmSudokuReset(game), true);
+  game.phase = 'complete';
+  assert.equal(shouldConfirmSudokuReset(game), false);
 });
 
 test('Sudoku variants preserve valid solutions and clue positions', () => {

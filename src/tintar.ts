@@ -376,6 +376,7 @@ export function initTintar(): void {
   const victoryOverlay = document.getElementById('tintarVictoryOverlay');
   const victoryTitle = document.getElementById('tintarVictoryTitle');
   const revengeButton = document.getElementById('tintarRevengeButton') as HTMLButtonElement | null;
+  const restartButton = document.getElementById('tintarRestartButton') as HTMLButtonElement | null;
   const botButtons = document.querySelectorAll<HTMLButtonElement>('[data-tintar-bot-difficulty]');
   const pointButtons: HTMLButtonElement[] = [];
   const roomMount = document.querySelector<HTMLElement>('[data-game-room="tintar"]');
@@ -584,6 +585,9 @@ export function initTintar(): void {
     turnMarker?.classList.toggle('coral', game.currentPlayer === 2);
     boardTurnMarker?.classList.toggle('coral', game.currentPlayer === 2);
     if (boardActions) boardActions.hidden = !matchStarted;
+    if (restartButton) {
+      restartButton.textContent = matchStarted && game.phase !== 'finished' ? 'Reset match' : 'Start match';
+    }
     if (game.phase === 'finished' && game.winner !== null && game.winner !== 0) {
       if (lastRenderedPhase !== 'finished') showVictoryEffect(game.winner);
     } else if (game.phase !== 'finished' && lastRenderedPhase === 'finished') {
@@ -635,7 +639,13 @@ export function initTintar(): void {
     room?.broadcastState(snapshot(), true);
   }
 
-  document.getElementById('tintarRestartButton')?.addEventListener('click', restartMatch);
+  function requestRestartMatch(): void {
+    if (matchStarted && game.phase !== 'finished'
+      && !window.confirm('Reset this Țintar match? The current board will be lost.')) return;
+    restartMatch();
+  }
+
+  restartButton?.addEventListener('click', requestRestartMatch);
   revengeButton?.addEventListener('click', restartMatch);
   botButtons.forEach(button => button.addEventListener('click', () => {
     const difficulty = button.dataset.tintarBotDifficulty;

@@ -124,6 +124,20 @@ test('solo scoreboards replace the inactive Coral slot with useful live stats', 
   assert.match(html, /\.paddle-score-player\.coral\.solo-stat \.paddle-score-swatch/);
 });
 
+test('remaining game setup and reset actions use clear, safe mobile copy', () => {
+  assert.match(indexSource, /let selectedLobbyMode: 'local' \| 'bot' \| 'online' = 'local'/);
+  assert.match(indexSource, /previewingLobby && selectedLobbyMode === 'local'/);
+  assert.match(html, /class="game-room-panel star-mode-panel"/);
+  assert.match(html, /data-star-mode="coop">Local co-op<\/button>/);
+  assert.match(html, /\.tintar-turn-card \{ display: none; \}/);
+  assert.match(html, /id="septicaRestartButton"[^>]*>New deal<\/button>/);
+  assert.match(html, /class="new-puzzle"[^>]*data-sudoku-new/);
+  assert.match(readFileSync(new URL('../src/twenty48.ts', import.meta.url), 'utf8'), /window\.confirm\('Start a new 2048 game\?/);
+  assert.match(sudokuSource, /window\.confirm\('Start a new Sudoku puzzle\?/);
+  assert.match(readFileSync(new URL('../src/septica.ts', import.meta.url), 'utf8'), /window\.confirm\('Start a new deal\?/);
+  assert.match(tintarSource, /window\.confirm\('Reset this Țintar match\?/);
+});
+
 test('Block Drop prioritizes one large human board on mobile', () => {
   assert.match(blocksSource, /const singleBoardMobile = mobile && \(game\.mode === 'bot' \|\| Boolean\(room\?\.session\(\)\.online\)\)/);
   assert.match(blocksSource, /setCanvasSize\(mobile \? 360 : 900, mobile \? \(singleBoardMobile \? 510 : 390\) : 600\)/);

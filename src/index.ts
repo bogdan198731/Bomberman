@@ -1291,6 +1291,7 @@ export function initGame(): void {
   let socket: WebSocket | undefined;
   let localRoom: OnlineRoom | undefined;
   let localMode = false;
+  let selectedLobbyMode: 'local' | 'bot' | 'online' = 'local';
   let localPlayerId: 1 | 2 | undefined;
   let activeRoomCode = '';
   let activeBotDifficulty: 'easy' | 'normal' | 'hard' | undefined;
@@ -1326,6 +1327,7 @@ export function initGame(): void {
   }
 
   function selectBombermanLobbyMode(mode: 'local' | 'bot' | 'online'): void {
+    selectedLobbyMode = mode;
     elements.lobbyModeButtons.forEach(button => {
       const selected = button.dataset.bombermanLobbyMode === mode;
       button.classList.toggle('active', selected);
@@ -1380,14 +1382,21 @@ export function initGame(): void {
     if (elements.playerTwoScore) elements.playerTwoScore.textContent = String(onlineState.scores[2]);
     if (elements.playerOneStats) elements.playerOneStats.textContent = playerStatsText(renderedPlayers[0]);
     if (elements.playerTwoStats) elements.playerTwoStats.textContent = playerStatsText(renderedPlayers[1]);
-    if (elements.playerOneRole) elements.playerOneRole.textContent = localMode ? 'Local P1' : localPlayerId === 1 ? 'You' : 'Online';
+    const previewingLobby = !localMode && !localPlayerId;
+    if (elements.playerOneRole) {
+      elements.playerOneRole.textContent = localMode || previewingLobby && selectedLobbyMode === 'local'
+        ? 'Local P1'
+        : localPlayerId === 1 || previewingLobby && selectedLobbyMode === 'bot' ? 'You' : 'Online';
+    }
     if (elements.playerTwoRole) {
-      elements.playerTwoRole.textContent = localMode
+      elements.playerTwoRole.textContent = localMode || previewingLobby && selectedLobbyMode === 'local'
         ? 'Local P2'
         : localPlayerId === 2
         ? 'You'
         : activeBotDifficulty
           ? `${activeBotDifficulty} bot`
+          : previewingLobby && selectedLobbyMode === 'bot'
+            ? 'Bot'
           : 'Online';
     }
 

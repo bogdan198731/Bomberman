@@ -6,6 +6,7 @@ import {
   createSepticaOnlineState,
   SEPTICA_TRICK_REVEAL_MS,
   SepticaGame,
+  shouldConfirmSepticaRestart,
   type SepticaCard,
 } from './septica.js';
 
@@ -19,6 +20,15 @@ test('Șeptică uses a 32-card deck and deals four cards each', () => {
   assert.equal(game.hands[1].length, 4);
   assert.equal(game.hands[2].length, 4);
   assert.equal(game.deck.length, 24);
+});
+
+test('Șeptică asks before discarding a deal only after play has begun', () => {
+  const game = new SepticaGame(() => .5);
+  assert.equal(shouldConfirmSepticaRestart(game), false);
+  game.playCard(1, 0);
+  assert.equal(shouldConfirmSepticaRestart(game), true);
+  game.phase = 'finished';
+  assert.equal(shouldConfirmSepticaRestart(game), false);
 });
 
 test('a seven cuts any opening card', () => {

@@ -2442,6 +2442,11 @@
       font-weight: 900;
     }
 
+    .star-mode-panel {
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+    }
+
     .tintar-board-frame {
       position: relative;
       display: flex;
@@ -5493,10 +5498,10 @@
       min-height: 42px;
       padding: 0 16px;
       flex: 0 0 auto;
-      border-color: rgba(255,200,87,.34);
+      border-color: rgba(255,255,255,.14);
       border-radius: 12px;
-      color: #271805;
-      background: var(--gold);
+      color: #d1d9e5;
+      background: rgba(255,255,255,.055);
     }
 
     .twenty48-scorebar {
@@ -5905,7 +5910,7 @@
       font-weight: 900;
     }
 
-    .sudoku-actions button.primary { border-color: rgba(84,227,142,.3); color: #07150d; background: var(--p1); }
+    .sudoku-actions button.new-puzzle { color: var(--muted); background: transparent; }
     .sudoku-actions button.active {
       border-color: rgba(73,226,255,.48);
       color: #06171c;
@@ -6031,14 +6036,11 @@
     .septica-card.red { color: #b8263d; }
 
     .septica-card.card-back {
-      color: rgba(255,255,255,.72);
       background:
-        linear-gradient(45deg, transparent 43%, rgba(255,255,255,.18) 44% 56%, transparent 57%),
-        linear-gradient(-45deg, transparent 43%, rgba(255,255,255,.12) 44% 56%, transparent 57%),
-        #762037;
-      background-size: 18px 18px;
-      font: 950 .72rem/1 system-ui, sans-serif;
-      letter-spacing: .12em;
+        radial-gradient(circle at center, rgba(255,255,255,.14) 0 4px, transparent 5px),
+        linear-gradient(145deg, #8a2b49, #51162a);
+      background-size: 20px 20px, auto;
+      box-shadow: inset 0 0 0 4px rgba(255,255,255,.08), inset 0 0 0 7px rgba(20,6,12,.18), 0 9px 16px rgba(0,0,0,.32);
     }
 
     .septica-card.played-mint { transform: rotate(-4deg); }
@@ -6633,10 +6635,15 @@
       .tintar-shell { display: flex; flex-direction: column; }
       .tintar-board-frame { order: -1; }
       .tintar-board-status { display: grid; }
+      .tintar-turn-card { display: none; }
       .tintar-panel > .catalog-kicker,
       .tintar-panel > h2,
       .tintar-panel > p { display: none; }
       .tintar-turn-card { margin-top: 0; }
+
+      .star-mode-panel { grid-template-columns: 1fr; }
+      .star-mode-panel .game-room-copy { display: none; }
+      .star-mode-panel .game-room-mode-tabs { width: 100%; }
 
       .twenty48-intro {
         display: grid;
@@ -7682,7 +7689,7 @@
           <li>With only three pieces, you may fly to any empty point.</li>
         </ol>
 
-        <button id="tintarRestartButton" class="tintar-restart" type="button">Start a new match</button>
+        <button id="tintarRestartButton" class="tintar-restart" type="button">Start match</button>
       </aside>
 
       <div id="tintarBoardFrame" class="tintar-board-frame">
@@ -7968,7 +7975,7 @@
       </div>
       <footer class="paddle-footer">
         <div class="paddle-key-guide">Tap or click a highlighted card</div>
-        <button id="septicaRestartButton" class="paddle-restart" type="button">Shuffle again</button>
+        <button id="septicaRestartButton" class="paddle-restart" type="button">New deal</button>
         <div class="septica-deck-readout">Cards remaining: <strong id="septicaDeckCount">24</strong></div>
       </footer>
     </section>
@@ -8044,14 +8051,18 @@
       <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub>← Arcade</button></div>
     </header>
 
-    <section class="paddle-shell" aria-label="Star Defender mission">
-      <div class="snake-toolbar">
-        <span>Clear formations, collect spread, rapid-fire, and shield boosts, then face a boss every fifth wave.</span>
-        <div class="snake-modes" aria-label="Star Defender game mode">
-          <button class="snake-mode-button active" type="button" data-star-mode="solo">Solo</button>
-          <button class="snake-mode-button" type="button" data-star-mode="coop">Play local</button>
-        </div>
+    <section class="game-room-panel star-mode-panel" aria-label="Star Defender play mode">
+      <div class="game-room-copy">
+        <strong>Play mode</strong>
+        <span>Fly solo or share the mission on this device.</span>
       </div>
+      <div class="game-room-mode-tabs" role="tablist" aria-label="Star Defender game mode">
+        <button class="game-room-mode-tab active" type="button" role="tab" aria-selected="true" data-star-mode="solo">Solo</button>
+        <button class="game-room-mode-tab" type="button" role="tab" aria-selected="false" data-star-mode="coop">Local co-op</button>
+      </div>
+    </section>
+
+    <section class="paddle-shell" aria-label="Star Defender mission">
       <div class="paddle-scorebar">
         <div class="paddle-score-player"><i class="paddle-score-swatch" aria-hidden="true"></i><div><span>Mint score</span><b id="starMintScore">0</b><span id="starMintHealth" class="survival-health">3 hull</span></div></div>
         <div class="paddle-score-goal">Wave <strong id="starWave">0</strong><span id="starThreat" class="star-threat" data-threat="clear">Formation</span></div>
@@ -8330,7 +8341,7 @@
         <button id="sudokuNotesButton" type="button" aria-pressed="false" aria-label="Notes mode off"><span aria-hidden="true">✎</span> Notes</button>
         <button id="sudokuEraseButton" type="button"><span aria-hidden="true">⌫</span> Erase</button>
         <button id="sudokuHintButton" type="button"><span aria-hidden="true">◇</span> Hint</button>
-        <button class="primary" type="button" data-sudoku-new>New puzzle</button>
+        <button class="new-puzzle" type="button" data-sudoku-new>New puzzle</button>
       </div>
       <p class="sudoku-help">Tap a cell and number, or use your keyboard. Tougher puzzles start with a higher score; time, mistakes, and hints reduce it.</p>
     </section>

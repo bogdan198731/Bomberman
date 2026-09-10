@@ -215,6 +215,17 @@ export function applySepticaOnlineState(game: SepticaGame, state: SepticaOnlineS
   game.winner = state.winner;
 }
 
+export function shouldConfirmSepticaRestart(game: SepticaGame): boolean {
+  return game.phase !== 'finished' && (
+    game.table.length > 0
+    || game.deck.length < 24
+    || game.points[1] > 0
+    || game.points[2] > 0
+    || game.hands[1].length !== 4
+    || game.hands[2].length !== 4
+  );
+}
+
 const SUIT_SYMBOLS: Record<SepticaSuit, string> = { clubs: '♣', diamonds: '♦', hearts: '♥', spades: '♠' };
 
 export function initSeptica(): void {
@@ -355,6 +366,8 @@ export function initSeptica(): void {
   }
 
   function selectOfflineMode(mode: SepticaOfflineMode): void {
+    if (mode !== offlineMode && shouldConfirmSepticaRestart(game)
+      && !window.confirm('Change play mode? The current Șeptică deal will be lost.')) return;
     window.clearTimeout(settleTimer);
     window.clearTimeout(botTimer);
     offlineMode = mode;
@@ -381,6 +394,8 @@ export function initSeptica(): void {
     selectOfflineMode(mode);
   }));
   document.getElementById('septicaRestartButton')?.addEventListener('click', () => {
+    if (shouldConfirmSepticaRestart(game)
+      && !window.confirm('Start a new deal? The current Șeptică hand will be lost.')) return;
     if (room?.isGuest()) room.sendAction({ type: 'restart' });
     else {
       window.clearTimeout(settleTimer);

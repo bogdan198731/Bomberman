@@ -108,6 +108,10 @@ export function hasWonTwenty48(board: readonly number[]): boolean {
   return board.some(value => value >= 2048);
 }
 
+export function shouldConfirmTwenty48Reset(phase: Twenty48Phase, movesMade: number): boolean {
+  return phase === 'playing' && movesMade > 0;
+}
+
 export class Twenty48Game {
   board: number[];
   score = 0;
@@ -190,6 +194,7 @@ export function initTwenty48(): void {
   let best = loadTwenty48Best(storage);
   let status = 'Keep merging — your next move is ready.';
   let resultReported = false;
+  let movesMade = 0;
   let swipeStart: { pointerId: number; x: number; y: number } | null = null;
 
   function visible(): boolean { return !activeView.classList.contains('view-hidden'); }
@@ -242,6 +247,7 @@ export function initTwenty48(): void {
   function play(direction: Twenty48Direction): void {
     if (!visible() || game.phase !== 'playing') return;
     const move = game.move(direction);
+    if (move.moved) movesMade += 1;
     const phase = game.phase as Twenty48Phase;
     if (phase === 'won') status = 'You made 2048!';
     else if (phase === 'over') status = `No moves left. Final score: ${game.score.toLocaleString()}.`;
@@ -255,8 +261,15 @@ export function initTwenty48(): void {
     game.reset();
     resultReporter.report(false);
     resultReported = false;
+    movesMade = 0;
     status = 'Keep merging — your next move is ready.';
     syncUi();
+  }
+
+  function requestReset(): void {
+    if (shouldConfirmTwenty48Reset(game.phase, movesMade)
+      && !window.confirm('Start a new 2048 game? Your current board and score will be lost.')) return;
+    reset();
   }
 
   const keyDirections: Record<string, Twenty48Direction> = {
@@ -279,7 +292,7 @@ export function initTwenty48(): void {
       if (direction) play(direction);
     });
   });
-  document.querySelectorAll<HTMLElement>('[data-twenty48-reset]').forEach(button => button.addEventListener('click', reset));
+  document.querySelectorAll<HTMLElement>('[data-twenty48-reset]').forEach(button => button.addEventListener('click', requestReset));
   continueButton?.addEventListener('click', () => {
     game.continueAfterWin();
     status = game.phase === 'over'
