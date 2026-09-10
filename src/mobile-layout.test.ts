@@ -277,6 +277,12 @@ test('mobile hub adds thumb navigation and a visible horizontal-filter cue', () 
   assert.match(catalogSource, /button\.scrollIntoView/);
 });
 
+test('wide desktop game library uses a denser four-column arcade shelf', () => {
+  assert.match(html, /@media \(min-width: 1100px\)[\s\S]*?\.game-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4, minmax\(0, 1fr\)\);/);
+  assert.match(html, /@media \(min-width: 1100px\)[\s\S]*?\.game-cover \{ min-height: 148px; \}/);
+  assert.match(html, /@media \(min-width: 1100px\)[\s\S]*?\.catalog-card-body p\s*\{[^}]*font-size: \.78rem;/);
+});
+
 test('game launches reset scroll immediately and mobile hub actions meet touch targets', () => {
   assert.match(indexSource, /window\.scrollTo\(\{ top: 0, behavior: 'auto' \}\)/);
   assert.match(indexSource, /requestAnimationFrame\(resetGameScroll\)/);

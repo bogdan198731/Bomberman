@@ -2051,6 +2051,34 @@
 
     .mobile-hub-nav { display: none; }
 
+    @media (min-width: 1100px) {
+      .game-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .catalog-card {
+        padding: 8px;
+        border-radius: 19px;
+      }
+
+      .game-cover { min-height: 148px; }
+      .game-glyph { font-size: 3.6rem; }
+      .catalog-card-body { padding: 12px 6px 7px; }
+      .catalog-card-body h3 { font-size: 1rem; }
+      .catalog-card-body p {
+        min-height: 38px;
+        margin: 6px 0 11px;
+        overflow: hidden;
+        font-size: .78rem;
+        line-height: 1.4;
+      }
+      .mode-label { font-size: .65rem; }
+      .card-play-button { min-height: 36px; padding-inline: 11px; }
+      .cover-label { top: 9px; left: 9px; padding: 5px 7px; font-size: .57rem; }
+      .favorite-button { top: 8px; right: 8px; }
+    }
+
     body.settings-open {
       overflow: hidden;
     }
