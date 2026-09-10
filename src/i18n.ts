@@ -138,6 +138,16 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Coral movement joystick': 'Joystick de mișcare Coral',
   'Mint driving joystick': 'Joystick de condus Mint',
   'Coral driving joystick': 'Joystick de condus Coral',
+  'Mint steering joystick': 'Joystick de direcție Mint',
+  'Coral steering joystick': 'Joystick de direcție Coral',
+  'Hold to brake Mint': 'Ține apăsat pentru a frâna cu Mint',
+  'Hold to accelerate Mint': 'Ține apăsat pentru a accelera cu Mint',
+  'Hold to brake Coral': 'Ține apăsat pentru a frâna cu Coral',
+  'Hold to accelerate Coral': 'Ține apăsat pentru a accelera cu Coral',
+  'Brake': 'Frână',
+  'Go': 'Accelerează',
+  'Waiting for rival': 'Se așteaptă adversarul',
+  'Tap Serve to start the rally.': 'Apasă Serviciu pentru a începe schimbul.',
   'Outsmart bots or invite a friend into a fast explosive maze battle.':
     'Păcălește boții sau invită un prieten într-o luptă rapidă printr-un labirint exploziv.',
   "Build mills, capture rival pieces, and master Romania's classic strategy board game.":
@@ -217,6 +227,8 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'After placement, move along connected lines.': 'După așezare, mută piesele pe liniile conectate.',
   'With only three pieces, you may fly to any empty point.': 'Cu doar trei piese, poți zbura către orice punct liber.',
   'Start a new match': 'Începe un meci nou',
+  'Start match': 'Pornește meciul',
+  'Reset match': 'Resetează meciul',
   'Full screen board': 'Tablă pe ecran complet',
   'Exit full screen': 'Ieși din ecran complet',
   'Țintar board with 24 playable points': 'Tablă de Țintar cu 24 de puncte de joc',
@@ -234,6 +246,7 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
     'Rândul tău: joacă orice carte. Un 7 sau aceeași figură taie.',
   'Concede trick': 'Cedează masa',
   'Shuffle again': 'Amestecă din nou',
+  'New deal': 'Mână nouă',
   'Cards remaining:': 'Cărți rămase:',
   'Online room': 'Cameră online',
   'Quick match, create an invite, or join with a code.': 'Joacă rapid, creează o invitație sau intră cu un cod.',
@@ -346,6 +359,18 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Danger close': 'Pericol aproape',
   'No hints remaining': 'Nu mai sunt indicii',
   'No hints remaining for this puzzle.': 'Nu mai sunt indicii pentru acest puzzle.',
+  'Play mode': 'Mod de joc',
+  'Fly solo or share the mission on this device.': 'Zboară solo sau împarte misiunea pe acest dispozitiv.',
+  'Start a new 2048 game? Your current board and score will be lost.':
+    'Începi un joc 2048 nou? Tabla și scorul actual vor fi pierdute.',
+  'Start a new Sudoku puzzle? Your current entries, notes, and score will be lost.':
+    'Începi un Sudoku nou? Valorile, notițele și scorul actual vor fi pierdute.',
+  'Start a new deal? The current Șeptică hand will be lost.':
+    'Începi o mână nouă? Mâna actuală de Șeptică va fi pierdută.',
+  'Change play mode? The current Șeptică deal will be lost.':
+    'Schimbi modul de joc? Mâna actuală de Șeptică va fi pierdută.',
+  'Reset this Țintar match? The current board will be lost.':
+    'Resetezi acest meci de Țintar? Tabla actuală va fi pierdută.',
   'Finish a match in all 12 games.': 'Termină un meci în toate cele 12 jocuri.',
 };
 

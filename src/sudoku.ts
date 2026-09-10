@@ -1,4 +1,5 @@
 import { ArcadeResultReporter } from './stats.js';
+import { translateArcadeText } from './i18n.js';
 
 export type SudokuDifficulty = 'easy' | 'medium' | 'hard';
 export type SudokuPhase = 'playing' | 'complete';
@@ -396,7 +397,7 @@ export function initSudoku(): void {
 
   function requestReset(difficulty: SudokuDifficulty = game.difficulty): void {
     if (shouldConfirmSudokuReset(game, notes.size)
-      && !window.confirm('Start a new Sudoku puzzle? Your current entries, notes, and score will be lost.')) return;
+      && !window.confirm(translateArcadeText('Start a new Sudoku puzzle? Your current entries, notes, and score will be lost.'))) return;
     reset(difficulty);
   }
 

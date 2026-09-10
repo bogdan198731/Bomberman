@@ -1,5 +1,6 @@
 import { GameRoomClient } from './game-room.js';
 import { ArcadeResultReporter } from './stats.js';
+import { translateArcadeText } from './i18n.js';
 
 export type SepticaPlayer = 1 | 2;
 export type SepticaRank = '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | 'A';
@@ -367,7 +368,7 @@ export function initSeptica(): void {
 
   function selectOfflineMode(mode: SepticaOfflineMode): void {
     if (mode !== offlineMode && shouldConfirmSepticaRestart(game)
-      && !window.confirm('Change play mode? The current Șeptică deal will be lost.')) return;
+      && !window.confirm(translateArcadeText('Change play mode? The current Șeptică deal will be lost.'))) return;
     window.clearTimeout(settleTimer);
     window.clearTimeout(botTimer);
     offlineMode = mode;
@@ -395,7 +396,7 @@ export function initSeptica(): void {
   }));
   document.getElementById('septicaRestartButton')?.addEventListener('click', () => {
     if (shouldConfirmSepticaRestart(game)
-      && !window.confirm('Start a new deal? The current Șeptică hand will be lost.')) return;
+      && !window.confirm(translateArcadeText('Start a new deal? The current Șeptică hand will be lost.'))) return;
     if (room?.isGuest()) room.sendAction({ type: 'restart' });
     else {
       window.clearTimeout(settleTimer);

@@ -1,5 +1,6 @@
 import { GameRoomClient } from './game-room.js';
 import { ArcadeResultReporter } from './stats.js';
+import { translateArcadeText } from './i18n.js';
 
 export type TintarPlayer = 1 | 2;
 export type TintarPhase = 'placing' | 'moving' | 'removing' | 'finished';
@@ -641,7 +642,7 @@ export function initTintar(): void {
 
   function requestRestartMatch(): void {
     if (matchStarted && game.phase !== 'finished'
-      && !window.confirm('Reset this Țintar match? The current board will be lost.')) return;
+      && !window.confirm(translateArcadeText('Reset this Țintar match? The current board will be lost.'))) return;
     restartMatch();
   }
 

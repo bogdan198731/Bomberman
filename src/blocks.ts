@@ -1,5 +1,6 @@
 import { GameRoomClient } from './game-room.js';
 import { ArcadeResultReporter } from './stats.js';
+import { currentArcadeLanguage } from './i18n.js';
 
 export type BlockPlayer = 1 | 2;
 export type BlockMode = 'bot' | 'duel';
@@ -525,8 +526,8 @@ export function initBlockDrop(): void {
 
     const focusedPlayer = session?.online ? (session.playerId ?? 1) as BlockPlayer : 1;
     const rival = otherPlayer(focusedPlayer);
-    drawBoard(focusedPlayer, 24, 62, 21);
-    drawBoard(rival, 282, 81, 6);
+    drawBoard(focusedPlayer, 29, 52, 20);
+    drawBoard(rival, 282, 70, 6);
     ctx.textAlign = 'center';
     ctx.font = '950 12px system-ui';
     ctx.fillStyle = focusedPlayer === 1 ? '#54e38e' : '#ff6b78';
@@ -547,7 +548,7 @@ export function initBlockDrop(): void {
     const previewTop = 263 - ((maxY - minY + 1) * previewSize) / 2;
     ctx.fillStyle = '#9aa8bd';
     ctx.font = '850 9px system-ui';
-    ctx.fillText('NEXT', 312, 243);
+    ctx.fillText(currentArcadeLanguage() === 'ro' ? 'URMEAZĂ' : 'NEXT', 312, 243);
     for (const [cellX, cellY] of nextCells) {
       drawCell(previewLeft + (cellX - minX) * previewSize, previewTop + (cellY - minY) * previewSize, previewSize, nextType);
     }
@@ -562,7 +563,7 @@ export function initBlockDrop(): void {
   function render(): void {
     const mobile = window.matchMedia('(max-width: 760px)').matches;
     const singleBoardMobile = mobile && (game.mode === 'bot' || Boolean(room?.session().online));
-    setCanvasSize(mobile ? 360 : 900, mobile ? (singleBoardMobile ? 510 : 390) : 600);
+    setCanvasSize(mobile ? 360 : 900, mobile ? (singleBoardMobile ? 470 : 390) : 600);
     canvas.dataset.mobileLayout = mobile ? (singleBoardMobile ? 'focus' : 'duel') : 'desktop';
     const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
     gradient.addColorStop(0, '#121a2a');

@@ -5690,7 +5690,7 @@
     @media (max-width: 620px) {
       .twenty48-shell { padding: 14px; border-radius: 19px; }
       .twenty48-intro { align-items: stretch; flex-direction: column; gap: 12px; }
-      .twenty48-new-game { width: 100%; }
+      .twenty48-new-game { width: 100%; min-height: 44px; }
       .twenty48-score-card { padding: 9px 11px; }
       .twenty48-controls { width: 168px; grid-template-columns: repeat(3, 50px); }
     }
@@ -6621,11 +6621,16 @@
       .racing-arena,
       .blocks-arena { padding: 10px; }
 
+      :is(#snakeCanvas, #tanksCanvas, #survivalCanvas, #starCanvas, #racingCanvas, #blocksCanvas) {
+        width: min(100%, calc((100dvh - 390px) * 1.5));
+        margin-inline: auto;
+      }
+
       .paddle-statusbar { padding: 8px 16px; }
       .paddle-footer { padding: 8px 16px; }
 
       #gameView .arena-wrap {
-        width: min(680px, calc(100dvh - 220px), calc(100% - 32px));
+        width: min(680px, calc(100dvh - 255px), calc(100% - 32px));
         margin: 12px auto;
       }
 
@@ -6649,7 +6654,7 @@
 
       .sudoku-toolbar { margin-bottom: 9px; }
       .sudoku-meta { margin-bottom: 8px; }
-      .sudoku-board-stage { width: min(100%, calc(100dvh - 390px)); }
+      .sudoku-board-stage { width: min(100%, calc(100dvh - 400px)); }
       .sudoku-status { margin-block: 8px 6px; }
       .sudoku-number-pad button { min-height: 40px; }
       .sudoku-actions button { min-height: 36px; }

@@ -18,6 +18,13 @@ test('Romanian translations cover shared arcade and revenge actions', () => {
   assert.equal(translateArcadeText('Mint movement joystick', 'ro'), 'Joystick de mișcare Mint');
   assert.equal(translateArcadeText('Coral driving joystick', 'ro'), 'Joystick de condus Coral');
   assert.equal(translateArcadeText('Play revenge match', 'en'), 'Play revenge match');
+  assert.equal(translateArcadeText('New deal', 'ro'), 'Mână nouă');
+  assert.equal(translateArcadeText('Brake', 'ro'), 'Frână');
+  assert.equal(translateArcadeText('Mint steering joystick', 'ro'), 'Joystick de direcție Mint');
+  assert.equal(
+    translateArcadeText('Reset this Țintar match? The current board will be lost.', 'ro'),
+    'Resetezi acest meci de Țintar? Tabla actuală va fi pierdută.',
+  );
 });
 
 test('Romanian translations preserve whitespace and localize dynamic Țintar messages', () => {

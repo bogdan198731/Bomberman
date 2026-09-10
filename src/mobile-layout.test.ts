@@ -44,9 +44,10 @@ test('multiplayer games share a mode-first room selector', () => {
 
 test('active game screens reserve short viewports for the playfield', () => {
   assert.match(html, /@media \(min-width: 761px\) and \(max-height: 920px\)/);
-  assert.match(html, /#gameView \.arena-wrap\s*\{[^}]*width:\s*min\(680px, calc\(100dvh - 220px\), calc\(100% - 32px\)\);/s);
+  assert.match(html, /#gameView \.arena-wrap\s*\{[^}]*width:\s*min\(680px, calc\(100dvh - 255px\), calc\(100% - 32px\)\);/s);
   assert.match(html, /\.paddle-shell\s*\{[^}]*width:\s*min\(100%, 900px\);[^}]*margin-inline:\s*auto;/s);
-  assert.match(html, /\.sudoku-board-stage\s*\{[^}]*width:\s*min\(100%, calc\(100dvh - 390px\)\);/s);
+  assert.match(html, /\.sudoku-board-stage\s*\{[^}]*width:\s*min\(100%, calc\(100dvh - 400px\)\);/s);
+  assert.match(html, /:is\(#snakeCanvas, #tanksCanvas, #survivalCanvas, #starCanvas, #racingCanvas, #blocksCanvas\)\s*\{[^}]*width:\s*min\(100%, calc\(\(100dvh - 390px\) \* 1\.5\)\);/s);
   assert.match(html, /\.room-mode-managed \.snake-toolbar\s*\{\s*display:\s*none;/s);
   assert.match(html, /\.tintar-board-frame\s*\{\s*order:\s*-1;/s);
   assert.match(html, /\.game-room-heading \.game-room-copy\s*\{\s*display:\s*none;/s);
@@ -132,17 +133,17 @@ test('remaining game setup and reset actions use clear, safe mobile copy', () =>
   assert.match(html, /\.tintar-turn-card \{ display: none; \}/);
   assert.match(html, /id="septicaRestartButton"[^>]*>New deal<\/button>/);
   assert.match(html, /class="new-puzzle"[^>]*data-sudoku-new/);
-  assert.match(readFileSync(new URL('../src/twenty48.ts', import.meta.url), 'utf8'), /window\.confirm\('Start a new 2048 game\?/);
-  assert.match(sudokuSource, /window\.confirm\('Start a new Sudoku puzzle\?/);
-  assert.match(readFileSync(new URL('../src/septica.ts', import.meta.url), 'utf8'), /window\.confirm\('Start a new deal\?/);
-  assert.match(tintarSource, /window\.confirm\('Reset this Țintar match\?/);
+  assert.match(readFileSync(new URL('../src/twenty48.ts', import.meta.url), 'utf8'), /window\.confirm\(translateArcadeText\('Start a new 2048 game\?/);
+  assert.match(sudokuSource, /window\.confirm\(translateArcadeText\('Start a new Sudoku puzzle\?/);
+  assert.match(readFileSync(new URL('../src/septica.ts', import.meta.url), 'utf8'), /window\.confirm\(translateArcadeText\('Start a new deal\?/);
+  assert.match(tintarSource, /window\.confirm\(translateArcadeText\('Reset this Țintar match\?/);
 });
 
 test('Block Drop prioritizes one large human board on mobile', () => {
   assert.match(blocksSource, /const singleBoardMobile = mobile && \(game\.mode === 'bot' \|\| Boolean\(room\?\.session\(\)\.online\)\)/);
-  assert.match(blocksSource, /setCanvasSize\(mobile \? 360 : 900, mobile \? \(singleBoardMobile \? 510 : 390\) : 600\)/);
-  assert.match(blocksSource, /drawBoard\(focusedPlayer, 24, 62, 21\)/);
-  assert.match(blocksSource, /drawBoard\(rival, 282, 81, 6\)/);
+  assert.match(blocksSource, /setCanvasSize\(mobile \? 360 : 900, mobile \? \(singleBoardMobile \? 470 : 390\) : 600\)/);
+  assert.match(blocksSource, /drawBoard\(focusedPlayer, 29, 52, 20\)/);
+  assert.match(blocksSource, /drawBoard\(rival, 282, 70, 6\)/);
   assert.match(html, /\.blocks-arena \{ padding: 6px; \}/);
   assert.match(html, /id="blocksMobileStartButton" class="blocks-mobile-start"/);
   assert.match(html, /\.blocks-mobile-start:not\(\[hidden\]\)\s*\{[^}]*position:\s*absolute;/s);
@@ -208,6 +209,7 @@ test('2048 exposes a responsive swipe board and touch fallback controls', () => 
   assert.match(html, /\.twenty48-board\s*\{[^}]*aspect-ratio:\s*1;[^}]*touch-action:\s*none;/s);
   assert.equal((html.match(/data-twenty48-direction=/g) ?? []).length, 4);
   assert.match(html, /Use arrow keys or WASD\. Swipe the board on touch screens\./);
+  assert.match(html, /\.twenty48-new-game \{ width: 100%; min-height: 44px; \}/);
 });
 
 test('Sudoku exposes a responsive board and complete touch controls', () => {
