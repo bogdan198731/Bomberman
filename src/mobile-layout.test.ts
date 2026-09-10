@@ -47,7 +47,10 @@ test('active game screens reserve short viewports for the playfield', () => {
   assert.match(html, /#gameView \.arena-wrap\s*\{[^}]*width:\s*min\(680px, calc\(100dvh - 255px\), calc\(100% - 32px\)\);/s);
   assert.match(html, /\.paddle-shell\s*\{[^}]*width:\s*min\(100%, 900px\);[^}]*margin-inline:\s*auto;/s);
   assert.match(html, /\.sudoku-board-stage\s*\{[^}]*width:\s*min\(100%, calc\(100dvh - 400px\)\);/s);
-  assert.match(html, /:is\(#snakeCanvas, #tanksCanvas, #survivalCanvas, #starCanvas, #racingCanvas, #blocksCanvas\)\s*\{[^}]*width:\s*min\(100%, calc\(\(100dvh - 390px\) \* 1\.5\)\);/s);
+  assert.match(html, /:is\(#paddleCanvas, #snakeCanvas, #tanksCanvas, #survivalCanvas, #starCanvas, #racingCanvas, #blocksCanvas\)\s*\{[^}]*width:\s*min\(100%, calc\(\(100dvh - 390px\) \* 1\.5\)\);/s);
+  assert.match(html, /\.tintar-board\s*\{[^}]*width:\s*min\(100%, 620px, calc\(100dvh - 200px\)\);/s);
+  assert.match(html, /\.twenty48-board-stage\s*\{[^}]*width:\s*min\(100%, 560px, calc\(100dvh - 295px\)\);/s);
+  assert.match(html, /\.septica-felt\s*\{[^}]*min-height:\s*0;[^}]*grid-template-rows:\s*auto minmax\(120px, 1fr\) auto;[^}]*padding:\s*14px 24px;/s);
   assert.match(html, /\.room-mode-managed \.snake-toolbar\s*\{\s*display:\s*none;/s);
   assert.match(html, /\.tintar-board-frame\s*\{\s*order:\s*-1;/s);
   assert.match(html, /\.game-room-heading \.game-room-copy\s*\{\s*display:\s*none;/s);
