@@ -218,7 +218,12 @@ export function initPaddleClash(): void {
   }
 
   function syncUi(): void {
-    if (status) status.textContent = game.statusText();
+    if (status) {
+      const touchFriendly = window.matchMedia('(max-width: 760px), (pointer: coarse)').matches;
+      status.textContent = game.phase === 'ready' && touchFriendly
+        ? 'Tap Serve to start the rally.'
+        : game.statusText();
+    }
     if (mintScore) mintScore.textContent = String(game.players[1].score);
     if (coralScore) coralScore.textContent = String(game.players[2].score);
     if (serveButton) {

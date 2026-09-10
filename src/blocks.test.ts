@@ -30,6 +30,21 @@ test('players receive the same deterministic piece sequence', () => {
   }
 });
 
+test('next-piece preview does not consume either player sequence', () => {
+  const rolls = [0, .2, .4, .6, .8];
+  let roll = 0;
+  const game = new BlockDropGame(() => rolls[roll++ % rolls.length]);
+  game.restart('duel');
+  const preview = game.peekNextType(1);
+  assert.equal(game.peekNextType(1), preview);
+  assert.equal(game.peekNextType(2), preview);
+  game.start();
+  game.hardDrop(1);
+  game.hardDrop(2);
+  assert.equal(game.active[1].type, preview);
+  assert.equal(game.active[2].type, preview);
+});
+
 test('a falling piece moves and rotates only into legal cells', () => {
   const game = new BlockDropGame(() => 0);
   game.restart('duel');

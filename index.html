@@ -5342,14 +5342,35 @@
     }
 
     .racing-team {
-      grid-template-columns: repeat(2, minmax(54px, 80px));
-      grid-template-rows: auto repeat(2, 48px);
+      grid-template-columns: minmax(96px, 112px);
+      grid-template-rows: auto auto auto;
     }
 
-    .racing-team .racing-left { grid-column: 1; grid-row: 2; }
-    .racing-team .racing-right { grid-column: 2; grid-row: 2; }
-    .racing-team .racing-brake { grid-column: 1; grid-row: 3; background: rgba(255,255,255,.1); }
-    .racing-team .racing-accelerate { grid-column: 2; grid-row: 3; background: rgba(255,200,87,.24); }
+    .racing-pedals {
+      display: grid;
+      width: 100%;
+      grid-template-columns: 1fr 1fr;
+      grid-row: 3;
+      gap: 7px;
+    }
+
+    .racing-pedal {
+      min-height: 48px;
+      border: 1px solid rgba(255,255,255,.18);
+      border-bottom-width: 5px;
+      border-radius: 12px;
+      color: var(--ink);
+      background: rgba(255,255,255,.1);
+      touch-action: none;
+      font-size: .66rem;
+      font-weight: 950;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+
+    .racing-pedal.racing-accelerate { color: #241a04; background: linear-gradient(#ffd978, #f1ae31); }
+    .racing-pedal.pressed,
+    .racing-pedal:active { border-bottom-width: 1px; filter: brightness(1.08); transform: translateY(4px); }
 
     .blocks-brand-mark {
       display: grid;
@@ -5378,9 +5399,12 @@
     .blocks-brand-mark i:nth-child(5) { grid-column: 3; grid-row: 3; background: #ff9b54; }
 
     .blocks-arena {
+      position: relative;
       padding: clamp(10px, 2.2vw, 22px);
       background: #080d16;
     }
+
+    .blocks-mobile-start { display: none; }
 
     #blocksCanvas {
       display: block;
@@ -6480,6 +6504,58 @@
         filter: brightness(1.1);
         transform: translateY(4px) scale(.97);
       }
+
+      .racing-touch-controls:has(.solo-hidden) > .racing-team:not(.solo-hidden) {
+        display: grid;
+        max-width: 360px;
+        grid-template-columns: 96px minmax(8px, 1fr) minmax(104px, 112px);
+        grid-template-rows: auto auto;
+        align-items: center;
+        gap: 8px 10px;
+      }
+
+      .racing-touch-controls:has(.solo-hidden) > .racing-team:not(.solo-hidden) > strong {
+        grid-column: 1 / -1;
+      }
+
+      .racing-touch-controls:has(.solo-hidden) > .racing-team:not(.solo-hidden) > .arcade-joystick {
+        width: min(112px, 32vw);
+        grid-column: 3;
+        grid-row: 2;
+        justify-self: end;
+      }
+
+      .racing-touch-controls:has(.solo-hidden) > .racing-team:not(.solo-hidden) > .racing-pedals {
+        width: 96px;
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr 1fr;
+        grid-column: 1;
+        grid-row: 2;
+      }
+
+      .racing-touch-controls:has(.solo-hidden) .racing-pedal { min-height: 50px; }
+
+      #blocksView .paddle-statusbar .paddle-serve { display: none; }
+
+      .blocks-mobile-start:not([hidden]) {
+        position: absolute;
+        z-index: 2;
+        top: 50%;
+        left: 50%;
+        display: block;
+        min-width: 164px;
+        min-height: 52px;
+        border: 2px solid rgba(255,255,255,.42);
+        border-bottom-width: 6px;
+        border-radius: 14px;
+        color: #201603;
+        background: linear-gradient(#ffd979, #f2b338);
+        box-shadow: 0 14px 34px rgba(0,0,0,.48), 0 0 24px rgba(255,200,87,.18);
+        font-weight: 950;
+        transform: translate(-50%, -50%);
+      }
+
+      .blocks-mobile-start:disabled { color: var(--ink); background: #374151; }
     }
 
     /* Keep the playfield—not setup chrome—as the focus on shorter screens. */
@@ -8061,22 +8137,26 @@
       <div class="tanks-touch-controls racing-touch-controls" aria-label="Touch racing controls">
         <div id="racingMintControls" class="tank-touch-team joystick-team racing-team">
           <strong>Mint</strong>
-          <div class="arcade-joystick" data-racing-joystick="1" role="group" tabindex="0" aria-label="Mint driving joystick">
-            <span class="arcade-joystick-arrow up" aria-hidden="true">GO</span>
+          <div class="arcade-joystick" data-racing-joystick="1" role="group" tabindex="0" aria-label="Mint steering joystick">
             <span class="arcade-joystick-arrow right" aria-hidden="true">▶</span>
-            <span class="arcade-joystick-arrow down" aria-hidden="true">BRK</span>
             <span class="arcade-joystick-arrow left" aria-hidden="true">◀</span>
             <span class="arcade-joystick-knob" data-joystick-knob aria-hidden="true"></span>
+          </div>
+          <div class="racing-pedals" aria-label="Mint pedals">
+            <button class="racing-pedal racing-brake" type="button" data-racing-player="1" data-racing-action="brake" aria-label="Hold to brake Mint">Brake</button>
+            <button class="racing-pedal racing-accelerate" type="button" data-racing-player="1" data-racing-action="accelerate" aria-label="Hold to accelerate Mint">Go</button>
           </div>
         </div>
         <div id="racingCoralControls" class="tank-touch-team joystick-team racing-team coral solo-hidden">
           <strong>Coral</strong>
-          <div class="arcade-joystick" data-racing-joystick="2" role="group" tabindex="0" aria-label="Coral driving joystick">
-            <span class="arcade-joystick-arrow up" aria-hidden="true">GO</span>
+          <div class="arcade-joystick" data-racing-joystick="2" role="group" tabindex="0" aria-label="Coral steering joystick">
             <span class="arcade-joystick-arrow right" aria-hidden="true">▶</span>
-            <span class="arcade-joystick-arrow down" aria-hidden="true">BRK</span>
             <span class="arcade-joystick-arrow left" aria-hidden="true">◀</span>
             <span class="arcade-joystick-knob" data-joystick-knob aria-hidden="true"></span>
+          </div>
+          <div class="racing-pedals" aria-label="Coral pedals">
+            <button class="racing-pedal racing-brake" type="button" data-racing-player="2" data-racing-action="brake" aria-label="Hold to brake Coral">Brake</button>
+            <button class="racing-pedal racing-accelerate" type="button" data-racing-player="2" data-racing-action="accelerate" aria-label="Hold to accelerate Coral">Go</button>
           </div>
         </div>
       </div>
@@ -8113,7 +8193,10 @@
           <div><span>Coral score</span><b id="blocksCoralScore">0</b><span id="blocksCoralLines" class="racing-speed">0 lines</span></div>
         </div>
       </div>
-      <div class="blocks-arena"><canvas id="blocksCanvas" width="900" height="600" aria-label="Two Block Drop battle boards"></canvas></div>
+      <div class="blocks-arena">
+        <canvas id="blocksCanvas" width="900" height="600" aria-label="Two Block Drop battle boards"></canvas>
+        <button id="blocksMobileStartButton" class="blocks-mobile-start" type="button">Start duel</button>
+      </div>
       <div class="paddle-statusbar" aria-live="polite">
         <span id="blocksStatus">Clear lines and bury the Coral bot under garbage blocks.</span>
         <button id="blocksStartButton" class="paddle-serve" type="button">Start duel</button>

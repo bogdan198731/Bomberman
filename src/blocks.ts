@@ -217,13 +217,19 @@ export class BlockDropGame {
     return `${this.winner === 1 ? 'Mint' : 'Coral'} wins the Block Drop duel!`;
   }
 
-  private nextType(player: BlockPlayer): TetrominoType {
-    const index = this.pieceIndexes[player]++;
+  peekNextType(player: BlockPlayer): TetrominoType {
+    const index = this.pieceIndexes[player];
     while (this.pieceHistory.length <= index) {
       const randomIndex = Math.min(BLOCK_TYPES.length - 1, Math.floor(this.random() * BLOCK_TYPES.length));
       this.pieceHistory.push(BLOCK_TYPES[randomIndex]);
     }
     return this.pieceHistory[index];
+  }
+
+  private nextType(player: BlockPlayer): TetrominoType {
+    const type = this.peekNextType(player);
+    this.pieceIndexes[player] += 1;
+    return type;
   }
 
   private canPlace(player: BlockPlayer, piece: FallingPiece): boolean {
@@ -378,6 +384,7 @@ export function initBlockDrop(): void {
   const mintLines = document.getElementById('blocksMintLines');
   const coralLines = document.getElementById('blocksCoralLines');
   const startButton = document.getElementById('blocksStartButton') as HTMLButtonElement | null;
+  const mobileStartButton = document.getElementById('blocksMobileStartButton') as HTMLButtonElement | null;
   const modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-blocks-mode]');
   const mintControls = document.getElementById('blocksMintControls');
   const coralControls = document.getElementById('blocksCoralControls');
@@ -425,10 +432,15 @@ export function initBlockDrop(): void {
     if (coralScore) coralScore.textContent = String(game.scores[2]);
     if (mintLines) mintLines.textContent = `${game.lines[1]} lines`;
     if (coralLines) coralLines.textContent = `${game.lines[2]} lines`;
-    if (startButton) {
-      startButton.disabled = game.phase === 'playing' || Boolean(room?.session().online && !room.session().ready);
-      startButton.textContent = game.phase === 'finished' ? 'New duel' : game.phase === 'ready' ? 'Start duel' : 'Battle live';
-    }
+    const waitingOnline = Boolean(room?.session().online && !room.session().ready);
+    [startButton, mobileStartButton].forEach(button => {
+      if (!button) return;
+      button.disabled = game.phase === 'playing' || waitingOnline;
+      button.textContent = waitingOnline
+        ? 'Waiting for rival'
+        : game.phase === 'finished' ? 'New duel' : game.phase === 'ready' ? 'Start duel' : 'Battle live';
+    });
+    if (mobileStartButton) mobileStartButton.hidden = game.phase === 'playing';
     modeButtons.forEach(button => {
       button.classList.toggle('active', button.dataset.blocksMode === game.mode);
       button.disabled = Boolean(room?.session().online) || game.phase === 'playing';
@@ -524,12 +536,27 @@ export function initBlockDrop(): void {
     ctx.fillStyle = '#9aa8bd';
     ctx.font = '800 10px system-ui';
     ctx.fillText(`${game.pendingGarbage[rival]} incoming`, 312, 221);
-    ctx.fillStyle = '#ffc857';
-    ctx.font = '950 28px system-ui';
-    ctx.fillText(String(game.pendingGarbage[focusedPlayer]), 312, 270);
+    const nextType = game.peekNextType(focusedPlayer);
+    const nextCells = pieceCells({ type: nextType, rotation: 0 });
+    const minX = Math.min(...nextCells.map(([x]) => x));
+    const maxX = Math.max(...nextCells.map(([x]) => x));
+    const minY = Math.min(...nextCells.map(([, y]) => y));
+    const maxY = Math.max(...nextCells.map(([, y]) => y));
+    const previewSize = 9;
+    const previewLeft = 312 - ((maxX - minX + 1) * previewSize) / 2;
+    const previewTop = 263 - ((maxY - minY + 1) * previewSize) / 2;
     ctx.fillStyle = '#9aa8bd';
     ctx.font = '850 9px system-ui';
-    ctx.fillText('INCOMING', 312, 286);
+    ctx.fillText('NEXT', 312, 243);
+    for (const [cellX, cellY] of nextCells) {
+      drawCell(previewLeft + (cellX - minX) * previewSize, previewTop + (cellY - minY) * previewSize, previewSize, nextType);
+    }
+    ctx.fillStyle = '#ffc857';
+    ctx.font = '950 28px system-ui';
+    ctx.fillText(String(game.pendingGarbage[focusedPlayer]), 312, 324);
+    ctx.fillStyle = '#9aa8bd';
+    ctx.font = '850 9px system-ui';
+    ctx.fillText('INCOMING', 312, 340);
   }
 
   function render(): void {
@@ -624,6 +651,7 @@ export function initBlockDrop(): void {
     if (mode === 'bot' || mode === 'duel') { game.restart(mode); syncUi(); render(); }
   }));
   startButton?.addEventListener('click', startMatch);
+  mobileStartButton?.addEventListener('click', startMatch);
   document.getElementById('blocksRestartButton')?.addEventListener('click', () => {
     if (room?.isGuest()) room.sendAction({ type: 'restart' });
     else {

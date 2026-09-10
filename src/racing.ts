@@ -525,9 +525,8 @@ export function initMicroRacers(): void {
   document.querySelectorAll<HTMLElement>('[data-racing-joystick]').forEach(track => {
     const player = Number(track.dataset.racingJoystick) as RacingPlayer;
     bindDirectionalJoystick(track, (direction, pressed) => {
-      const action: RacingAction = direction === 'up' ? 'accelerate' : direction === 'down' ? 'brake' : direction;
-      setPlayerInput(player, action, pressed);
-    });
+      if (direction === 'left' || direction === 'right') setPlayerInput(player, direction, pressed);
+    }, 'horizontal');
   });
   modeButtons.forEach(button => button.addEventListener('click', () => {
     if (room?.session().online) return;

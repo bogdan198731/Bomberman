@@ -14,7 +14,7 @@ export interface JoystickVector {
 }
 
 export type JoystickInputDirection = 'up' | 'down' | 'left' | 'right';
-export type JoystickInputMode = 'free' | 'cardinal' | 'vertical';
+export type JoystickInputMode = 'free' | 'cardinal' | 'horizontal' | 'vertical';
 export type JoystickDigitalState = Record<JoystickInputDirection, boolean>;
 
 export type BombermanTouchLayout = 'joystick-left' | 'joystick-right';
@@ -75,6 +75,11 @@ export function digitalJoystickState(
   threshold = 0.32,
 ): JoystickDigitalState {
   const state: JoystickDigitalState = { up: false, down: false, left: false, right: false };
+  if (mode === 'horizontal') {
+    state.left = vector.x < -threshold;
+    state.right = vector.x > threshold;
+    return state;
+  }
   if (mode === 'vertical') {
     state.up = vector.y < -threshold;
     state.down = vector.y > threshold;

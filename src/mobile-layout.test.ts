@@ -93,7 +93,7 @@ test('real-time mobile games use shared virtual joysticks', () => {
   assert.match(html, /\.tank-touch-team\.joystick-team\s*\{[^}]*grid-template-columns:/s);
   assert.equal((html.match(/data-paddle-direction=/g) ?? []).length, 0);
   assert.equal((html.match(/data-snake-direction=/g) ?? []).length, 0);
-  assert.equal((html.match(/data-racing-action=/g) ?? []).length, 0);
+  assert.equal((html.match(/data-racing-action=/g) ?? []).length, 4);
   for (const id of ['snakeCoralControls', 'tanksCoralControls', 'racingCoralControls', 'blocksCoralControls']) {
     assert.match(html, new RegExp(`id="${id}"[^>]*solo-hidden`));
   }
@@ -130,6 +130,17 @@ test('Block Drop prioritizes one large human board on mobile', () => {
   assert.match(blocksSource, /drawBoard\(focusedPlayer, 24, 62, 21\)/);
   assert.match(blocksSource, /drawBoard\(rival, 282, 81, 6\)/);
   assert.match(html, /\.blocks-arena \{ padding: 6px; \}/);
+  assert.match(html, /id="blocksMobileStartButton" class="blocks-mobile-start"/);
+  assert.match(html, /\.blocks-mobile-start:not\(\[hidden\]\)\s*\{[^}]*position:\s*absolute;/s);
+  assert.match(blocksSource, /game\.peekNextType\(focusedPlayer\)/);
+});
+
+test('mobile racing separates steering from throttle and brake pedals', () => {
+  assert.equal((html.match(/class="racing-pedal racing-brake"/g) ?? []).length, 2);
+  assert.equal((html.match(/class="racing-pedal racing-accelerate"/g) ?? []).length, 2);
+  assert.match(racingSource, /direction === 'left' \|\| direction === 'right'/);
+  assert.match(racingSource, /}, 'horizontal'\);/);
+  assert.match(html, /\.racing-touch-controls:has\(\.solo-hidden\) > \.racing-team:not\(\.solo-hidden\)[\s\S]*?grid-template-columns: 96px minmax\(8px, 1fr\) minmax\(104px, 112px\);/);
 });
 
 test('mobile controls meet a 44px minimum and Sudoku supports pencil notes', () => {

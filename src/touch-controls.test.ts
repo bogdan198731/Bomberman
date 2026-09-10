@@ -46,7 +46,7 @@ test('joystick vectors are normalized and preserve diagonals', () => {
   assert.deepEqual(joystickVector(4, 5, 50), { x: 0, y: 0 });
 });
 
-test('digital joystick modes support free, cardinal, and vertical controls', () => {
+test('digital joystick modes support free, cardinal, horizontal, and vertical controls', () => {
   assert.deepEqual(digitalJoystickState({ x: .8, y: -.7 }), {
     up: true, down: false, left: false, right: true,
   });
@@ -55,5 +55,8 @@ test('digital joystick modes support free, cardinal, and vertical controls', () 
   });
   assert.deepEqual(digitalJoystickState({ x: .8, y: -.7 }, 'vertical'), {
     up: true, down: false, left: false, right: false,
+  });
+  assert.deepEqual(digitalJoystickState({ x: .8, y: -.7 }, 'horizontal'), {
+    up: false, down: false, left: false, right: true,
   });
 });
