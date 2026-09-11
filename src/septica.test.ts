@@ -65,6 +65,7 @@ test('a non-cutting response remains visible before the table is awarded', () =>
   assert.deepEqual(game.legalCardIndexes(2), []);
   assert.equal(game.settleTrick(), true);
   assert.equal(game.points[1], 1);
+  assert.equal(game.lastTrickSummary, 'Mint takes 2 cards with the last cut · 1 point.');
   assert.equal(game.phase, 'finished');
   assert.equal(game.table.length, 0);
   assert.equal(game.settleTrick(), false);

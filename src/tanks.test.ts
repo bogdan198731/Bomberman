@@ -6,6 +6,19 @@ test('Mini Tanks starts ready in bot mode', () => {
   const game = new MiniTanksGame();
   assert.equal(game.mode, 'bot');
   assert.equal(game.phase, 'ready');
+  assert.equal(game.botPace, 'rookie');
+});
+
+test('tank bot offers a faster ace reaction profile', () => {
+  const game = new MiniTanksGame();
+  game.setBotPace('ace');
+  game.startRound();
+  game.update(.01);
+  const firstDirection = game.tanks[2].direction;
+  game.tanks[1].x = game.tanks[2].x;
+  game.tanks[1].y = game.tanks[2].y - 200;
+  for (let tick = 0; tick < 6; tick += 1) game.update(.04);
+  assert.notEqual(game.tanks[2].direction, firstDirection);
 });
 
 test('starting a round enables movement and firing', () => {

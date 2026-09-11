@@ -56,7 +56,7 @@ test('a defeated crawler awards points to the shooter', () => {
   assert.equal(game.players[1].score, 10);
 });
 
-test('every third wave grants an overdrive upgrade', () => {
+test('every third wave pauses for a meaningful player upgrade choice', () => {
   const game = new SurvivalArenaGame(() => .5);
   game.start();
   const originalSpeed = game.players[1].speed;
@@ -64,8 +64,27 @@ test('every third wave grants an overdrive upgrade', () => {
   game.enemies = [];
   game.update(.01);
   assert.equal(game.wave, 3);
+  assert.equal(game.awaitingUpgrade, true);
+  assert.equal(game.enemies.length, 0);
+  assert.equal(game.chooseUpgrade('speed'), true);
   assert.equal(game.upgradeLevel, 1);
   assert.ok(game.players[1].speed > originalSpeed);
+  assert.equal(game.awaitingUpgrade, false);
+  assert.ok(game.enemies.length > 0);
+});
+
+test('wave upgrades have distinct effects and later waves mix enemy roles', () => {
+  const game = new SurvivalArenaGame(() => .5);
+  game.start();
+  game.wave = 3;
+  game.enemies = [];
+  game.awaitingUpgrade = true;
+  assert.equal(game.chooseUpgrade('rapid'), true);
+  assert.equal(game.rapidLevel, 1);
+  assert.ok(game.enemies.some(enemy => enemy.kind === 'brute'));
+  assert.ok(game.enemies.some(enemy => enemy.kind === 'scout'));
+  game.shoot(1, 0, 0);
+  assert.ok(game.players[1].cooldown < .42);
 });
 
 test('the run ends when every active hero falls', () => {

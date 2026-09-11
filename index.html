@@ -127,7 +127,8 @@
     }
 
     .hub-settings-button,
-    .settings-nav-button {
+    .settings-nav-button,
+    .pause-game-button {
       min-height: 40px;
       border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 12px;
@@ -168,8 +169,14 @@
       font-size: 0.9rem;
     }
 
-    .settings-nav-button {
+    .settings-nav-button,
+    .pause-game-button {
       padding: 0 12px;
+    }
+
+    .pause-game-button {
+      border-color: rgba(73, 226, 255, .18);
+      color: #cdeaf0;
     }
 
     .live-chip,
@@ -1418,6 +1425,26 @@
       scroll-snap-type: x proximity;
     }
 
+    .circuit-mode-picker {
+      display: inline-flex;
+      gap: 6px;
+      padding: 5px;
+      border: 1px solid rgba(137, 163, 191, .18);
+      border-radius: 14px;
+      background: rgba(7, 14, 23, .48);
+    }
+    .circuit-mode-picker button {
+      min-height: 38px;
+      border: 0;
+      border-radius: 10px;
+      padding: 0 14px;
+      background: transparent;
+      color: #aeb9c9;
+      font: 850 .75rem/1 inherit;
+      cursor: pointer;
+    }
+    .circuit-mode-picker button.active { background: rgba(84, 227, 142, .16); color: #8af0b2; }
+
     .leaderboard-tabs::-webkit-scrollbar { display: none; }
 
     .leaderboard-tab {
@@ -2239,6 +2266,242 @@
       line-height: 1.5;
       text-align: center;
     }
+
+    .settings-session-note {
+      margin: 14px 0 0;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 200, 87, .28);
+      border-radius: 12px;
+      color: #f9e2ab;
+      background: rgba(255, 200, 87, .08);
+      font-size: .72rem;
+      font-weight: 780;
+      line-height: 1.45;
+    }
+
+    .arcade-session-overlay {
+      position: fixed;
+      z-index: 90;
+      inset: 0;
+      display: grid;
+      padding: 20px;
+      place-items: center;
+      background: rgba(4, 8, 14, .78);
+      backdrop-filter: blur(7px);
+    }
+
+    .arcade-session-overlay[hidden] { display: none; }
+
+    .arcade-session-card {
+      width: min(390px, 100%);
+      padding: 24px;
+      border: 1px solid rgba(73, 226, 255, .35);
+      border-radius: 20px;
+      background: linear-gradient(145deg, #182334, #101722);
+      box-shadow: 0 28px 80px rgba(0, 0, 0, .55), 0 0 32px rgba(73, 226, 255, .09);
+      text-align: center;
+    }
+
+    .arcade-session-kicker {
+      color: #49e2ff;
+      font-size: .64rem;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .arcade-session-card h2 { margin: 8px 0 7px; font-size: 1.65rem; }
+    .arcade-session-card p { margin: 0 0 18px; color: var(--muted); line-height: 1.5; }
+    .arcade-session-card button {
+      width: 100%;
+      min-height: 48px;
+      border: 0;
+      border-radius: 13px;
+      color: #07150d;
+      background: var(--p1);
+      font-weight: 950;
+    }
+
+    .game-help-button {
+      min-height: 42px;
+      padding: 0 14px;
+      border: 1px solid rgba(137, 163, 191, .25);
+      border-radius: 14px;
+      background: rgba(19, 30, 39, .72);
+      color: var(--ink);
+      font: 800 .76rem/1 inherit;
+      cursor: pointer;
+    }
+
+    .game-help-overlay,
+    .arcade-result-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 125;
+      display: grid;
+      place-items: center;
+      padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+      overflow-y: auto;
+      background: rgba(3, 9, 15, .84);
+      backdrop-filter: blur(10px);
+    }
+
+    .game-help-overlay[hidden],
+    .arcade-result-overlay[hidden] { display: none; }
+
+    .game-help-card,
+    .arcade-result-card {
+      width: min(100%, 570px);
+      border: 1px solid rgba(104, 226, 169, .28);
+      border-radius: 24px;
+      padding: clamp(20px, 4vw, 34px);
+      background: linear-gradient(145deg, #192334, #101824);
+      box-shadow: 0 24px 72px rgba(0, 0, 0, .48);
+    }
+
+    .game-help-kicker,
+    .arcade-result-kicker {
+      color: var(--p1);
+      font: 900 .69rem/1.2 inherit;
+      letter-spacing: .14em;
+    }
+
+    .game-help-card h2,
+    .arcade-result-card h2 { margin: 10px 0 8px; font-size: clamp(1.65rem, 5vw, 2.45rem); }
+    .game-help-card h3 { margin: 22px 0 7px; font-size: .8rem; letter-spacing: .1em; text-transform: uppercase; color: #c6d0dd; }
+    .game-help-objective,
+    .game-help-controls,
+    .arcade-result-explanation { margin: 0; color: #bdc8d7; line-height: 1.55; }
+    .game-help-rules { margin: 14px 0; padding-left: 1.35rem; display: grid; gap: 9px; color: #e6edf6; line-height: 1.45; }
+    .game-help-tip { margin: 18px 0; padding: 12px 14px; border-radius: 13px; background: rgba(255, 200, 87, .08); color: #f5dc9f; }
+    .game-help-close,
+    .arcade-result-actions button {
+      min-height: 48px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 14px;
+      padding: 0 18px;
+      background: #54e38e;
+      color: #07140d;
+      font: 900 .85rem/1 inherit;
+      cursor: pointer;
+    }
+    .arcade-result-card { text-align: center; }
+    .arcade-result-actions { margin-top: 22px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .arcade-result-actions [data-result-next] { grid-column: 1 / -1; background: #ffc857; color: #1a1203; }
+    .arcade-result-actions [data-result-close] { background: #263246; color: #eaf1fa; }
+
+    .arcade-gameplay-cue {
+      position: fixed;
+      left: 50%;
+      top: max(88px, calc(env(safe-area-inset-top) + 58px));
+      z-index: 118;
+      translate: -50% 0;
+      padding: 9px 15px;
+      border: 1px solid rgba(255, 255, 255, .24);
+      border-radius: 999px;
+      background: rgba(11, 18, 28, .92);
+      color: #fff;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .35);
+      font: 950 .72rem/1 inherit;
+      letter-spacing: .1em;
+      pointer-events: none;
+      animation: gameplay-cue-in .24s ease both;
+    }
+    .arcade-gameplay-cue[hidden] { display: none; }
+    .arcade-gameplay-cue[data-cue="danger"] { border-color: #ff6b78; color: #ff9ca6; }
+    .arcade-gameplay-cue[data-cue="pickup"] { border-color: #ffc857; color: #ffe09a; }
+    .arcade-gameplay-cue[data-cue="line-clear"] { border-color: #54e38e; color: #8af0b2; }
+    @keyframes gameplay-cue-in { from { opacity: 0; transform: translateY(-8px) scale(.94); } }
+    body[data-gameplay-cue="hit"] main:not(.view-hidden) canvas { filter: brightness(1.18) saturate(1.2); }
+    html.reduce-motion .arcade-gameplay-cue { animation: none; }
+
+    .gameplay-option,
+    .gameplay-toggle,
+    .shot-readiness {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 36px;
+      color: #aeb9c8;
+      font-size: .68rem;
+      font-weight: 900;
+      letter-spacing: .04em;
+    }
+
+    .gameplay-option select {
+      min-height: 36px;
+      border: 1px solid rgba(255,255,255,.13);
+      border-radius: 10px;
+      padding: 0 9px;
+      color: #eef5ff;
+      background: #202b3d;
+      font: 850 .7rem/1 inherit;
+    }
+
+    .gameplay-toggle {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .gameplay-toggle input {
+      width: 19px;
+      height: 19px;
+      margin: 0;
+      accent-color: var(--p1);
+    }
+
+    .shot-readiness {
+      min-height: 0;
+      color: #ff9ca6;
+    }
+
+    .shot-readiness.ready {
+      color: #77eba6;
+      text-shadow: 0 0 12px rgba(84,227,142,.45);
+    }
+
+    .upgrade-choice {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 9px;
+      padding: 12px 14px;
+      border-top: 1px solid var(--panel-border);
+      background: rgba(255,200,87,.055);
+    }
+
+    .upgrade-choice[hidden] { display: none; }
+    .upgrade-choice > strong {
+      grid-column: 1 / -1;
+      color: #ffc857;
+      font-size: .68rem;
+      font-weight: 950;
+      letter-spacing: .09em;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .upgrade-choice button {
+      min-height: 44px;
+      border: 1px solid rgba(255,200,87,.25);
+      border-radius: 12px;
+      color: #fff1c2;
+      background: rgba(255,200,87,.09);
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    @media (max-width: 520px) {
+      .game-help-button { padding-inline: 11px; font-size: 0; }
+      .game-help-button::before { content: '?'; font-size: .9rem; }
+      .game-help-card, .arcade-result-card { border-radius: 20px; padding: 20px; }
+      .arcade-result-actions { grid-template-columns: 1fr; }
+      .arcade-result-actions [data-result-next] { grid-column: auto; }
+      .gameplay-option { gap: 4px; font-size: .61rem; }
+      .gameplay-option select { padding-inline: 6px; }
+      .upgrade-choice { grid-template-columns: 1fr; }
+      .upgrade-choice > strong { grid-column: auto; }
+    }
+    .arcade-session-card button:disabled { color: var(--muted); background: #293447; }
 
     html.high-contrast {
       --muted: #d8e1ed;
@@ -3591,6 +3854,17 @@
       display: none;
     }
 
+    @media (min-width: 701px) and (max-width: 960px) {
+      .profile-panel {
+        grid-template-columns: minmax(230px, .9fr) minmax(200px, .7fr);
+      }
+
+      .profile-game-stats {
+        grid-column: 1 / -1;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    }
+
     @media (hover: none) and (pointer: coarse), (max-width: 700px) {
       body {
         overscroll-behavior-y: contain;
@@ -4292,7 +4566,16 @@
       }
 
       .cover-label {
-        display: none;
+        top: 5px;
+        left: 5px;
+        display: block;
+        max-width: calc(100% - 48px);
+        padding: 3px 5px;
+        overflow: hidden;
+        font-size: .46rem;
+        letter-spacing: .06em;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .favorite-button {
@@ -4321,13 +4604,25 @@
         -webkit-line-clamp: 2;
       }
 
-      .catalog-card-body p,
-      .mode-label {
+      .catalog-card-body p {
         display: none;
       }
 
       .catalog-card-footer {
         display: block;
+      }
+
+      .mode-label {
+        display: block;
+        min-height: 1.15em;
+        margin-top: 3px;
+        overflow: hidden;
+        color: #96a6ba;
+        font-size: .5rem;
+        line-height: 1.15;
+        text-align: center;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .card-play-button {
@@ -4461,9 +4756,34 @@
         gap: 6px;
       }
 
-      .back-to-hub {
+      .game-nav-actions .back-to-hub,
+      .game-nav-actions .game-help-button,
+      .game-nav-actions .pause-game-button,
+      .game-nav-actions .settings-nav-button {
+        width: 40px;
         min-height: 38px;
-        padding: 0 10px;
+        padding: 0;
+        font-size: 0;
+      }
+
+      .game-nav-actions .back-to-hub::before {
+        content: '←';
+        font-size: .92rem;
+      }
+
+      .game-nav-actions .game-help-button::before {
+        content: '?';
+        font-size: .9rem;
+      }
+
+      .game-nav-actions .pause-game-button::before {
+        content: 'Ⅱ';
+        font-size: .86rem;
+      }
+
+      .game-nav-actions .settings-nav-button::before {
+        content: '⚙';
+        font-size: .9rem;
       }
 
       .game-card {
@@ -5488,6 +5808,8 @@
       margin-bottom: 18px;
     }
 
+    .twenty48-intro-actions { display: flex; gap: 8px; flex: 0 0 auto; }
+
     .twenty48-kicker {
       display: block;
       margin-bottom: 6px;
@@ -5513,6 +5835,7 @@
     }
 
     .twenty48-new-game,
+    .twenty48-undo,
     .twenty48-overlay button,
     .twenty48-direction {
       border: 1px solid rgba(255,255,255,.13);
@@ -5522,7 +5845,8 @@
       font-weight: 900;
     }
 
-    .twenty48-new-game {
+    .twenty48-new-game,
+    .twenty48-undo {
       min-height: 42px;
       padding: 0 16px;
       flex: 0 0 auto;
@@ -5532,9 +5856,11 @@
       background: rgba(255,255,255,.055);
     }
 
+    .twenty48-undo:disabled { cursor: not-allowed; opacity: .45; }
+
     .twenty48-scorebar {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(3, 1fr);
       gap: 10px;
       margin-bottom: 12px;
     }
@@ -5658,6 +5984,31 @@
       text-align: center;
     }
 
+    .puzzle-resume-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border: 1px solid rgba(84,227,142,.3);
+      border-radius: 13px;
+      color: #dff9e9;
+      background: rgba(84,227,142,.08);
+      font-size: .74rem;
+      font-weight: 780;
+    }
+    .puzzle-resume-banner[hidden] { display: none; }
+    .puzzle-resume-banner button {
+      min-height: 40px;
+      padding: 0 14px;
+      border: 0;
+      border-radius: 10px;
+      color: #07150d;
+      background: var(--p1);
+      font-weight: 950;
+    }
+
     .twenty48-controls {
       display: grid;
       width: 180px;
@@ -5691,6 +6042,8 @@
       .twenty48-shell { padding: 14px; border-radius: 19px; }
       .twenty48-intro { align-items: stretch; flex-direction: column; gap: 12px; }
       .twenty48-new-game { width: 100%; min-height: 44px; }
+      .twenty48-intro-actions { display: grid; grid-template-columns: auto auto; }
+      .twenty48-undo { min-height: 44px; }
       .twenty48-score-card { padding: 9px 11px; }
       .twenty48-controls { width: 168px; grid-template-columns: repeat(3, 50px); }
     }
@@ -5765,7 +6118,10 @@
       flex: 0 0 auto;
     }
 
-    .sudoku-difficulties button {
+    .sudoku-toolbar-actions { display: grid; justify-items: end; gap: 7px; }
+
+    .sudoku-difficulties button,
+    .sudoku-relaxed-button {
       min-height: 38px;
       padding: 0 11px;
       border: 1px solid rgba(255,255,255,.11);
@@ -5868,6 +6224,16 @@
       font: 800 clamp(.34rem, 1.45vw, .58rem)/1 system-ui, sans-serif;
     }
 
+    .sudoku-relaxed-button.active {
+      border-color: rgba(84, 227, 142, .42);
+      color: #07150d;
+      background: var(--p1);
+    }
+
+    .sudoku-relaxed .sudoku-meta div:first-child,
+    .sudoku-relaxed .sudoku-meta div:last-child { display: none; }
+    .sudoku-relaxed .sudoku-meta { grid-template-columns: repeat(2, 1fr); }
+
     .sudoku-overlay {
       position: absolute;
       inset: 0;
@@ -5958,6 +6324,7 @@
     @media (max-width: 620px) {
       .sudoku-shell { padding: 12px; border-radius: 18px; }
       .sudoku-toolbar { align-items: stretch; flex-direction: column; gap: 11px; }
+      .sudoku-toolbar-actions { justify-items: stretch; }
       .sudoku-toolbar p { display: none; }
       .sudoku-difficulties { display: grid; grid-template-columns: repeat(3, 1fr); }
       .sudoku-difficulties button { min-height: 44px; padding: 0 7px; }
@@ -6622,7 +6989,7 @@
       .blocks-arena { padding: 10px; }
 
       :is(#paddleCanvas, #snakeCanvas, #tanksCanvas, #survivalCanvas, #starCanvas, #racingCanvas, #blocksCanvas) {
-        width: min(100%, calc((100dvh - 390px) * 1.5));
+        width: min(100%, max(360px, calc((100dvh - 390px) * 1.5)));
         margin-inline: auto;
       }
 
@@ -6642,7 +7009,7 @@
       .tintar-panel h2 { font-size: clamp(2rem, 4vw, 2.8rem); }
       .tintar-rules { display: none; }
       .tintar-board-frame { padding: 14px; }
-      .tintar-board { width: min(100%, 620px, calc(100dvh - 200px)); }
+      .tintar-board { width: min(100%, 620px, max(300px, calc(100dvh - 200px))); }
 
       .twenty48-shell,
       .sudoku-shell { padding: 18px; }
@@ -6652,7 +7019,7 @@
       .twenty48-help,
       .sudoku-help { display: none; }
       .twenty48-controls { display: none; }
-      .twenty48-board-stage { width: min(100%, 560px, calc(100dvh - 295px)); }
+      .twenty48-board-stage { width: min(100%, 560px, max(300px, calc(100dvh - 295px))); }
 
       .septica-felt {
         min-height: 0;
@@ -6663,7 +7030,7 @@
 
       .sudoku-toolbar { margin-bottom: 9px; }
       .sudoku-meta { margin-bottom: 8px; }
-      .sudoku-board-stage { width: min(100%, calc(100dvh - 400px)); }
+      .sudoku-board-stage { width: min(100%, max(300px, calc(100dvh - 400px))); }
       .sudoku-status { margin-block: 8px 6px; }
       .sudoku-number-pad button { min-height: 40px; }
       .sudoku-actions button { min-height: 36px; }
@@ -6706,7 +7073,76 @@
       }
     }
 
+    /* Touch capability is not the same thing as phone width. */
+    html.touch-controls-on :is(.paddle-touch-controls, .snake-touch-controls, .tanks-touch-controls) {
+      display: grid;
+    }
+
+    html.touch-controls-off :is(.paddle-touch-controls, .snake-touch-controls, .tanks-touch-controls) {
+      display: none !important;
+    }
+
+    @media (any-pointer: coarse) {
+      html:not(.touch-controls-off) :is(.paddle-touch-controls, .snake-touch-controls, .tanks-touch-controls) {
+        display: grid;
+      }
+    }
+
+    @media (min-width: 761px) and (any-pointer: coarse),
+           (min-width: 761px) {
+      html.touch-controls-on :is(.paddle-touch-controls, .snake-touch-controls, .tanks-touch-controls),
+      html:not(.touch-controls-off) :is(.paddle-touch-controls, .snake-touch-controls, .tanks-touch-controls) {
+        width: min(100%, 720px);
+        margin-inline: auto;
+      }
+    }
+
     @media (orientation: landscape) and (max-height: 520px) {
+      :is(.paddle-app, .tintar-app) {
+        width: 100%;
+        padding: 5px 10px 12px;
+      }
+
+      :is(.paddle-app, .tintar-app) > .topbar {
+        min-height: 42px;
+        margin-bottom: 5px;
+      }
+
+      :is(.paddle-app, .tintar-app) > .topbar .brand p {
+        display: none;
+      }
+
+      :is(.paddle-app, .tintar-app) > .topbar .brand h1 {
+        font-size: 1.15rem;
+      }
+
+      :is(.paddle-app, .tintar-app) .game-room-panel {
+        margin-bottom: 5px;
+        padding: 5px 8px;
+      }
+
+      :is(.paddle-app, .tintar-app) .game-room-copy {
+        display: none;
+      }
+
+      :is(.paddle-app, .tintar-app) .paddle-scorebar {
+        padding-block: 5px;
+      }
+
+      :is(.paddle-app, .tintar-app) .paddle-statusbar,
+      :is(.paddle-app, .tintar-app) .paddle-footer {
+        padding-block: 5px;
+      }
+
+      :is(.paddle-app, .tintar-app) :is(.paddle-touch-controls, .snake-touch-controls, .tanks-touch-controls) {
+        gap: 8px;
+        padding: 7px 10px 9px;
+      }
+
+      :is(.paddle-app, .tintar-app) .arcade-joystick {
+        width: 88px;
+      }
+
       body[data-view="bomberman"] {
         min-height: 100dvh;
         overflow: hidden;
@@ -7077,6 +7513,10 @@
           <h2 id="circuitTitle">Arcade Circuit</h2>
         </div>
         <p id="circuitStatus" aria-live="polite">Ready for a new three-game run</p>
+        <div class="circuit-mode-picker" role="group" aria-label="Circuit play mode">
+          <button class="active" type="button" data-circuit-mode="solo" aria-pressed="true">Solo</button>
+          <button type="button" data-circuit-mode="friends" aria-pressed="false">Friends</button>
+        </div>
       </div>
       <div class="circuit-layout">
         <div id="circuitLineup" class="circuit-lineup" aria-label="Circuit game lineup">
@@ -7831,7 +8271,7 @@
             <span class="arcade-joystick-knob" data-joystick-knob aria-hidden="true"></span>
           </div>
         </div>
-        <div class="paddle-touch-team coral">
+        <div id="paddleCoralControls" class="paddle-touch-team coral solo-hidden">
           <strong>Coral</strong>
           <div class="arcade-joystick" data-paddle-joystick="2" role="group" tabindex="0" aria-label="Coral movement joystick">
             <span class="arcade-joystick-arrow up" aria-hidden="true">▲</span>
@@ -7886,6 +8326,11 @@
 
       <div class="paddle-statusbar" aria-live="polite">
         <span id="snakeStatus">Start a solo high-score run.</span>
+        <label class="gameplay-option">Speed
+          <select id="snakeSpeed" aria-label="Snake speed">
+            <option value="155">Chill</option><option value="115" selected>Arcade</option><option value="88">Turbo</option>
+          </select>
+        </label>
         <button id="snakeStartButton" class="paddle-serve" type="button">Start run</button>
       </div>
 
@@ -7947,6 +8392,10 @@
       <div class="tanks-arena"><canvas id="tanksCanvas" width="900" height="600" aria-label="Mini Tanks ricochet arena"></canvas></div>
       <div class="paddle-statusbar" aria-live="polite">
         <span id="tanksStatus">Start a duel against the Coral bot.</span>
+        <span id="tanksShotReadiness" class="shot-readiness ready">● Shot ready</span>
+        <label class="gameplay-option">Bot
+          <select id="tanksBotPace" aria-label="Tank bot pace"><option value="rookie">Rookie</option><option value="normal">Normal</option><option value="ace">Ace</option></select>
+        </label>
         <button id="tanksLaunchButton" class="paddle-serve" type="button">Start duel</button>
       </div>
       <footer class="paddle-footer">
@@ -8050,7 +8499,14 @@
       <div class="survival-arena"><canvas id="survivalCanvas" width="900" height="600" aria-label="Neon survival arena"></canvas></div>
       <div class="paddle-statusbar" aria-live="polite">
         <span id="survivalStatus">Start a solo run. Your blaster locks onto the nearest crawler.</span>
+        <label class="gameplay-toggle"><input id="survivalAutoFire" type="checkbox"> Auto-fire</label>
         <button id="survivalStartButton" class="paddle-serve" type="button">Start run</button>
+      </div>
+      <div id="survivalUpgradePanel" class="upgrade-choice" role="group" aria-label="Choose a survival upgrade" hidden>
+        <strong>Choose your upgrade</strong>
+        <button type="button" data-survival-upgrade="rapid">Rapid fire</button>
+        <button type="button" data-survival-upgrade="speed">Move speed</button>
+        <button type="button" data-survival-upgrade="guard">Armor + heal</button>
       </div>
       <footer class="paddle-footer">
         <div class="paddle-key-guide">Mint: <kbd>WASD</kbd> + <kbd>F</kbd></div>
@@ -8180,6 +8636,7 @@
       <div class="racing-arena"><canvas id="racingCanvas" width="900" height="600" aria-label="Micro Racers top-down circuit"></canvas></div>
       <div class="paddle-statusbar" aria-live="polite">
         <span id="racingStatus">Race the Coral bot through three turbo-charged laps.</span>
+        <label class="gameplay-toggle"><input id="racingAutoAccelerate" type="checkbox" checked> Auto-accelerate</label>
         <button id="racingStartButton" class="paddle-serve" type="button">Start race</button>
       </div>
       <footer class="paddle-footer">
@@ -8252,6 +8709,9 @@
       </div>
       <div class="paddle-statusbar" aria-live="polite">
         <span id="blocksStatus">Clear lines and bury the Coral bot under garbage blocks.</span>
+        <label class="gameplay-option">Bot
+          <select id="blocksBotDifficulty" aria-label="Block Drop bot difficulty"><option value="relaxed">Relaxed</option><option value="normal">Normal</option><option value="expert">Expert</option></select>
+        </label>
         <button id="blocksStartButton" class="paddle-serve" type="button">Start duel</button>
       </div>
       <footer class="paddle-footer">
@@ -8296,12 +8756,21 @@
           <h2>Join equal numbers. Build 2048.</h2>
           <p>Every move slides the whole board. Matching tiles merge once, and a new tile appears after each successful move.</p>
         </div>
-        <button class="twenty48-new-game" type="button" data-twenty48-reset>New game</button>
+        <div class="twenty48-intro-actions">
+          <button id="twenty48UndoButton" class="twenty48-undo" type="button" disabled>Undo</button>
+          <button class="twenty48-new-game" type="button" data-twenty48-reset>New game</button>
+        </div>
+      </div>
+
+      <div id="twenty48ResumeBanner" class="puzzle-resume-banner" hidden>
+        <span>A saved run is ready on this device.</span>
+        <button id="twenty48ResumeSession" type="button">Continue</button>
       </div>
 
       <div class="twenty48-scorebar" aria-label="2048 score">
         <div class="twenty48-score-card"><span>Score</span><b id="twenty48Score">0</b></div>
         <div class="twenty48-score-card"><span>Best score</span><b id="twenty48Best">0</b></div>
+        <div class="twenty48-score-card"><span>Time</span><b id="twenty48Time">00:00</b></div>
       </div>
 
       <div class="twenty48-board-stage">
@@ -8343,11 +8812,19 @@
           <h2>Every number has one place.</h2>
           <p>Fill each row, column, and 3×3 box with the numbers 1 through 9.</p>
         </div>
-        <div class="sudoku-difficulties" role="group" aria-label="Sudoku difficulty">
-          <button class="active" type="button" data-sudoku-difficulty="easy" aria-pressed="true">Easy</button>
-          <button type="button" data-sudoku-difficulty="medium" aria-pressed="false">Medium</button>
-          <button type="button" data-sudoku-difficulty="hard" aria-pressed="false">Hard</button>
+        <div class="sudoku-toolbar-actions">
+          <div class="sudoku-difficulties" role="group" aria-label="Sudoku difficulty">
+            <button class="active" type="button" data-sudoku-difficulty="easy" aria-pressed="true">Easy</button>
+            <button type="button" data-sudoku-difficulty="medium" aria-pressed="false">Medium</button>
+            <button type="button" data-sudoku-difficulty="hard" aria-pressed="false">Hard</button>
+          </div>
+          <button id="sudokuRelaxedButton" class="sudoku-relaxed-button" type="button" aria-pressed="false">Relaxed view</button>
         </div>
+      </div>
+
+      <div id="sudokuResumeBanner" class="puzzle-resume-banner" hidden>
+        <span>A saved puzzle with notes is ready.</span>
+        <button id="sudokuResumeSession" type="button">Continue</button>
       </div>
 
       <div class="sudoku-meta" aria-label="Sudoku progress">
@@ -8431,12 +8908,21 @@
           <span class="settings-toggle-copy"><strong>Higher contrast</strong><span>Strengthen borders and secondary text throughout the arcade.</span></span>
           <input id="settingsContrastToggle" type="checkbox">
         </label>
+        <label class="settings-language-row" for="settingsTouchControls">
+          <span class="settings-language-copy"><strong>Touch controls</strong><span>Automatically detect touch, always show controls, or hide them on hybrid devices.</span></span>
+          <select id="settingsTouchControls" class="settings-language-select">
+            <option value="auto">Automatic</option>
+            <option value="on">Always show</option>
+            <option value="off">Hide</option>
+          </select>
+        </label>
       </div>
 
       <div class="settings-button-row">
         <button id="settingsFullscreenButton" class="settings-action-button" type="button">Enter fullscreen</button>
         <button id="settingsResetButton" class="settings-action-button" type="button">Reset settings</button>
       </div>
+      <p id="settingsSessionNote" class="settings-session-note" role="status" hidden></p>
       <p class="settings-device-note">Settings are saved privately on this device and apply to every game.</p>
     </section>
   </div>

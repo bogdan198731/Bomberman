@@ -16,6 +16,10 @@ import { initQuickPlay } from './quick-play.js';
 import { initArcadePwa } from './pwa.js';
 import { initArcadeLeaderboard } from './leaderboard.js';
 import { initArcadeCircuit } from './circuit.js';
+import { initArcadeSessionControl } from './session-control.js';
+import { initGameExperience } from './game-experience.js';
+import { emitArcadeGameplayCue, initArcadeGameplayFeedback } from './feedback.js';
+import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
 import {
   BOMBERMAN_TOUCH_LAYOUT_STORAGE_KEY,
   bindVirtualJoystick,
@@ -405,9 +409,10 @@ export function movePlayer(player: Player, dx: number, dy: number, grid: MapGrid
 export interface RenderState {
   grid: MapGrid;
   players: Player[];
-  bombs?: Array<{ x: number; y: number }>;
+  bombs?: Array<{ x: number; y: number; fuseProgress?: number }>;
   explosions?: Explosion[];
   powerUps?: PowerUp[];
+  pressureLevel?: number;
 }
 
 /** Draws a supplied plain game-state object without depending on live game internals. */
@@ -525,7 +530,8 @@ function drawBomb(
   x: number,
   y: number,
   size: number,
-  now: number
+  now: number,
+  fuseProgress = 0
 ): void {
   const cx = x + size / 2;
   const cy = y + size * 0.56;
@@ -567,6 +573,16 @@ function drawBomb(
   ctx.beginPath();
   ctx.ellipse(-radius * 0.38, -radius * 0.43, radius * 0.17, radius * 0.25, -0.7, 0, Math.PI * 2);
   ctx.fill();
+  ctx.restore();
+
+  const fuse = Math.max(0, Math.min(1, fuseProgress));
+  ctx.save();
+  ctx.strokeStyle = fuse > .72 ? '#ff6b78' : '#ffc857';
+  ctx.lineWidth = Math.max(2, size * .055);
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius * 1.34, -Math.PI / 2, -Math.PI / 2 + (1 - fuse) * Math.PI * 2);
+  ctx.stroke();
   ctx.restore();
 }
 
@@ -792,7 +808,7 @@ export function render(
   canvas: HTMLCanvasElement,
   state: RenderState
 ): void {
-  const { grid, players, bombs = [], explosions = [], powerUps = [] } = state;
+  const { grid, players, bombs = [], explosions = [], powerUps = [], pressureLevel = 0 } = state;
   const tileSize = canvas.width / grid.width;
   const now = performance.now();
 
@@ -815,12 +831,26 @@ export function render(
     }
   }
 
+  if (pressureLevel > 0) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 70, 82, .16)';
+    ctx.strokeStyle = '#ff6b78';
+    ctx.lineWidth = Math.max(3, tileSize * .08);
+    const inset = pressureLevel * tileSize;
+    ctx.fillRect(0, 0, canvas.width, inset);
+    ctx.fillRect(0, canvas.height - inset, canvas.width, inset);
+    ctx.fillRect(0, inset, inset, canvas.height - inset * 2);
+    ctx.fillRect(canvas.width - inset, inset, inset, canvas.height - inset * 2);
+    ctx.strokeRect(inset, inset, canvas.width - inset * 2, canvas.height - inset * 2);
+    ctx.restore();
+  }
+
   for (const powerUp of powerUps) {
     drawPowerUp(ctx, powerUp, tileSize, now);
   }
 
   for (const bomb of bombs) {
-    drawBomb(ctx, bomb.x * tileSize, bomb.y * tileSize, tileSize, now);
+    drawBomb(ctx, bomb.x * tileSize, bomb.y * tileSize, tileSize, now, bomb.fuseProgress);
   }
 
   for (const explosion of explosions) {
@@ -1156,6 +1186,7 @@ function initLocalGameLegacy() {
       .map((b) => ({
         x: b.position.x,
         y: b.position.y,
+        fuseProgress: b.placedAt === undefined ? 0 : (Date.now() - b.placedAt) / b.timer,
       }));
 
     const powerUps: PowerUp[] = [];
@@ -1198,6 +1229,7 @@ interface OnlineClientState extends RenderState {
   botDifficulty?: 'easy' | 'normal' | 'hard';
   overlayText: string;
   statusText: string;
+  pressureLevel?: number;
 }
 
 type ClientMessage =
@@ -1356,6 +1388,7 @@ export function initGame(): void {
     elements.twenty48View?.classList.toggle('view-hidden', view !== 'twenty48');
     elements.sudokuView?.classList.toggle('view-hidden', view !== 'sudoku');
     document.body.dataset.view = view;
+    window.dispatchEvent(new CustomEvent('arcade-view-changed', { detail: { view } }));
     if (view !== 'hub') {
       const resetGameScroll = (): void => window.scrollTo({ top: 0, behavior: 'auto' });
       resetGameScroll();
@@ -1377,7 +1410,7 @@ export function initGame(): void {
 
   function syncUi(): void {
     if (elements.statusText) elements.statusText.textContent = onlineState.statusText;
-    if (elements.roundLabel) elements.roundLabel.textContent = `Round ${onlineState.round}`;
+    if (elements.roundLabel) elements.roundLabel.textContent = `Round ${onlineState.round} · First to 3`;
     if (elements.playerOneScore) elements.playerOneScore.textContent = String(onlineState.scores[1]);
     if (elements.playerTwoScore) elements.playerTwoScore.textContent = String(onlineState.scores[2]);
     if (elements.playerOneStats) elements.playerOneStats.textContent = playerStatsText(renderedPlayers[0]);
@@ -1428,7 +1461,7 @@ export function initGame(): void {
     }
     const trackedPlayer = localMode ? 1 : localPlayerId ?? 1;
     const winner = onlineState.gameStatus === 'player1-wins' ? 1 : onlineState.gameStatus === 'player2-wins' ? 2 : 0;
-    resultReporter.report(onlineState.phase === 'finished', {
+    resultReporter.report(onlineState.phase === 'finished' && Math.max(onlineState.scores[1], onlineState.scores[2]) >= 3, {
       outcome: winner === 0 ? 'draw' : winner === trackedPlayer ? 'win' : 'loss',
       score: onlineState.scores[trackedPlayer],
     });
@@ -1524,13 +1557,16 @@ export function initGame(): void {
   }
 
   function sendAction(action: unknown): void {
+    if (isArcadeSessionPaused('bomberman')) return;
     if (socket?.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify({ type: 'action', action }));
     }
   }
 
   function sendPlayerAction(player: 1 | 2, action: PlayerAction): void {
-    if (localMode && localRoom) localRoom.handleAction(player, action);
+    if (isArcadeSessionPaused('bomberman')) return;
+    if (action.type === 'bomb') emitArcadeGameplayCue('danger', 'FUSE LIT — FIND COVER');
+    if (localRoom) localRoom.handleAction(player, action);
     else sendAction(action);
   }
 
@@ -1547,6 +1583,27 @@ export function initGame(): void {
     localMode = true;
     activeRoomCode = '';
     activeBotDifficulty = undefined;
+    quickMatching = false;
+    onlineState = localRoom.snapshot(now);
+    mergePlayers(onlineState.players, onlineState.round);
+    history.replaceState(null, '', clearArcadeInviteUrl(location.href));
+    syncUi();
+  }
+
+  async function startLocalBotMatch(difficulty: 'easy' | 'normal' | 'hard'): Promise<void> {
+    localPlayerId = undefined;
+    const previousSocket = socket;
+    socket = undefined;
+    previousSocket?.close();
+    const { OnlineRoom: LocalRoom } = await import('./multiplayer.js');
+    const now = Date.now();
+    localRoom = new LocalRoom('BOT');
+    localRoom.connectPlayer(1, now);
+    localRoom.connectBot(difficulty, now);
+    localMode = false;
+    localPlayerId = 1;
+    activeRoomCode = '';
+    activeBotDifficulty = difficulty;
     quickMatching = false;
     onlineState = localRoom.snapshot(now);
     mergePlayers(onlineState.players, onlineState.round);
@@ -1578,8 +1635,27 @@ export function initGame(): void {
   elements.launchGameButtons.forEach(button => {
     button.addEventListener('click', () => {
       const game = button.dataset.launchGame;
-      if (game === 'bomberman' || game === 'tintar' || game === 'paddle' || game === 'snake' || game === 'tanks' || game === 'septica' || game === 'survival' || game === 'star' || game === 'racing' || game === 'blocks' || game === 'twenty48' || game === 'sudoku') setActiveView(game);
+      if (game === 'bomberman' || game === 'tintar' || game === 'paddle' || game === 'snake' || game === 'tanks' || game === 'septica' || game === 'survival' || game === 'star' || game === 'racing' || game === 'blocks' || game === 'twenty48' || game === 'sudoku') {
+        setActiveView(game);
+        const requestedMode = button.dataset.launchMode;
+        if (requestedMode === 'solo' || requestedMode === 'local' || requestedMode === 'online') {
+          window.dispatchEvent(new CustomEvent('arcade-launch-mode', { detail: { gameId: game, mode: requestedMode } }));
+          if (game === 'bomberman') selectBombermanLobbyMode(requestedMode === 'solo' ? 'bot' : requestedMode);
+        }
+      }
     });
+  });
+  window.addEventListener('arcade-request-launch', event => {
+    const detail = (event as CustomEvent<{ gameId?: string; mode?: string }>).detail;
+    const game = detail?.gameId;
+    if (game !== 'bomberman' && game !== 'tintar' && game !== 'paddle' && game !== 'snake' && game !== 'tanks'
+      && game !== 'septica' && game !== 'survival' && game !== 'star' && game !== 'racing' && game !== 'blocks'
+      && game !== 'twenty48' && game !== 'sudoku') return;
+    setActiveView(game);
+    window.dispatchEvent(new CustomEvent('arcade-launch-mode', { detail: { gameId: game, mode: detail.mode } }));
+    if (game === 'bomberman' && (detail.mode === 'solo' || detail.mode === 'local' || detail.mode === 'online')) {
+      selectBombermanLobbyMode(detail.mode === 'solo' ? 'bot' : detail.mode);
+    }
   });
   elements.backToHubButtons.forEach(button => {
     button.addEventListener('click', () => {
@@ -1605,7 +1681,7 @@ export function initGame(): void {
     button.addEventListener('click', () => {
       const difficulty = button.dataset.botDifficulty;
       if (difficulty === 'easy' || difficulty === 'normal' || difficulty === 'hard') {
-        connectAndSend({ type: 'createBot', difficulty });
+        void startLocalBotMatch(difficulty);
       }
     });
   });
@@ -1780,6 +1856,7 @@ export function initGame(): void {
       sendAction({ type: 'move', ...direction });
     });
     window.addEventListener('blur', () => release());
+    window.addEventListener('arcade-clear-bomberman-inputs', () => release());
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) release();
     });
@@ -1787,6 +1864,12 @@ export function initGame(): void {
   if (elements.mobileJoystick && elements.mobileJoystickKnob) {
     bindMobileJoystick(elements.mobileJoystick, elements.mobileJoystickKnob);
   }
+  window.addEventListener('arcade-clear-bomberman-inputs', () => {
+    touchTimers.forEach(timer => { if (timer >= 0) window.clearInterval(timer); });
+    touchTimers.clear();
+    document.querySelectorAll<HTMLElement>('[data-bomberman-action].pressed, #mobileBombButton.pressed')
+      .forEach(button => button.classList.remove('pressed'));
+  });
   if (elements.mobileBombButton) {
     bindTouchControl(elements.mobileBombButton, { type: 'bomb' }, false, true);
   }
@@ -1847,6 +1930,16 @@ export function initGame(): void {
     }
   });
 
+  if (elements.gameView) {
+    registerArcadeSession({
+      gameId: 'bomberman',
+      view: elements.gameView,
+      mode: () => activeBotDifficulty ? 'solo' : localMode ? 'local' : 'online',
+      isActive: () => onlineState.phase === 'playing',
+      clearHeldInputs: () => window.dispatchEvent(new CustomEvent('arcade-clear-bomberman-inputs')),
+    });
+  }
+
   selectBombermanLobbyMode('local');
   const inviteFromUrl = parseArcadeInvite(location.search);
   if (inviteFromUrl?.game === 'bomberman' && elements.roomCodeInput) {
@@ -1857,7 +1950,7 @@ export function initGame(): void {
   setActiveView(inviteFromUrl?.game ?? 'hub');
 
   function gameLoop(): void {
-    if (localRoom) {
+    if (localRoom && !isArcadeSessionPaused('bomberman')) {
       const now = Date.now();
       localRoom.update(now);
       const snapshot = localRoom.snapshot(now);
@@ -1883,6 +1976,8 @@ if (typeof window !== 'undefined') {
     arrangeHubContent();
     initMobileHubNavigation();
     initArcadeSettings();
+    initArcadeSessionControl();
+    initArcadeGameplayFeedback();
     initArcadePwa();
     initArcadeProfile();
     initArcadeLeaderboard();
@@ -1901,5 +1996,6 @@ if (typeof window !== 'undefined') {
     initBlockDrop();
     initTwenty48();
     initSudoku();
+    initGameExperience();
   });
 }

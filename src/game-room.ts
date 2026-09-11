@@ -14,6 +14,7 @@ export interface GameRoomSession {
 }
 
 export type GameRoomOfflineModeId = 'local' | 'solo' | 'bot';
+export const GAME_ROOM_PREFERENCE_STORAGE_KEY = 'blast-arcade-room-preferences-v1';
 
 export interface GameRoomOfflineMode {
   id: GameRoomOfflineModeId;
@@ -53,6 +54,7 @@ export class GameRoomClient {
   private codeElement: HTMLElement;
   private compactToggle: HTMLButtonElement;
   private summaryElement: HTMLElement;
+  private launchModeListener: (event: Event) => void;
 
   constructor(options: GameRoomClientOptions) {
     this.options = options;
@@ -61,7 +63,7 @@ export class GameRoomClient {
     this.offlineModes = options.offlineModes?.length
       ? options.offlineModes
       : [{ id: 'local', label: 'Local 2P', description: 'Two players on this device.', onSelect: options.onPlayLocal ?? (() => {}) }];
-    this.initialOfflineMode = options.initialOfflineMode ?? this.offlineModes[0].id;
+    this.initialOfflineMode = this.loadPreferredMode() ?? options.initialOfflineMode ?? this.offlineModes[0].id;
     if (!this.offlineModes.some(mode => mode.id === this.initialOfflineMode)) this.initialOfflineMode = this.offlineModes[0].id;
     this.mount.classList.add('game-room-panel', 'arcade-mode-panel');
     this.mount.closest('main')?.classList.add('room-mode-managed');
@@ -107,6 +109,13 @@ export class GameRoomClient {
     this.summaryElement = this.mount.querySelector<HTMLElement>('[data-room-summary]')!;
     this.bindUi();
     this.selectMode(this.initialOfflineMode, false);
+    window.setTimeout(() => this.offlineModes.find(mode => mode.id === this.initialOfflineMode)?.onSelect(), 0);
+    this.launchModeListener = event => {
+      const detail = (event as CustomEvent<{ gameId?: string; mode?: string }>).detail;
+      if (detail?.gameId !== this.game) return;
+      this.chooseRequestedMode(detail.mode);
+    };
+    window.addEventListener('arcade-launch-mode', this.launchModeListener);
     this.mount.closest('main')?.querySelector('[data-back-to-hub]')?.addEventListener('click', () => {
       this.leave();
     });
@@ -160,6 +169,7 @@ export class GameRoomClient {
         const mode = button.dataset.roomMode;
         if (mode === 'online') {
           this.selectMode('online', false);
+          this.savePreferredMode('online');
           return;
         }
         const offlineMode = this.offlineModes.find(candidate => candidate.id === mode);
@@ -167,6 +177,7 @@ export class GameRoomClient {
         this.disconnect();
         history.replaceState(null, '', clearArcadeInviteUrl(location.href));
         this.selectMode(offlineMode.id, false);
+        this.savePreferredMode(offlineMode.id);
         offlineMode.onSelect();
       });
     });
@@ -325,6 +336,42 @@ export class GameRoomClient {
         ? 'Quick match, create an invite, or join with a code.'
         : selectedMode?.description ?? 'Ready to play on this device.';
     }
+  }
+
+  private chooseRequestedMode(requested: string | undefined): void {
+    const mode = requested === 'online'
+      ? 'online'
+      : requested === 'local'
+        ? this.offlineModes.find(candidate => candidate.id === 'local')?.id
+        : this.offlineModes.find(candidate => candidate.id === 'solo')?.id
+          ?? this.offlineModes.find(candidate => candidate.id === 'bot')?.id;
+    if (!mode) return;
+    if (mode !== 'online') {
+      this.disconnect();
+      const selected = this.offlineModes.find(candidate => candidate.id === mode);
+      this.selectMode(mode, false);
+      this.savePreferredMode(mode);
+      selected?.onSelect();
+    } else {
+      this.selectMode('online', false);
+      this.savePreferredMode('online');
+    }
+  }
+
+  private loadPreferredMode(): GameRoomOfflineModeId | undefined {
+    try {
+      const stored = JSON.parse(localStorage.getItem(GAME_ROOM_PREFERENCE_STORAGE_KEY) ?? '{}') as Record<string, unknown>;
+      const value = stored[this.game];
+      return value === 'local' || value === 'solo' || value === 'bot' ? value : undefined;
+    } catch { return undefined; }
+  }
+
+  private savePreferredMode(mode: GameRoomOfflineModeId | 'online'): void {
+    try {
+      const stored = JSON.parse(localStorage.getItem(GAME_ROOM_PREFERENCE_STORAGE_KEY) ?? '{}') as Record<string, unknown>;
+      stored[this.game] = mode;
+      localStorage.setItem(GAME_ROOM_PREFERENCE_STORAGE_KEY, JSON.stringify(stored));
+    } catch { /* Play mode still applies for the current session. */ }
   }
 
   private setCompact(collapsed: boolean): void {

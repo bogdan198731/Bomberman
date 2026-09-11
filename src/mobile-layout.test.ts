@@ -46,10 +46,10 @@ test('active game screens reserve short viewports for the playfield', () => {
   assert.match(html, /@media \(min-width: 761px\) and \(max-height: 920px\)/);
   assert.match(html, /#gameView \.arena-wrap\s*\{[^}]*width:\s*min\(680px, calc\(100dvh - 255px\), calc\(100% - 32px\)\);/s);
   assert.match(html, /\.paddle-shell\s*\{[^}]*width:\s*min\(100%, 900px\);[^}]*margin-inline:\s*auto;/s);
-  assert.match(html, /\.sudoku-board-stage\s*\{[^}]*width:\s*min\(100%, calc\(100dvh - 400px\)\);/s);
-  assert.match(html, /:is\(#paddleCanvas, #snakeCanvas, #tanksCanvas, #survivalCanvas, #starCanvas, #racingCanvas, #blocksCanvas\)\s*\{[^}]*width:\s*min\(100%, calc\(\(100dvh - 390px\) \* 1\.5\)\);/s);
-  assert.match(html, /\.tintar-board\s*\{[^}]*width:\s*min\(100%, 620px, calc\(100dvh - 200px\)\);/s);
-  assert.match(html, /\.twenty48-board-stage\s*\{[^}]*width:\s*min\(100%, 560px, calc\(100dvh - 295px\)\);/s);
+  assert.match(html, /\.sudoku-board-stage\s*\{[^}]*width:\s*min\(100%, max\(300px, calc\(100dvh - 400px\)\)\);/s);
+  assert.match(html, /:is\(#paddleCanvas, #snakeCanvas, #tanksCanvas, #survivalCanvas, #starCanvas, #racingCanvas, #blocksCanvas\)\s*\{[^}]*width:\s*min\(100%, max\(360px, calc\(\(100dvh - 390px\) \* 1\.5\)\)\);/s);
+  assert.match(html, /\.tintar-board\s*\{[^}]*width:\s*min\(100%, 620px, max\(300px, calc\(100dvh - 200px\)\)\);/s);
+  assert.match(html, /\.twenty48-board-stage\s*\{[^}]*width:\s*min\(100%, 560px, max\(300px, calc\(100dvh - 295px\)\)\);/s);
   assert.match(html, /\.septica-felt\s*\{[^}]*min-height:\s*0;[^}]*grid-template-rows:\s*auto minmax\(120px, 1fr\) auto;[^}]*padding:\s*14px 24px;/s);
   assert.match(html, /\.room-mode-managed \.snake-toolbar\s*\{\s*display:\s*none;/s);
   assert.match(html, /\.tintar-board-frame\s*\{\s*order:\s*-1;/s);
@@ -165,7 +165,7 @@ test('mobile controls meet a 44px minimum and Sudoku supports pencil notes', () 
   assert.match(html, /\.game-room-mode-tab,[\s\S]*?\.game-room-join input \{ min-height: 44px; \}/);
   assert.match(html, /id="sudokuNotesButton"[^>]*aria-pressed="false"[^>]*aria-label="Notes mode off"/);
   assert.match(html, /\.sudoku-notes\s*\{[^}]*grid-template-columns: repeat\(3, 1fr\)/s);
-  assert.match(sudokuSource, /const notes = new Map<number, Set<number>>\(\)/);
+  assert.match(sudokuSource, /const notes = new Map<number, Set<number>>/);
 });
 
 test('Țintar board includes native fullscreen styling and a mobile fallback', () => {
@@ -238,9 +238,10 @@ test('mobile game library uses compact three-column tiles with a narrow-screen f
   assert.match(mobileStyles, /\.game-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\);[^}]*gap:\s*7px;/s);
   assert.match(mobileStyles, /\.game-cover\s*\{[^}]*min-height:\s*76px;/s);
   assert.match(mobileStyles, /\.game-glyph\s*\{[^}]*font-size:\s*1\.75rem;/s);
-  assert.match(mobileStyles, /\.cover-label\s*\{[^}]*display:\s*none;/s);
-  assert.match(mobileStyles, /\.catalog-card-body p,[\s\S]*?\.mode-label\s*\{[^}]*display:\s*none;/s);
+  assert.match(mobileStyles, /\.cover-label\s*\{[^}]*display:\s*block;[^}]*text-overflow:\s*ellipsis;/s);
+  assert.match(mobileStyles, /\.catalog-card-body p\s*\{[^}]*display:\s*none;/s);
   assert.match(mobileStyles, /\.catalog-card-footer\s*\{[^}]*display:\s*block;/s);
+  assert.match(mobileStyles, /\.mode-label\s*\{[^}]*display:\s*block;[^}]*text-overflow:\s*ellipsis;/s);
   assert.match(mobileStyles, /\.card-play-button\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;[^}]*width:\s*100%;[^}]*height:\s*100%;/s);
   assert.equal((html.match(/class="card-play-button"[^>]*aria-label="Play /g) ?? []).length, 12);
   assert.doesNotMatch(catalogSource, /card\.tabIndex = 0/);

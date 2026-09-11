@@ -172,6 +172,7 @@ export function bindVirtualJoystick(
   };
   const blur = (): void => reset();
   const visibilityChange = (): void => { if (document.hidden) reset(); };
+  const clearInputs = (): void => reset();
 
   track.addEventListener('pointerdown', pointerDown);
   track.addEventListener('pointermove', pointerMove);
@@ -183,6 +184,7 @@ export function bindVirtualJoystick(
   track.addEventListener('keyup', keyUp);
   window.addEventListener('blur', blur);
   document.addEventListener('visibilitychange', visibilityChange);
+  window.addEventListener('arcade-clear-inputs', clearInputs);
 
   return () => {
     reset();
@@ -196,6 +198,7 @@ export function bindVirtualJoystick(
     track.removeEventListener('keyup', keyUp);
     window.removeEventListener('blur', blur);
     document.removeEventListener('visibilitychange', visibilityChange);
+    window.removeEventListener('arcade-clear-inputs', clearInputs);
   };
 }
 

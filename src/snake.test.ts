@@ -40,6 +40,7 @@ test('hitting the arena wall ends a solo run', () => {
   game.tick();
   assert.equal(game.phase, 'finished');
   assert.equal(game.riders[1].alive, false);
+  assert.match(game.statusText(), /wall/i);
 });
 
 test('a head-on duel crash is a draw', () => {

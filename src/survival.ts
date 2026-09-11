@@ -1,6 +1,8 @@
 import { GameRoomClient } from './game-room.js';
 import { ArcadeResultReporter } from './stats.js';
 import { bindDirectionalJoystick } from './touch-controls.js';
+import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
+import { emitArcadeGameplayCue } from './feedback.js';
 
 export type SurvivalPlayer = 1 | 2;
 export type SurvivalMode = 'solo' | 'coop';
@@ -28,6 +30,7 @@ export interface SurvivalEnemy {
   y: number;
   health: number;
   speed: number;
+  kind?: 'crawler' | 'scout' | 'brute';
 }
 
 export interface SurvivalBullet {
@@ -69,6 +72,8 @@ export class SurvivalArenaGame {
   phase: SurvivalPhase = 'ready';
   wave = 0;
   upgradeLevel = 0;
+  rapidLevel = 0;
+  awaitingUpgrade = false;
   players: Record<SurvivalPlayer, Survivor> = { 1: createHero(1, true), 2: createHero(2, false) };
   inputs: Record<SurvivalPlayer, SurvivalInput> = { 1: emptyInput(), 2: emptyInput() };
   enemies: SurvivalEnemy[] = [];
@@ -85,6 +90,8 @@ export class SurvivalArenaGame {
     this.phase = 'ready';
     this.wave = 0;
     this.upgradeLevel = 0;
+    this.rapidLevel = 0;
+    this.awaitingUpgrade = false;
     this.players = { 1: createHero(1, true), 2: createHero(2, mode === 'coop') };
     this.inputs = { 1: emptyInput(), 2: emptyInput() };
     this.enemies = [];
@@ -123,12 +130,13 @@ export class SurvivalArenaGame {
       owner: player,
       age: 0,
     });
-    hero.cooldown = Math.max(.18, .42 - this.upgradeLevel * .025);
+    hero.cooldown = Math.max(.18, .42 - this.rapidLevel * .055);
     return true;
   }
 
   update(seconds: number): void {
     if (this.phase !== 'playing') return;
+    if (this.awaitingUpgrade) return;
     const dt = Math.max(0, Math.min(.05, seconds));
     ([1, 2] as SurvivalPlayer[]).forEach(player => {
       const hero = this.players[player];
@@ -152,8 +160,24 @@ export class SurvivalArenaGame {
       ? 'Start a solo run. Your blaster locks onto the nearest crawler.'
       : 'Start a couch co-op run and protect each other.';
     if (this.phase === 'finished') return `Run over on wave ${this.wave}. Reset and rally again.`;
-    if (this.wave % 3 === 0) return `Wave ${this.wave}: overdrive active — faster movement and fire rate.`;
-    return `Wave ${this.wave}: clear ${this.enemies.length} crawler${this.enemies.length === 1 ? '' : 's'}.`;
+    if (this.awaitingUpgrade) return `Wave ${this.wave - 1} clear — choose one upgrade to continue.`;
+    const scouts = this.enemies.filter(enemy => enemy.kind === 'scout').length;
+    const brutes = this.enemies.filter(enemy => enemy.kind === 'brute').length;
+    return `Wave ${this.wave}: ${this.enemies.length} enemies · ${scouts} fast scouts · ${brutes} brutes.`;
+  }
+
+  chooseUpgrade(kind: 'rapid' | 'speed' | 'guard'): boolean {
+    if (!this.awaitingUpgrade) return false;
+    this.upgradeLevel += 1;
+    if (kind === 'rapid') this.rapidLevel += 1;
+    this.activePlayers().forEach(hero => {
+      if (kind === 'speed') hero.speed += 28;
+      if (kind === 'guard') { hero.maxHealth += 25; hero.health = Math.min(hero.maxHealth, hero.health + 45); }
+    });
+    this.awaitingUpgrade = false;
+    emitArcadeGameplayCue('pickup', kind === 'rapid' ? 'RAPID FIRE' : kind === 'speed' ? 'SPEED BOOST' : 'ARMOR UP');
+    this.spawnWave();
+    return true;
   }
 
   private activePlayers(): Survivor[] {
@@ -191,6 +215,7 @@ export class SurvivalArenaGame {
         if (enemy.health <= 0) {
           this.enemies.splice(hitIndex, 1);
           this.players[bullet.owner].score += 10;
+          emitArcadeGameplayCue('hit');
         }
         continue;
       }
@@ -212,6 +237,7 @@ export class SurvivalArenaGame {
       if (distance < HERO_RADIUS + 15) {
         target.health = Math.max(0, target.health - 30 * dt);
         target.alive = target.health > 0;
+        if (!target.alive) emitArcadeGameplayCue('danger', 'PLAYER DOWN');
         enemy.x -= dx / distance * 18 * dt;
         enemy.y -= dy / distance * 18 * dt;
       } else {
@@ -224,12 +250,8 @@ export class SurvivalArenaGame {
   private advanceWave(): void {
     this.wave += 1;
     if (this.wave % 3 === 0) {
-      this.upgradeLevel += 1;
-      this.activePlayers().forEach(hero => {
-        hero.speed += 14;
-        hero.maxHealth += 10;
-        hero.health = Math.min(hero.maxHealth, hero.health + 28);
-      });
+      this.awaitingUpgrade = true;
+      return;
     }
     this.spawnWave();
   }
@@ -243,11 +265,14 @@ export class SurvivalArenaGame {
         : side === 1 ? { x: SURVIVAL_WIDTH - 8, y: SURVIVAL_HEIGHT * along }
         : side === 2 ? { x: SURVIVAL_WIDTH * along, y: 8 }
         : { x: SURVIVAL_WIDTH * along, y: SURVIVAL_HEIGHT - 8 };
+      const kind: SurvivalEnemy['kind'] = this.wave >= 3 && index % 5 === 0 ? 'brute'
+        : this.wave >= 2 && index % 3 === 0 ? 'scout' : 'crawler';
       this.enemies.push({
         id: this.nextEnemyId++,
         ...position,
-        health: 1 + Math.floor((this.wave - 1) / 4),
-        speed: 64 + this.wave * 4 + this.random() * 14,
+        health: 1 + Math.floor((this.wave - 1) / 4) + (kind === 'brute' ? 2 : 0),
+        speed: (64 + this.wave * 4 + this.random() * 14) * (kind === 'scout' ? 1.45 : kind === 'brute' ? .68 : 1),
+        kind,
       });
     }
   }
@@ -274,6 +299,8 @@ export function initSurvivalArena(): void {
   const mintHealth = document.getElementById('survivalMintHealth');
   const coralHealth = document.getElementById('survivalCoralHealth');
   const startButton = document.getElementById('survivalStartButton') as HTMLButtonElement | null;
+  const autoFireToggle = document.getElementById('survivalAutoFire') as HTMLInputElement | null;
+  const upgradePanel = document.getElementById('survivalUpgradePanel');
   const modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-survival-mode]');
   const mintControls = document.getElementById('survivalMintControls');
   const coralControls = document.getElementById('survivalCoralControls');
@@ -284,6 +311,7 @@ export function initSurvivalArena(): void {
   function snapshot(): Record<string, unknown> {
     return {
       mode: game.mode, phase: game.phase, wave: game.wave, upgradeLevel: game.upgradeLevel,
+      rapidLevel: game.rapidLevel, awaitingUpgrade: game.awaitingUpgrade,
       players: game.players, enemies: game.enemies, bullets: game.bullets,
     };
   }
@@ -294,12 +322,15 @@ export function initSurvivalArena(): void {
     game.phase = state.phase as SurvivalPhase;
     game.wave = Number(state.wave) || 0;
     game.upgradeLevel = Number(state.upgradeLevel) || 0;
+    game.rapidLevel = Number(state.rapidLevel) || 0;
+    game.awaitingUpgrade = state.awaitingUpgrade === true;
     game.players = state.players as Record<SurvivalPlayer, Survivor>;
     game.enemies = state.enemies as SurvivalEnemy[];
     game.bullets = state.bullets as SurvivalBullet[];
   }
 
   function setPlayerInput(player: SurvivalPlayer, action: keyof SurvivalInput, pressed: boolean): void {
+    if (pressed && isArcadeSessionPaused('survival')) return;
     const session = room?.session();
     if (!session?.online) game.setInput(player, action, pressed);
     else if (session.ready && room?.canControl(player)) {
@@ -309,6 +340,7 @@ export function initSurvivalArena(): void {
   }
 
   function startRun(): void {
+    if (isArcadeSessionPaused('survival')) return;
     const session = room?.session();
     if (session?.online && !session.ready) return;
     if (room?.isGuest()) room.sendAction({ type: 'start' });
@@ -332,6 +364,7 @@ export function initSurvivalArena(): void {
     if (mintHealth) mintHealth.textContent = `${Math.ceil(game.players[1].health)} HP`;
     if (coralHealth) coralHealth.textContent = solo ? 'Auto-aim' : `${Math.ceil(game.players[2].health)} HP`;
     if (startButton) startButton.textContent = game.phase === 'ready' ? 'Start run' : game.phase === 'finished' ? 'New run' : 'Run live';
+    if (upgradePanel) upgradePanel.hidden = !game.awaitingUpgrade;
     modeButtons.forEach(button => {
       button.classList.toggle('active', button.dataset.survivalMode === game.mode);
       button.disabled = Boolean(room?.session().online);
@@ -365,8 +398,12 @@ export function initSurvivalArena(): void {
     });
     game.enemies.forEach(enemy => {
       ctx.save(); ctx.translate(enemy.x, enemy.y); ctx.rotate(performance.now() / 600 + enemy.id);
-      ctx.shadowBlur = 16; ctx.shadowColor = '#a064ff'; ctx.fillStyle = '#a064ff';
-      ctx.fillRect(-11, -11, 22, 22); ctx.fillStyle = '#28183b'; ctx.fillRect(-4, -4, 8, 8); ctx.restore();
+      const color = enemy.kind === 'scout' ? '#55d9ff' : enemy.kind === 'brute' ? '#ff9b54' : '#a064ff';
+      const size = enemy.kind === 'brute' ? 16 : enemy.kind === 'scout' ? 9 : 11;
+      ctx.shadowBlur = 16; ctx.shadowColor = color; ctx.fillStyle = color;
+      if (enemy.kind === 'scout') { ctx.beginPath(); ctx.moveTo(0, -15); ctx.lineTo(12, 10); ctx.lineTo(-12, 10); ctx.closePath(); ctx.fill(); }
+      else ctx.fillRect(-size, -size, size * 2, size * 2);
+      ctx.fillStyle = '#28183b'; ctx.fillRect(-4, -4, 8, 8); ctx.restore();
     });
     game.bullets.forEach(bullet => {
       ctx.fillStyle = colors[bullet.owner]; ctx.shadowBlur = 14; ctx.shadowColor = colors[bullet.owner];
@@ -408,6 +445,18 @@ export function initSurvivalArena(): void {
   modeButtons.forEach(button => button.addEventListener('click', () => {
     const mode = button.dataset.survivalMode;
     if (mode === 'solo' || mode === 'coop') { game.restart(mode); syncUi(); render(); }
+  }));
+  autoFireToggle?.addEventListener('change', () => {
+    ([1, 2] as SurvivalPlayer[]).forEach(player => {
+      if (game.players[player].alive) setPlayerInput(player, 'fire', autoFireToggle.checked);
+    });
+  });
+  document.querySelectorAll<HTMLButtonElement>('[data-survival-upgrade]').forEach(button => button.addEventListener('click', () => {
+    if (room?.isGuest()) return;
+    const kind = button.dataset.survivalUpgrade;
+    if (kind === 'rapid' || kind === 'speed' || kind === 'guard') {
+      game.chooseUpgrade(kind); room?.broadcastState(snapshot(), true); syncUi();
+    }
   }));
   startButton?.addEventListener('click', startRun);
   document.getElementById('survivalRestartButton')?.addEventListener('click', () => {
@@ -452,11 +501,24 @@ export function initSurvivalArena(): void {
     });
   }
 
+  registerArcadeSession({
+    gameId: 'survival',
+    view,
+    mode: () => room?.session().online ? 'online' : game.mode === 'solo' ? 'solo' : 'local',
+    isActive: () => game.phase === 'playing',
+    clearHeldInputs: () => {
+      ([1, 2] as SurvivalPlayer[]).forEach(player => {
+        (['up', 'down', 'left', 'right', 'fire'] as Array<keyof SurvivalInput>)
+          .forEach(action => game.setInput(player, action, false));
+      });
+    },
+  });
+
   let previous = performance.now();
   function loop(now: number): void {
     if (visible()) {
       if (!room?.isGuest()) {
-        game.update((now - previous) / 1000);
+        if (!isArcadeSessionPaused('survival')) game.update((now - previous) / 1000);
         room?.broadcastState(snapshot());
       }
       render(); syncUi();

@@ -21,6 +21,10 @@ test('Romanian translations cover shared arcade and revenge actions', () => {
   assert.equal(translateArcadeText('New deal', 'ro'), 'Mână nouă');
   assert.equal(translateArcadeText('Brake', 'ro'), 'Frână');
   assert.equal(translateArcadeText('Mint steering joystick', 'ro'), 'Joystick de direcție Mint');
+  assert.equal(translateArcadeText('? How to play', 'ro'), '? Cum se joacă');
+  assert.equal(translateArcadeText('Touch controls', 'ro'), 'Comenzi tactile');
+  assert.equal(translateArcadeText('Auto-fire', 'ro'), 'Foc automat');
+  assert.equal(translateArcadeText('LINE CLEAR', 'ro'), 'LINIE ELIMINATĂ');
   assert.equal(
     translateArcadeText('Reset this Țintar match? The current board will be lost.', 'ro'),
     'Resetezi acest meci de Țintar? Tabla actuală va fi pierdută.',

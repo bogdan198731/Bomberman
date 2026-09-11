@@ -47,3 +47,9 @@ test('service worker refreshes app files before using its offline cache', () => 
   assert.match(workerSource, /fetch\(request\)[\s\S]*?\.catch\(\(\) => caches\.match\(cacheKey\)/);
   assert.doesNotMatch(workerSource, /caches\.match\(request\)\.then\(cached => cached \|\| fetch\(request\)/);
 });
+
+test('the offline shell includes shared gameplay experience modules', () => {
+  for (const module of ['feedback', 'game-experience', 'session-control']) {
+    assert.match(workerSource, new RegExp(`/dist/${module}\\.js`));
+  }
+});

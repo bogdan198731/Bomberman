@@ -1,6 +1,8 @@
 import { GameRoomClient } from './game-room.js';
 import { ArcadeResultReporter } from './stats.js';
 import { bindDirectionalJoystick } from './touch-controls.js';
+import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
+import { emitArcadeGameplayCue } from './feedback.js';
 
 export type RacingPlayer = 1 | 2;
 export type RacingMode = 'bot' | 'duel';
@@ -56,6 +58,7 @@ export interface RacingSnapshot {
   phase: RacingPhase;
   winner: RacingPlayer | null;
   countdown: number;
+  trackVariant: number;
 }
 
 function blankInput(): RacingInput {
@@ -74,13 +77,11 @@ function createCar(player: RacingPlayer): RacingCar {
   };
 }
 
-function createPickups(): RacingPickup[] {
-  return [
-    { id: 1, x: 240, y: 420, active: true, respawnTimer: 0 },
-    { id: 2, x: 240, y: 180, active: true, respawnTimer: 0 },
-    { id: 3, x: 660, y: 180, active: true, respawnTimer: 0 },
-    { id: 4, x: 660, y: 420, active: true, respawnTimer: 0 },
-  ];
+function createPickups(variant = 0): RacingPickup[] {
+  return Array.from({ length: 4 }, (_, index) => {
+    const angle = Math.PI / 4 + index * Math.PI / 2 + variant * Math.PI / 12;
+    return { id: index + 1, x: 450 + Math.cos(angle) * 292, y: 300 + Math.sin(angle) * 168, active: true, respawnTimer: 0 };
+  });
 }
 
 function normalizeAngle(angle: number): number {
@@ -106,12 +107,14 @@ export class MicroRacersGame {
   phase: RacingPhase = 'ready';
   winner: RacingPlayer | null = null;
   countdown = 3;
+  trackVariant = 0;
 
   restart(mode: RacingMode = this.mode): void {
     this.mode = mode;
+    this.trackVariant = (this.trackVariant + 1) % 3;
     this.cars = { 1: createCar(1), 2: createCar(2) };
     this.inputs = { 1: blankInput(), 2: blankInput() };
-    this.pickups = createPickups();
+    this.pickups = createPickups(this.trackVariant);
     this.phase = 'ready';
     this.winner = null;
     this.countdown = 3;
@@ -127,6 +130,9 @@ export class MicroRacersGame {
   setInput(player: RacingPlayer, action: RacingAction, pressed: boolean): void {
     if (this.mode === 'bot' && player === 2) return;
     this.inputs[player][action] = pressed;
+    if (this.phase === 'ready' && pressed && (action === 'left' || action === 'right')) {
+      this.cars[player].angle = normalizeAngle(this.cars[player].angle + (action === 'left' ? -.18 : .18));
+    }
   }
 
   update(seconds: number): void {
@@ -162,8 +168,8 @@ export class MicroRacersGame {
     car.boostTimer = Math.max(0, car.boostTimer - dt);
     const topSpeed = car.boostTimer > 0 ? BOOST_TOP_SPEED : NORMAL_TOP_SPEED;
 
-    if (input.accelerate) car.speed += ACCELERATION * dt;
-    else if (input.brake) car.speed -= BRAKE_FORCE * dt;
+    if (input.brake) car.speed -= BRAKE_FORCE * dt;
+    else if (input.accelerate) car.speed += ACCELERATION * dt;
     else if (car.speed > 0) car.speed = Math.max(0, car.speed - 58 * dt);
     else if (car.speed < 0) car.speed = Math.min(0, car.speed + 58 * dt);
     car.speed = Math.max(-90, Math.min(topSpeed, car.speed));
@@ -233,6 +239,7 @@ export class MicroRacersGame {
         car.speed = Math.max(car.speed, 235);
         pickup.active = false;
         pickup.respawnTimer = 5;
+        emitArcadeGameplayCue('pickup', 'TURBO');
         break;
       }
     }
@@ -267,6 +274,7 @@ export function createRacingSnapshot(game: MicroRacersGame): RacingSnapshot {
     phase: game.phase,
     winner: game.winner,
     countdown: game.countdown,
+    trackVariant: game.trackVariant,
   };
 }
 
@@ -277,6 +285,7 @@ export function applyRacingSnapshot(game: MicroRacersGame, state: RacingSnapshot
   game.phase = state.phase;
   game.winner = state.winner;
   game.countdown = state.countdown;
+  game.trackVariant = Math.max(0, Math.min(2, Math.floor(state.trackVariant ?? 0)));
 }
 
 export function initMicroRacers(): void {
@@ -298,12 +307,14 @@ export function initMicroRacers(): void {
   const mintSpeed = document.getElementById('racingMintSpeed');
   const coralSpeed = document.getElementById('racingCoralSpeed');
   const startButton = document.getElementById('racingStartButton') as HTMLButtonElement | null;
+  const autoAccelerate = document.getElementById('racingAutoAccelerate') as HTMLInputElement | null;
   const modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-racing-mode]');
   const mintControls = document.getElementById('racingMintControls');
   const coralControls = document.getElementById('racingCoralControls');
   const roomMount = document.querySelector<HTMLElement>('[data-game-room="racing"]');
   let room: GameRoomClient | null = null;
   const resultReporter = new ArcadeResultReporter('racing');
+  let autoDrive = true;
 
   function snapshot(): Record<string, unknown> {
     return createRacingSnapshot(game) as unknown as Record<string, unknown>;
@@ -315,6 +326,7 @@ export function initMicroRacers(): void {
   }
 
   function setPlayerInput(player: RacingPlayer, action: RacingAction, pressed: boolean): void {
+    if (pressed && isArcadeSessionPaused('racing')) return;
     const session = room?.session();
     if (!session?.online) game.setInput(player, action, pressed);
     else if (session.ready && room?.canControl(player)) {
@@ -324,6 +336,7 @@ export function initMicroRacers(): void {
   }
 
   function startRace(): void {
+    if (isArcadeSessionPaused('racing')) return;
     const session = room?.session();
     if (session?.online && !session.ready) return;
     if (room?.isGuest()) room.sendAction({ type: 'start' });
@@ -363,8 +376,10 @@ export function initMicroRacers(): void {
 
   function drawTrack(): void {
     const background = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    background.addColorStop(0, '#183a2d');
-    background.addColorStop(1, '#0d251e');
+    const palettes = [['#183a2d', '#0d251e'], ['#243251', '#11192c'], ['#3a251d', '#1d1512']];
+    const palette = palettes[game.trackVariant];
+    background.addColorStop(0, palette[0]);
+    background.addColorStop(1, palette[1]);
     ctx.fillStyle = background;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -467,6 +482,15 @@ export function initMicroRacers(): void {
     drawPickups();
     drawCar(1);
     drawCar(2);
+    const tracked = (room?.session().online ? room.session().playerId : 1) ?? 1;
+    const car = game.cars[tracked];
+    const gate = RACING_CHECKPOINTS[car.nextCheckpoint];
+    ctx.save();
+    ctx.strokeStyle = tracked === 1 ? '#54e38e' : '#ff6b78'; ctx.lineWidth = 6; ctx.setLineDash([12, 8]);
+    ctx.beginPath(); ctx.arc(gate.x, gate.y, 38, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    const direction = Math.atan2(gate.y - car.y, gate.x - car.x);
+    ctx.translate(car.x, car.y); ctx.rotate(direction); ctx.fillStyle = '#ffc857';
+    ctx.beginPath(); ctx.moveTo(42, 0); ctx.lineTo(22, -10); ctx.lineTo(22, 10); ctx.closePath(); ctx.fill(); ctx.restore();
     if (game.phase === 'countdown') {
       ctx.fillStyle = 'rgba(7,10,16,.55)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -533,6 +557,10 @@ export function initMicroRacers(): void {
     const mode = button.dataset.racingMode;
     if (mode === 'bot' || mode === 'duel') { game.restart(mode); syncUi(); render(); }
   }));
+  autoAccelerate?.addEventListener('change', () => {
+    autoDrive = autoAccelerate.checked;
+    setPlayerInput(1, 'accelerate', autoDrive);
+  });
   startButton?.addEventListener('click', startRace);
   document.getElementById('racingRestartButton')?.addEventListener('click', () => {
     if (room?.isGuest()) room.sendAction({ type: 'restart' });
@@ -583,11 +611,25 @@ export function initMicroRacers(): void {
     });
   }
 
+  registerArcadeSession({
+    gameId: 'racing',
+    view,
+    mode: () => room?.session().online ? 'online' : game.mode === 'bot' ? 'solo' : 'local',
+    isActive: () => game.phase === 'countdown' || game.phase === 'racing',
+    clearHeldInputs: () => {
+      ([1, 2] as RacingPlayer[]).forEach(player => {
+        (['accelerate', 'brake', 'left', 'right'] as RacingAction[])
+          .forEach(action => game.setInput(player, action, false));
+      });
+    },
+  });
+
   let previous = performance.now();
   function loop(now: number): void {
     if (visible()) {
       if (!room?.isGuest()) {
-        game.update((now - previous) / 1000);
+        if (autoDrive && !game.inputs[1].brake) game.inputs[1].accelerate = true;
+        if (!isArcadeSessionPaused('racing')) game.update((now - previous) / 1000);
         room?.broadcastState(snapshot());
       }
       render();

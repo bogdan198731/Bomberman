@@ -8,6 +8,7 @@ import {
 
 export type QuickPlayMode = 'all' | 'solo' | 'local' | 'online';
 type GameMode = Exclude<QuickPlayMode, 'all'>;
+export const QUICK_PLAY_MODE_STORAGE_KEY = 'blast-arcade-quick-play-mode-v1';
 
 export interface QuickPlayGame {
   id: ArcadeGameId;
@@ -19,7 +20,7 @@ export interface QuickPlayGame {
 export const QUICK_PLAY_GAMES: readonly QuickPlayGame[] = [
   { id: 'bomberman', title: 'Blast Buddies', icon: '💣', modes: ['solo', 'local', 'online'] },
   { id: 'tintar', title: 'Țintar', icon: '◎', modes: ['solo', 'local', 'online'] },
-  { id: 'paddle', title: 'Paddle Clash', icon: '⚡', modes: ['local', 'online'] },
+  { id: 'paddle', title: 'Paddle Clash', icon: '⚡', modes: ['solo', 'local', 'online'] },
   { id: 'snake', title: 'Neon Snake Arena', icon: '〰', modes: ['solo', 'local', 'online'] },
   { id: 'tanks', title: 'Mini Tanks', icon: '▰', modes: ['solo', 'local', 'online'] },
   { id: 'septica', title: 'Șeptică', icon: '7♥', modes: ['solo', 'local', 'online'] },
@@ -54,9 +55,8 @@ export function recommendQuickPlay(
   const rotation = unseen.length
     ? unseen
     : [...candidates].sort((first, second) => (recentPosition.get(second) ?? 0) - (recentPosition.get(first) ?? 0));
-  const shortlist = rotation.slice(0, Math.min(3, rotation.length));
   const safeRandom = Number.isFinite(randomValue) ? Math.min(0.999999, Math.max(0, randomValue)) : 0;
-  return shortlist[Math.floor(safeRandom * shortlist.length)] ?? shortlist[0] ?? null;
+  return rotation[Math.floor(safeRandom * rotation.length)] ?? rotation[0] ?? null;
 }
 
 export function quickPlayReason(game: QuickPlayGame, profile: ArcadeProfile): string {
@@ -85,7 +85,12 @@ export function initQuickPlay(): void {
   const activeLaunch = launch;
   const activeTitle = title;
 
-  let activeMode: QuickPlayMode = 'all';
+  let activeMode: QuickPlayMode = (() => {
+    try {
+      const saved = localStorage.getItem(QUICK_PLAY_MODE_STORAGE_KEY);
+      return saved === 'solo' || saved === 'local' || saved === 'online' || saved === 'all' ? saved : 'all';
+    } catch { return 'all'; }
+  })();
   let selectedGame: ArcadeGameId | null = null;
   let profile = loadArcadeProfile();
 
@@ -105,6 +110,9 @@ export function initQuickPlay(): void {
     if (modes) modes.textContent = game.modes.map(mode => mode === 'local' ? 'Local 2P' : mode[0].toUpperCase() + mode.slice(1)).join(' · ');
     if (count) count.textContent = `${available.length} available`;
     activeLaunch.dataset.launchGame = game.id;
+    activeLaunch.dataset.launchMode = activeMode === 'all'
+      ? game.modes.includes('solo') ? 'solo' : game.modes[0]
+      : activeMode;
     activeLaunch.textContent = `Play ${game.title}`;
   }
 
@@ -112,6 +120,8 @@ export function initQuickPlay(): void {
     const mode = button.dataset.quickPlayMode as QuickPlayMode;
     if (!['all', 'solo', 'local', 'online'].includes(mode)) return;
     activeMode = mode;
+    try { localStorage.setItem(QUICK_PLAY_MODE_STORAGE_KEY, activeMode); }
+    catch { /* Mode remains active for this visit when storage is unavailable. */ }
     modeButtons.forEach(item => {
       const active = item.dataset.quickPlayMode === activeMode;
       item.classList.toggle('active', active);
@@ -123,6 +133,11 @@ export function initQuickPlay(): void {
   window.addEventListener('arcade-profile-updated', event => {
     profile = (event as CustomEvent<ArcadeProfile>).detail;
     choose();
+  });
+  modeButtons.forEach(item => {
+    const active = item.dataset.quickPlayMode === activeMode;
+    item.classList.toggle('active', active);
+    item.setAttribute('aria-pressed', String(active));
   });
   choose(false);
 }

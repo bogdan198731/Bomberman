@@ -7,9 +7,16 @@ import {
   hasWonTwenty48,
   mergeTwenty48Line,
   moveTwenty48,
+  loadTwenty48Session,
+  saveTwenty48Session,
   shouldConfirmTwenty48Reset,
   Twenty48Game,
 } from './twenty48.js';
+
+function memoryStorage(): { getItem(key: string): string | null; setItem(key: string, value: string): void } {
+  const values = new Map<string, string>();
+  return { getItem: key => values.get(key) ?? null, setItem: (key, value) => { values.set(key, value); } };
+}
 
 test('2048 starts with exactly two tiles', () => {
   const values = [0, 0, 0.99, 0.95];
@@ -74,4 +81,29 @@ test('game tracks score, win pause, continuation, and game-over state', () => {
   game.board = [2, 4, 2, 4, 4, 2, 4, 2, 2, 4, 2, 4, 4, 2, 4, 2];
   game.move('left');
   assert.equal(game.phase, 'over');
+});
+
+test('casual undo restores exactly one previous move', () => {
+  const game = new Twenty48Game(() => 0);
+  game.board = [2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  const before = [...game.board];
+  game.move('left');
+  assert.equal(game.canUndo(), true);
+  assert.equal(game.undo(), true);
+  assert.deepEqual(game.board, before);
+  assert.equal(game.score, 0);
+  assert.equal(game.undo(), false);
+});
+
+test('unfinished 2048 sessions persist board, score, moves, and active time', () => {
+  const storage = memoryStorage();
+  const game = new Twenty48Game(() => 0);
+  game.board = [2, 4, 8, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  game.score = 320;
+  game.movesMade = 12;
+  game.elapsedMs = 42_500;
+  saveTwenty48Session(game.session(), storage);
+  assert.deepEqual(loadTwenty48Session(storage), game.session());
+  storage.setItem('blast-arcade-2048-session-v1', '{broken');
+  assert.equal(loadTwenty48Session(storage), null);
 });

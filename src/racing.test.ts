@@ -41,6 +41,23 @@ test('the race begins after a three-second countdown', () => {
   assert.equal(game.phase, 'racing');
 });
 
+test('ready-state steering teaches direction before the countdown', () => {
+  const game = new MicroRacersGame();
+  const startAngle = game.cars[1].angle;
+  game.setInput(1, 'left', true);
+  assert.notEqual(game.cars[1].angle, startAngle);
+  assert.equal(game.phase, 'ready');
+});
+
+test('new races rotate pickup layouts while preserving the track', () => {
+  const game = new MicroRacersGame();
+  const first = game.pickups.map(pickup => [pickup.x, pickup.y]);
+  game.restart();
+  const second = game.pickups.map(pickup => [pickup.x, pickup.y]);
+  assert.notDeepEqual(second, first);
+  assert.ok(game.pickups.every(pickup => isPointOnRacingTrack(pickup.x, pickup.y)));
+});
+
 test('accelerating moves a racer while keeping it on the circuit', () => {
   const game = new MicroRacersGame();
   game.restart('duel');

@@ -1,6 +1,12 @@
 import { strict as assert } from 'node:assert';
 import { test } from 'node:test';
-import { OnlineRoom, isPlayerAction } from './multiplayer.js';
+import {
+  BOMBERMAN_MATCH_TARGET,
+  BOMBERMAN_PRESSURE_START_MS,
+  BOMBERMAN_PRESSURE_STEP_MS,
+  OnlineRoom,
+  isPlayerAction,
+} from './multiplayer.js';
 import { GameState, PowerUpType, TileType, type MapGrid } from './index.js';
 
 function createOpenGrid(width: number = 9, height: number = 9): MapGrid {
@@ -80,6 +86,38 @@ test('room snapshots are JSON serializable and include both players', () => {
   assert.strictEqual(snapshot.connectedPlayers.length, 2);
   assert.strictEqual(snapshot.players.length, 2);
   assert.doesNotThrow(() => JSON.stringify(snapshot));
+});
+
+test('bomb snapshots expose a clamped visual fuse rhythm', () => {
+  const room = createPlayingRoom();
+  room.handleAction(1, { type: 'bomb' }, 3_000);
+  const snapshot = room.snapshot(4_500);
+  assert.equal(snapshot.bombs?.length, 1);
+  assert.equal(snapshot.bombs?.[0].fuseProgress, .5);
+});
+
+test('late rounds shrink to a visible safe ring instead of stalling forever', () => {
+  const room = createPlayingRoom();
+  room.gameState = new GameState(createOpenGrid());
+  room.players[0].x = room.players[1].x = 4;
+  room.players[0].y = 3;
+  room.players[1].y = 5;
+  room.update(1_000 + 1_750 + BOMBERMAN_PRESSURE_START_MS);
+  assert.equal(room.pressureLevel, 1);
+  assert.match(room.statusText, /Danger closing in/);
+  room.update(1_000 + 1_750 + BOMBERMAN_PRESSURE_START_MS + BOMBERMAN_PRESSURE_STEP_MS);
+  assert.equal(room.pressureLevel, 2);
+});
+
+test('restarting after the target score begins a fresh best-of match', () => {
+  const room = createPlayingRoom();
+  room.scores[1] = BOMBERMAN_MATCH_TARGET;
+  room.round = 5;
+  room.phase = 'finished';
+  room.handleAction(2, { type: 'restart' }, 5_000);
+  assert.deepEqual(room.scores, { 1: 0, 2: 0 });
+  assert.equal(room.round, 1);
+  assert.equal(room.phase, 'countdown');
 });
 
 test('either online player can start the next round', () => {

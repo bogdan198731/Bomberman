@@ -1,10 +1,13 @@
 import { GameRoomClient } from './game-room.js';
 import { ArcadeResultReporter } from './stats.js';
 import { currentArcadeLanguage } from './i18n.js';
+import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
+import { emitArcadeGameplayCue } from './feedback.js';
 
 export type BlockPlayer = 1 | 2;
 export type BlockMode = 'bot' | 'duel';
 export type BlockPhase = 'ready' | 'playing' | 'finished';
+export type BlockBotDifficulty = 'relaxed' | 'normal' | 'expert';
 export type BlockAction = 'left' | 'right' | 'rotate' | 'down' | 'drop';
 export type TetrominoType = 'I' | 'O' | 'T' | 'S' | 'Z' | 'J' | 'L';
 export type BlockCell = TetrominoType | 'G' | null;
@@ -80,6 +83,7 @@ export class BlockDropGame {
   mode: BlockMode = 'bot';
   phase: BlockPhase = 'ready';
   winner: BlockPlayer | null = null;
+  botDifficulty: BlockBotDifficulty = 'relaxed';
   private random: () => number;
   private pieceHistory: TetrominoType[] = [];
   private pieceIndexes: Record<BlockPlayer, number> = { 1: 0, 2: 0 };
@@ -102,7 +106,7 @@ export class BlockDropGame {
     this.pieceIndexes = { 1: 0, 2: 0 };
     this.gravityTimers = { 1: 0, 2: 0 };
     this.nextPieceId = 1;
-    this.botTimer = .6;
+    this.botTimer = this.botInterval();
     this.phase = 'ready';
     this.winner = null;
     this.spawnPiece(1);
@@ -214,8 +218,17 @@ export class BlockDropGame {
     if (this.phase === 'ready') return this.mode === 'bot'
       ? 'Clear lines and bury the Coral bot under garbage blocks.'
       : 'Two boards are ready. Every cleared line attacks your rival.';
-    if (this.phase === 'playing') return 'Build clean stacks, counter incoming garbage, and avoid topping out.';
+    if (this.phase === 'playing') {
+      const incoming = this.pendingGarbage[1];
+      return incoming > 0 ? `${incoming} garbage row${incoming === 1 ? '' : 's'} incoming — clear lines to cancel.`
+        : 'Ghost = landing spot. Clear lines to attack and avoid topping out.';
+    }
     return `${this.winner === 1 ? 'Mint' : 'Coral'} wins the Block Drop duel!`;
+  }
+
+  setBotDifficulty(difficulty: BlockBotDifficulty): void {
+    this.botDifficulty = difficulty;
+    this.botTimer = this.botInterval();
   }
 
   peekNextType(player: BlockPlayer): TetrominoType {
@@ -265,6 +278,7 @@ export class BlockDropGame {
     attack -= cancelled;
     this.pendingGarbage[player] -= cancelled;
     if (attack > 0) this.pendingGarbage[otherPlayer(player)] += attack;
+    if (cleared > 0) emitArcadeGameplayCue('line-clear', `${cleared} LINE${cleared === 1 ? '' : 'S'} · ${attack > 0 ? `SEND ${attack}` : 'CANCELLED'}`);
 
     if (!this.applyPendingGarbage(player)) return;
     this.gravityTimers[player] = 0;
@@ -298,7 +312,7 @@ export class BlockDropGame {
   private updateBot(elapsed: number): void {
     this.botTimer -= elapsed;
     if (this.botTimer > 0 || this.phase !== 'playing') return;
-    this.botTimer = .62;
+    this.botTimer = this.botInterval();
     const best = this.bestBotPlacement();
     if (best) this.active[2] = { ...this.active[2], rotation: best.rotation, x: best.x };
     this.hardDrop(2);
@@ -335,6 +349,10 @@ export class BlockDropGame {
       }
     }
     return best;
+  }
+
+  private botInterval(): number {
+    return this.botDifficulty === 'relaxed' ? .88 : this.botDifficulty === 'expert' ? .38 : .62;
   }
 
   private finish(winner: BlockPlayer): void {
@@ -392,19 +410,22 @@ export function initBlockDrop(): void {
   const roomMount = document.querySelector<HTMLElement>('[data-game-room="blocks"]');
   let room: GameRoomClient | null = null;
   const resultReporter = new ArcadeResultReporter('blocks');
+  const difficultySelect = document.getElementById('blocksBotDifficulty') as HTMLSelectElement | null;
 
   function snapshot(): Record<string, unknown> {
-    return createBlockDropSnapshot(game) as unknown as Record<string, unknown>;
+    return { ...createBlockDropSnapshot(game), botDifficulty: game.botDifficulty } as unknown as Record<string, unknown>;
   }
 
   function restore(state: Record<string, unknown>): void {
     if (!state.boards || !state.active) return;
     applyBlockDropSnapshot(game, state as unknown as BlockDropSnapshot);
+    if (state.botDifficulty === 'relaxed' || state.botDifficulty === 'normal' || state.botDifficulty === 'expert') game.setBotDifficulty(state.botDifficulty);
   }
 
   function visible(): boolean { return !view.classList.contains('view-hidden'); }
 
   function performAction(player: BlockPlayer, action: BlockAction): void {
+    if (isArcadeSessionPaused('blocks')) return;
     const session = room?.session();
     if (!session?.online) {
       if (game.mode === 'bot' && player === 2) return;
@@ -416,6 +437,7 @@ export function initBlockDrop(): void {
   }
 
   function startMatch(): void {
+    if (isArcadeSessionPaused('blocks')) return;
     const session = room?.session();
     if (session?.online && !session.ready) return;
     if (room?.isGuest()) room.sendAction({ type: 'start' });
@@ -446,6 +468,7 @@ export function initBlockDrop(): void {
       button.classList.toggle('active', button.dataset.blocksMode === game.mode);
       button.disabled = Boolean(room?.session().online) || game.phase === 'playing';
     });
+    if (difficultySelect) difficultySelect.hidden = game.mode !== 'bot' || Boolean(room?.session().online);
     const touchSession = room?.session();
     mintControls?.classList.toggle('solo-hidden', Boolean(touchSession?.online && touchSession.playerId === 2));
     coralControls?.classList.toggle('solo-hidden', touchSession?.online ? touchSession.playerId !== 2 : game.mode === 'bot');
@@ -651,6 +674,10 @@ export function initBlockDrop(): void {
     const mode = button.dataset.blocksMode;
     if (mode === 'bot' || mode === 'duel') { game.restart(mode); syncUi(); render(); }
   }));
+  difficultySelect?.addEventListener('change', () => {
+    const difficulty = difficultySelect.value;
+    if (difficulty === 'relaxed' || difficulty === 'normal' || difficulty === 'expert') game.setBotDifficulty(difficulty);
+  });
   startButton?.addEventListener('click', startMatch);
   mobileStartButton?.addEventListener('click', startMatch);
   document.getElementById('blocksRestartButton')?.addEventListener('click', () => {
@@ -699,11 +726,24 @@ export function initBlockDrop(): void {
     });
   }
 
+  registerArcadeSession({
+    gameId: 'blocks',
+    view,
+    mode: () => room?.session().online ? 'online' : game.mode === 'bot' ? 'solo' : 'local',
+    isActive: () => game.phase === 'playing',
+    clearHeldInputs: () => {
+      repeatTimers.forEach(timer => window.clearInterval(timer));
+      repeatTimers.clear();
+      document.querySelectorAll<HTMLElement>('[data-blocks-action].pressed')
+        .forEach(button => button.classList.remove('pressed'));
+    },
+  });
+
   let previous = performance.now();
   function loop(now: number): void {
     if (visible()) {
       if (!room?.isGuest()) {
-        game.update((now - previous) / 1000);
+        if (!isArcadeSessionPaused('blocks')) game.update((now - previous) / 1000);
         room?.broadcastState(snapshot());
       }
       render();

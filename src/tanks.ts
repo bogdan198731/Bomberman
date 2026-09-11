@@ -1,11 +1,14 @@
 import { GameRoomClient } from './game-room.js';
 import { ArcadeResultReporter } from './stats.js';
 import { bindDirectionalJoystick } from './touch-controls.js';
+import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
+import { emitArcadeGameplayCue } from './feedback.js';
 
 export type TankPlayer = 1 | 2;
 export type TankMode = 'bot' | 'duel';
 export type TankDirection = 'up' | 'down' | 'left' | 'right';
 export type TankPhase = 'ready' | 'playing' | 'round-over' | 'finished';
+export type TankBotPace = 'rookie' | 'normal' | 'ace';
 
 export const TANK_ARENA_WIDTH = 900;
 export const TANK_ARENA_HEIGHT = 600;
@@ -85,6 +88,8 @@ export class MiniTanksGame {
   phase: TankPhase = 'ready';
   roundWinner: TankPlayer | null = null;
   matchWinner: TankPlayer | null = null;
+  botPace: TankBotPace = 'rookie';
+  private botDecisionTimer = 0;
 
   restart(mode: TankMode = this.mode): void {
     this.mode = mode;
@@ -104,6 +109,11 @@ export class MiniTanksGame {
   setInput(player: TankPlayer, action: keyof TankInput, pressed: boolean): void {
     if (this.mode === 'bot' && player === 2) return;
     this.inputs[player][action] = pressed;
+  }
+
+  setBotPace(pace: TankBotPace): void {
+    this.botPace = pace;
+    this.botDecisionTimer = 0;
   }
 
   fire(player: TankPlayer): boolean {
@@ -128,7 +138,11 @@ export class MiniTanksGame {
     const dt = Math.max(0, Math.min(.04, seconds));
     this.tanks[1].cooldown = Math.max(0, this.tanks[1].cooldown - dt);
     this.tanks[2].cooldown = Math.max(0, this.tanks[2].cooldown - dt);
-    if (this.mode === 'bot') this.updateBot();
+    this.botDecisionTimer -= dt;
+    if (this.mode === 'bot' && this.botDecisionTimer <= 0) {
+      this.updateBot();
+      this.botDecisionTimer = this.botPace === 'rookie' ? .85 : this.botPace === 'normal' ? .42 : .2;
+    }
     this.moveTank(1, dt);
     this.moveTank(2, dt);
     ([1, 2] as TankPlayer[]).forEach(player => {
@@ -152,6 +166,7 @@ export class MiniTanksGame {
     this.tanks[2] = { ...this.tanks[2], x: TANK_ARENA_WIDTH - 80, y: TANK_ARENA_HEIGHT / 2, direction: 'left', cooldown: 0 };
     this.inputs = { 1: emptyInput(), 2: emptyInput() };
     this.bullets = [];
+    this.botDecisionTimer = 0;
     this.obstacles = defaultObstacles();
     this.phase = 'ready';
     this.roundWinner = null;
@@ -206,7 +221,7 @@ export class MiniTanksGame {
         bullet.vy *= -1; bounced = true;
         bullet.y = Math.max(5, Math.min(TANK_ARENA_HEIGHT - 5, bullet.y));
       }
-      if (bounced) bullet.bounces += 1;
+      if (bounced) { bullet.bounces += 1; emitArcadeGameplayCue('ricochet'); }
       if (bullet.bounces > 1) continue;
 
       const obstacleIndex = this.obstacles.findIndex(obstacle => overlapsRect(bullet.x, bullet.y, 8, obstacle));
@@ -217,6 +232,7 @@ export class MiniTanksGame {
 
       const victim = (bullet.owner === 1 ? 2 : 1) as TankPlayer;
       if (bullet.age > .08 && Math.hypot(bullet.x - this.tanks[victim].x, bullet.y - this.tanks[victim].y) < TANK_SIZE * .62) {
+        emitArcadeGameplayCue('hit', `${bullet.owner === 1 ? 'MINT' : 'CORAL'} HIT`);
         this.finishRound(bullet.owner);
         return;
       }
@@ -252,6 +268,8 @@ export function initMiniTanks(): void {
   const mintScore = document.getElementById('tanksMintScore');
   const coralScore = document.getElementById('tanksCoralScore');
   const launchButton = document.getElementById('tanksLaunchButton') as HTMLButtonElement | null;
+  const readiness = document.getElementById('tanksShotReadiness');
+  const paceSelect = document.getElementById('tanksBotPace') as HTMLSelectElement | null;
   const modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-tanks-mode]');
   const mintControls = document.getElementById('tanksMintControls');
   const coralControls = document.getElementById('tanksCoralControls');
@@ -263,6 +281,7 @@ export function initMiniTanks(): void {
     return {
       tanks: game.tanks, bullets: game.bullets, obstacles: game.obstacles,
       mode: game.mode, phase: game.phase, roundWinner: game.roundWinner, matchWinner: game.matchWinner,
+      botPace: game.botPace,
     };
   }
 
@@ -275,9 +294,11 @@ export function initMiniTanks(): void {
     game.phase = state.phase as TankPhase;
     game.roundWinner = state.roundWinner as TankPlayer | null;
     game.matchWinner = state.matchWinner as TankPlayer | null;
+    if (state.botPace === 'rookie' || state.botPace === 'normal' || state.botPace === 'ace') game.setBotPace(state.botPace);
   }
 
   function setPlayerInput(player: TankPlayer, action: keyof TankInput, pressed: boolean): void {
+    if (pressed && isArcadeSessionPaused('tanks')) return;
     const session = room?.session();
     if (!session?.online) game.setInput(player, action, pressed);
     else if (session.ready && room?.canControl(player)) {
@@ -287,6 +308,7 @@ export function initMiniTanks(): void {
   }
 
   function launchRound(): void {
+    if (isArcadeSessionPaused('tanks')) return;
     const session = room?.session();
     if (session?.online && !session.ready) return;
     if (room?.isGuest()) room.sendAction({ type: 'launch' });
@@ -303,6 +325,13 @@ export function initMiniTanks(): void {
     if (status) status.textContent = game.statusText();
     if (mintScore) mintScore.textContent = String(game.tanks[1].score);
     if (coralScore) coralScore.textContent = String(game.tanks[2].score);
+    const tracked = (room?.session().online ? room.session().playerId : 1) ?? 1;
+    if (readiness) {
+      const ready = game.tanks[tracked].cooldown <= 0;
+      readiness.textContent = ready ? '● Shot ready' : `◌ Reloading ${Math.ceil(game.tanks[tracked].cooldown * 10) / 10}s`;
+      readiness.classList.toggle('ready', ready);
+    }
+    if (paceSelect) paceSelect.hidden = game.mode !== 'bot' || Boolean(room?.session().online);
     if (launchButton) launchButton.textContent = game.phase === 'round-over' ? 'Next round' : game.phase === 'finished' ? 'New match' : game.phase === 'ready' ? 'Start duel' : 'Battle live';
     modeButtons.forEach(button => {
       button.classList.toggle('active', button.dataset.tanksMode === game.mode);
@@ -311,7 +340,7 @@ export function initMiniTanks(): void {
     const touchSession = room?.session();
     mintControls?.classList.toggle('solo-hidden', Boolean(touchSession?.online && touchSession.playerId === 2));
     coralControls?.classList.toggle('solo-hidden', touchSession?.online ? touchSession.playerId !== 2 : game.mode === 'bot');
-    const trackedPlayer = (room?.session().online ? room.session().playerId : 1) ?? 1;
+    const trackedPlayer = tracked;
     resultReporter.report(game.phase === 'finished', {
       outcome: game.matchWinner === trackedPlayer ? 'win' : 'loss',
       score: game.tanks[trackedPlayer].score,
@@ -341,7 +370,7 @@ export function initMiniTanks(): void {
     });
     game.bullets.forEach(bullet => {
       ctx.fillStyle = '#ffc857'; ctx.shadowBlur = 15; ctx.shadowColor = '#ffc857';
-      ctx.beginPath(); ctx.arc(bullet.x, bullet.y, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(bullet.x, bullet.y, 7, 0, Math.PI * 2); ctx.fill();
     });
     ctx.shadowBlur = 0;
   }
@@ -375,6 +404,10 @@ export function initMiniTanks(): void {
     const mode = button.dataset.tanksMode;
     if (mode === 'bot' || mode === 'duel') { game.restart(mode); syncUi(); render(); }
   }));
+  paceSelect?.addEventListener('change', () => {
+    const pace = paceSelect.value;
+    if (pace === 'rookie' || pace === 'normal' || pace === 'ace') game.setBotPace(pace);
+  });
   launchButton?.addEventListener('click', launchRound);
   document.getElementById('tanksRestartButton')?.addEventListener('click', () => {
     if (room?.isGuest()) room.sendAction({ type: 'restart' });
@@ -418,11 +451,24 @@ export function initMiniTanks(): void {
     });
   }
 
+  registerArcadeSession({
+    gameId: 'tanks',
+    view,
+    mode: () => room?.session().online ? 'online' : game.mode === 'bot' ? 'solo' : 'local',
+    isActive: () => game.phase === 'playing',
+    clearHeldInputs: () => {
+      ([1, 2] as TankPlayer[]).forEach(player => {
+        (['up', 'down', 'left', 'right', 'fire'] as Array<keyof TankInput>)
+          .forEach(action => game.setInput(player, action, false));
+      });
+    },
+  });
+
   let previous = performance.now();
   function loop(now: number): void {
     if (visible()) {
       if (!room?.isGuest()) {
-        game.update((now - previous) / 1000);
+        if (!isArcadeSessionPaused('tanks')) game.update((now - previous) / 1000);
         room?.broadcastState(snapshot());
       }
       render(); syncUi();

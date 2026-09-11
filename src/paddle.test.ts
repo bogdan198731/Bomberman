@@ -29,6 +29,14 @@ test('held controls move paddles while keeping them inside the arena', () => {
   assert.ok(game.players[1].y < PADDLE_HEIGHT);
 });
 
+test('direct touch dragging positions a paddle without overshooting the court', () => {
+  const game = new PaddleClashGame();
+  game.moveBatTo(1, PADDLE_HEIGHT * .75);
+  assert.ok(game.players[1].y > PADDLE_HEIGHT / 2);
+  game.moveBatTo(1, -100);
+  assert.equal(game.players[1].y, 0);
+});
+
 test('the ball bounces off the top wall', () => {
   const game = new PaddleClashGame();
   game.phase = 'playing';

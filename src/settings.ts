@@ -9,6 +9,7 @@ export interface ArcadeSettings {
   reducedMotion: boolean;
   highContrast: boolean;
   language: ArcadeLanguage;
+  touchControls: 'auto' | 'on' | 'off';
 }
 
 interface StorageLike {
@@ -16,7 +17,7 @@ interface StorageLike {
   setItem(key: string, value: string): void;
 }
 
-type SoundCue = 'ui' | 'launch' | 'win' | 'loss' | 'draw' | 'complete' | 'reward';
+type SoundCue = 'ui' | 'launch' | 'win' | 'loss' | 'draw' | 'complete' | 'reward' | 'danger' | 'hit' | 'pickup' | 'ricochet' | 'line-clear';
 
 const SOUND_PATTERNS: Record<SoundCue, readonly number[]> = {
   ui: [440],
@@ -26,10 +27,22 @@ const SOUND_PATTERNS: Record<SoundCue, readonly number[]> = {
   draw: [330, 330],
   complete: [392, 523, 659],
   reward: [659, 784, 988],
+  danger: [220, 185, 220],
+  hit: [155, 105],
+  pickup: [740, 988],
+  ricochet: [440, 620],
+  'line-clear': [392, 523, 784],
 };
 
 export function createDefaultSettings(): ArcadeSettings {
-  return { soundEnabled: true, volume: 60, reducedMotion: false, highContrast: false, language: 'en' };
+  return {
+    soundEnabled: true,
+    volume: 60,
+    reducedMotion: false,
+    highContrast: false,
+    language: 'en',
+    touchControls: 'auto',
+  };
 }
 
 export function normalizeSettings(value: unknown): ArcadeSettings {
@@ -44,6 +57,9 @@ export function normalizeSettings(value: unknown): ArcadeSettings {
     reducedMotion: typeof candidate.reducedMotion === 'boolean' ? candidate.reducedMotion : defaults.reducedMotion,
     highContrast: typeof candidate.highContrast === 'boolean' ? candidate.highContrast : defaults.highContrast,
     language: candidate.language === 'ro' ? 'ro' : defaults.language,
+    touchControls: candidate.touchControls === 'on' || candidate.touchControls === 'off'
+      ? candidate.touchControls
+      : defaults.touchControls,
   };
 }
 
@@ -122,6 +138,7 @@ export function initArcadeSettings(): void {
   const motionToggle = document.getElementById('settingsMotionToggle') as HTMLInputElement | null;
   const contrastToggle = document.getElementById('settingsContrastToggle') as HTMLInputElement | null;
   const languageSelect = document.getElementById('settingsLanguageSelect') as HTMLSelectElement | null;
+  const touchControlsSelect = document.getElementById('settingsTouchControls') as HTMLSelectElement | null;
   const testButton = document.getElementById('settingsTestSound');
   const fullscreenButton = document.getElementById('settingsFullscreenButton') as HTMLButtonElement | null;
   const resetButton = document.getElementById('settingsResetButton');
@@ -137,6 +154,9 @@ export function initArcadeSettings(): void {
     settings = save ? saveSettings(settings) : normalizeSettings(settings);
     document.documentElement.classList.toggle('reduce-motion', settings.reducedMotion);
     document.documentElement.classList.toggle('high-contrast', settings.highContrast);
+    document.documentElement.classList.toggle('touch-controls-on', settings.touchControls === 'on');
+    document.documentElement.classList.toggle('touch-controls-off', settings.touchControls === 'off');
+    document.documentElement.dataset.touchControls = settings.touchControls;
     setArcadeLanguage(settings.language);
     if (soundToggle) soundToggle.checked = settings.soundEnabled;
     if (volumeInput) volumeInput.value = String(settings.volume);
@@ -144,12 +164,14 @@ export function initArcadeSettings(): void {
     if (motionToggle) motionToggle.checked = settings.reducedMotion;
     if (contrastToggle) contrastToggle.checked = settings.highContrast;
     if (languageSelect) languageSelect.value = settings.language;
+    if (touchControlsSelect) touchControlsSelect.value = settings.touchControls;
   }
 
   function openSettings(): void {
     previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     activeOverlay.hidden = false;
     document.body.classList.add('settings-open');
+    window.dispatchEvent(new CustomEvent('arcade-settings-change', { detail: { open: true } }));
     closeButton?.focus();
     soundPlayer.play('ui', settings);
   }
@@ -157,6 +179,7 @@ export function initArcadeSettings(): void {
   function closeSettings(): void {
     activeOverlay.hidden = true;
     document.body.classList.remove('settings-open');
+    window.dispatchEvent(new CustomEvent('arcade-settings-change', { detail: { open: false } }));
     previouslyFocused?.focus();
   }
 
@@ -196,6 +219,12 @@ export function initArcadeSettings(): void {
     settings.language = languageSelect.value === 'ro' ? 'ro' : 'en';
     applySettings();
   });
+  touchControlsSelect?.addEventListener('change', () => {
+    settings.touchControls = touchControlsSelect.value === 'on' || touchControlsSelect.value === 'off'
+      ? touchControlsSelect.value
+      : 'auto';
+    applySettings();
+  });
   testButton?.addEventListener('click', () => soundPlayer.play('reward', settings));
   resetButton?.addEventListener('click', () => { settings = createDefaultSettings(); applySettings(); soundPlayer.play('ui', settings); });
   fullscreenButton?.addEventListener('click', () => {
@@ -213,6 +242,10 @@ export function initArcadeSettings(): void {
     soundPlayer.play(result.outcome, settings);
   });
   window.addEventListener('arcade-progression-rewarded', () => window.setTimeout(() => soundPlayer.play('reward', settings), 240));
+  window.addEventListener('arcade-game-cue', event => {
+    const cue = (event as CustomEvent<{ cue?: SoundCue }>).detail?.cue;
+    if (cue && cue in SOUND_PATTERNS) soundPlayer.play(cue, settings);
+  });
   window.addEventListener('storage', event => { if (event.key === SETTINGS_STORAGE_KEY) { settings = loadSettings(); applySettings(false); } });
 
   applySettings(false);

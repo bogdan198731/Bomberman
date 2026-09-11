@@ -4,7 +4,10 @@ import {
   isValidSudokuSolution,
   parseSudokuGrid,
   SUDOKU_DIFFICULTY_RULES,
+  SUDOKU_PUZZLE_COLLECTION,
   SUDOKU_PUZZLES,
+  loadSudokuSession,
+  saveSudokuSession,
   sudokuCompletionScore,
   shouldConfirmSudokuReset,
   SudokuGame,
@@ -12,7 +15,7 @@ import {
 } from './sudoku.js';
 
 test('all Sudoku definitions contain valid solutions and matching clues', () => {
-  Object.values(SUDOKU_PUZZLES).forEach(definition => {
+  Object.values(SUDOKU_PUZZLE_COLLECTION).flat().forEach(definition => {
     const puzzle = parseSudokuGrid(definition.puzzle);
     const solution = parseSudokuGrid(definition.solution);
     assert.equal(isValidSudokuSolution(solution), true);
@@ -20,6 +23,38 @@ test('all Sudoku definitions contain valid solutions and matching clues', () => 
       if (value) assert.equal(value, solution[index]);
     });
   });
+});
+
+test('Sudoku collection contains distinct validated boards at every difficulty', () => {
+  (['easy', 'medium', 'hard'] as const).forEach(difficulty => {
+    const definitions = SUDOKU_PUZZLE_COLLECTION[difficulty];
+    assert.ok(definitions.length >= 3);
+    assert.equal(new Set(definitions.map(definition => definition.puzzle)).size, definitions.length);
+  });
+});
+
+test('unfinished Sudoku sessions persist entries, notes, difficulty, and elapsed time', () => {
+  const values = new Map<string, string>();
+  const storage = { getItem: (key: string): string | null => values.get(key) ?? null, setItem: (key: string, value: string): void => { values.set(key, value); } };
+  const game = new SudokuGame('medium', 2);
+  const editable = game.puzzle.findIndex(value => value === 0);
+  game.select(editable);
+  game.input(game.solution[editable]);
+  const another = game.puzzle.findIndex((value, index) => value === 0 && index !== editable);
+  const session = {
+    version: 1 as const,
+    difficulty: game.difficulty,
+    variant: game.variant,
+    board: [...game.board],
+    selected: another,
+    mistakes: game.mistakes,
+    hints: game.hints,
+    elapsedSeconds: 93,
+    notes: [[another, [2, 7]]] as Array<readonly [number, number[]]>,
+    relaxed: true,
+  };
+  saveSudokuSession(session, storage);
+  assert.deepEqual(loadSudokuSession(storage), session);
 });
 
 test('Sudoku protects entered values, notes, mistakes, and used hints from accidental reset', () => {

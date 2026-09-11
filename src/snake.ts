@@ -1,6 +1,7 @@
 import { GameRoomClient } from './game-room.js';
 import { ArcadeResultReporter } from './stats.js';
 import { bindVirtualJoystick, digitalJoystickState, type JoystickInputDirection } from './touch-controls.js';
+import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
 
 export type SnakePlayer = 1 | 2;
 export type SnakeMode = 'solo' | 'duel';
@@ -58,6 +59,7 @@ export class NeonSnakeGame {
   phase: SnakePhase = 'ready';
   winner: SnakePlayer | 0 | null = null;
   ticks = 0;
+  collisionCause = '';
   private random: () => number;
 
   constructor(random: () => number = Math.random) {
@@ -73,6 +75,7 @@ export class NeonSnakeGame {
     this.phase = 'ready';
     this.winner = null;
     this.ticks = 0;
+    this.collisionCause = '';
     this.spawnFood();
   }
 
@@ -116,7 +119,10 @@ export class NeonSnakeGame {
       const head = nextHeads.get(player)!;
       const outOfBounds = head.x < 0 || head.x >= SNAKE_COLUMNS || head.y < 0 || head.y >= SNAKE_ROWS;
       const bodyCollision = occupied.has(`${head.x},${head.y}`);
-      if (outOfBounds || bodyCollision || headOnCollision) this.riders[player].alive = false;
+      if (outOfBounds || bodyCollision || headOnCollision) {
+        this.riders[player].alive = false;
+        this.collisionCause = outOfBounds ? 'wall' : headOnCollision ? 'head-on collision' : 'snake trail';
+      }
     });
 
     activePlayers.forEach(player => {
@@ -137,7 +143,7 @@ export class NeonSnakeGame {
     if (this.phase === 'playing') return this.mode === 'solo'
       ? `Score ${this.riders[1].score} — collect the neon cells.`
       : 'Last snake moving wins the arena.';
-    if (this.mode === 'solo') return `Run over — final score ${this.riders[1].score}.`;
+    if (this.mode === 'solo') return `Run over — hit ${this.collisionCause || 'an obstacle'} · final score ${this.riders[1].score}.`;
     if (this.winner === 0) return 'Double crash — draw!';
     return `${this.winner === 1 ? 'Mint' : 'Coral'} wins the arena!`;
   }
@@ -190,17 +196,30 @@ export function initNeonSnake(): void {
   const secondaryStat = document.getElementById('snakeSecondaryStat');
   const secondaryLabel = document.getElementById('snakeSecondaryLabel');
   const startButton = document.getElementById('snakeStartButton') as HTMLButtonElement | null;
+  const speedSelect = document.getElementById('snakeSpeed') as HTMLSelectElement | null;
   const modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-snake-mode]');
   const mintControls = document.getElementById('snakeMintControls');
   const coralControls = document.getElementById('snakeCoralControls');
   const roomMount = document.querySelector<HTMLElement>('[data-game-room="snake"]');
   let room: GameRoomClient | null = null;
   const resultReporter = new ArcadeResultReporter('snake');
+  let tickInterval = Number(speedSelect?.value) || 115;
+  try {
+    const savedSpeed = Number(localStorage.getItem('blast-arcade-snake-speed-v1'));
+    if (savedSpeed >= 80 && savedSpeed <= 180) {
+      tickInterval = savedSpeed;
+      if (speedSelect && Array.from(speedSelect.options).some(option => Number(option.value) === savedSpeed)) {
+        speedSelect.value = String(savedSpeed);
+      }
+    }
+  } catch {
+    // Keep the approachable default when storage is unavailable.
+  }
 
   function snapshot(): Record<string, unknown> {
     return {
       riders: game.riders, food: game.food, mode: game.mode,
-      phase: game.phase, winner: game.winner, ticks: game.ticks,
+      phase: game.phase, winner: game.winner, ticks: game.ticks, collisionCause: game.collisionCause, tickInterval,
     };
   }
 
@@ -212,9 +231,12 @@ export function initNeonSnake(): void {
     game.phase = state.phase as SnakePhase;
     game.winner = state.winner as SnakePlayer | 0 | null;
     game.ticks = Number(state.ticks) || 0;
+    game.collisionCause = typeof state.collisionCause === 'string' ? state.collisionCause : '';
+    if (Number(state.tickInterval) >= 80 && Number(state.tickInterval) <= 180) tickInterval = Number(state.tickInterval);
   }
 
   function turn(player: SnakePlayer, direction: SnakeDirection): void {
+    if (isArcadeSessionPaused('snake')) return;
     const session = room?.session();
     if (!session?.online) game.turn(player, direction);
     else if (session.ready && room?.canControl(player)) {
@@ -224,6 +246,7 @@ export function initNeonSnake(): void {
   }
 
   function startRun(): void {
+    if (isArcadeSessionPaused('snake')) return;
     const session = room?.session();
     if (session?.online && !session.ready) return;
     if (room?.isGuest()) room.sendAction({ type: 'start' });
@@ -385,15 +408,35 @@ export function initNeonSnake(): void {
     });
   }
 
+  registerArcadeSession({
+    gameId: 'snake',
+    view: snakeView,
+    mode: () => room?.session().online ? 'online' : game.mode === 'solo' ? 'solo' : 'local',
+    isActive: () => game.phase === 'playing',
+    clearHeldInputs: () => { accumulator = 0; },
+  });
+  let swipeStart: { x: number; y: number; id: number } | null = null;
+  canvas.addEventListener('pointerdown', event => { swipeStart = { x: event.clientX, y: event.clientY, id: event.pointerId }; });
+  canvas.addEventListener('pointerup', event => {
+    if (!swipeStart || swipeStart.id !== event.pointerId) return;
+    const dx = event.clientX - swipeStart.x; const dy = event.clientY - swipeStart.y; swipeStart = null;
+    if (Math.hypot(dx, dy) < 24) return;
+    turn(1, Math.abs(dx) > Math.abs(dy) ? dx > 0 ? 'right' : 'left' : dy > 0 ? 'down' : 'up');
+  });
+  speedSelect?.addEventListener('change', () => {
+    tickInterval = Math.max(80, Math.min(180, Number(speedSelect.value) || 115));
+    try { localStorage.setItem('blast-arcade-snake-speed-v1', String(tickInterval)); } catch { /* optional */ }
+  });
+
   let accumulator = 0;
   let previous = performance.now();
   function loop(now: number): void {
     if (visible()) {
-      if (!room?.isGuest()) {
+      if (!room?.isGuest() && !isArcadeSessionPaused('snake')) {
         accumulator += Math.min(100, now - previous);
-        while (accumulator >= 115) {
+        while (accumulator >= tickInterval) {
           game.tick();
-          accumulator -= 115;
+          accumulator -= tickInterval;
           syncUi();
         }
         room?.broadcastState(snapshot());

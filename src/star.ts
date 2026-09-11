@@ -1,5 +1,7 @@
 import { ArcadeResultReporter } from './stats.js';
 import { bindDirectionalJoystick } from './touch-controls.js';
+import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
+import { emitArcadeGameplayCue } from './feedback.js';
 
 export type StarPhase = 'ready' | 'playing' | 'finished';
 export type StarMode = 'solo' | 'coop';
@@ -67,6 +69,7 @@ export class StarDefenderGame {
   phase: StarPhase = 'ready';
   mode: StarMode = 'solo';
   wave = 0;
+  recoveries = 1;
   kills = 0;
   players: Record<StarPlayerId, StarPlayer> = { 1: this.createPlayer(1), 2: this.createPlayer(2) };
   inputs: Record<StarPlayerId, StarInput> = { 1: emptyInput(), 2: emptyInput() };
@@ -87,6 +90,7 @@ export class StarDefenderGame {
     this.mode = mode;
     this.phase = 'ready';
     this.wave = 0;
+    this.recoveries = 1;
     this.kills = 0;
     this.players = { 1: this.createPlayer(1), 2: this.createPlayer(2) };
     this.inputs = { 1: emptyInput(), 2: emptyInput() };
@@ -130,6 +134,7 @@ export class StarDefenderGame {
     if (kind === 'spread') player.spreadTimer = 9;
     else if (kind === 'rapid') player.rapidTimer = 9;
     else player.shield = Math.min(3, player.shield + 1);
+    emitArcadeGameplayCue('pickup', `${kind.toUpperCase()} PICKUP`);
   }
 
   damagePlayer(playerId: StarPlayerId = 1): void {
@@ -137,9 +142,11 @@ export class StarDefenderGame {
     const player = this.players[playerId];
     if (player.shield > 0) {
       player.shield -= 1;
+      emitArcadeGameplayCue('hit', 'SHIELD HIT');
       return;
     }
     player.health -= 1;
+    emitArcadeGameplayCue('danger', player.health > 0 ? 'HULL HIT' : 'FIGHTER DOWN');
     if (player.health <= 0) {
       player.health = 0;
       this.inputs[playerId] = emptyInput();
@@ -301,6 +308,7 @@ export class StarDefenderGame {
     const [enemy] = this.enemies.splice(index, 1);
     this.players[playerId].score += enemy.kind === 'boss' ? 500 : enemy.kind === 'heavy' ? 50 : 20;
     this.kills += 1;
+    emitArcadeGameplayCue('hit');
     if (this.kills % 4 === 0) {
       const kinds: StarPowerUpKind[] = ['spread', 'rapid', 'shield'];
       this.powerUps.push({ x: enemy.x, y: enemy.y, vy: 105, kind: kinds[(this.kills / 4 - 1) % kinds.length] });
@@ -309,6 +317,17 @@ export class StarDefenderGame {
 
   private advanceWave(): void {
     this.wave += 1;
+    if (this.mode === 'coop' && this.recoveries > 0) {
+      const defeated = ([1, 2] as StarPlayerId[]).find(playerId => this.players[playerId].health <= 0);
+      if (defeated) {
+        const restored = this.createPlayer(defeated);
+        restored.health = 1;
+        restored.score = this.players[defeated].score;
+        this.players[defeated] = restored;
+        this.recoveries -= 1;
+        emitArcadeGameplayCue('pickup', `${defeated === 1 ? 'MINT' : 'CORAL'} RESCUED`);
+      }
+    }
     this.activePlayerIds().forEach(playerId => {
       const player = this.players[playerId];
       player.health = Math.min(3, player.health + (this.wave % 3 === 0 ? 1 : 0));
@@ -444,7 +463,7 @@ export function initStarDefender(): void {
     });
     game.bullets.forEach(bullet => {
       ctx.strokeStyle = bullet.owner === 1 ? '#54e38e' : bullet.owner === 2 ? '#ff6b78' : '#ffc857';
-      ctx.lineWidth = bullet.owner === 'enemy' ? 3 : 4; ctx.shadowBlur = 12; ctx.shadowColor = ctx.strokeStyle;
+      ctx.lineWidth = bullet.owner === 'enemy' ? 5 : 6; ctx.shadowBlur = 12; ctx.shadowColor = ctx.strokeStyle;
       ctx.beginPath(); ctx.moveTo(bullet.x, bullet.y); ctx.lineTo(bullet.x - bullet.vx * .025, bullet.y - bullet.vy * .025); ctx.stroke();
     });
     game.powerUps.forEach(powerUp => {
@@ -464,6 +483,7 @@ export function initStarDefender(): void {
   };
   window.addEventListener('keydown', event => {
     if (!visible()) return;
+    if (isArcadeSessionPaused('star')) return;
     const command = commands[event.code];
     if (command) {
       event.preventDefault();
@@ -487,27 +507,47 @@ export function initStarDefender(): void {
     const action = button.dataset.starAction as keyof StarInput;
     const release = (): void => game.setInput(action, false, player);
     button.addEventListener('pointerdown', event => {
+      if (isArcadeSessionPaused('star')) return;
       event.preventDefault(); button.setPointerCapture?.(event.pointerId); game.setInput(action, true, player);
     });
     button.addEventListener('pointerup', release); button.addEventListener('pointercancel', release); button.addEventListener('lostpointercapture', release);
   });
   document.querySelectorAll<HTMLElement>('[data-star-joystick]').forEach(track => {
     const player = Number(track.dataset.starJoystick) as StarPlayerId;
-    bindDirectionalJoystick(track, (direction, pressed) => game.setInput(direction, pressed, player));
+    bindDirectionalJoystick(track, (direction, pressed) => {
+      if (!pressed || !isArcadeSessionPaused('star')) game.setInput(direction, pressed, player);
+    });
   });
   modeButtons.forEach(button => button.addEventListener('click', () => {
     const mode = button.dataset.starMode;
     if (mode === 'solo' || mode === 'coop') { game.restart(mode); syncUi(); render(); }
   }));
   startButton?.addEventListener('click', () => {
+    if (isArcadeSessionPaused('star')) return;
     if (game.phase === 'finished') game.restart(game.mode);
     game.start(); syncUi();
   });
   document.getElementById('starRestartButton')?.addEventListener('click', () => { game.restart(game.mode); syncUi(); render(); });
 
+  registerArcadeSession({
+    gameId: 'star',
+    view,
+    mode: () => game.mode === 'solo' ? 'solo' : 'local',
+    isActive: () => game.phase === 'playing',
+    clearHeldInputs: () => {
+      ([1, 2] as StarPlayerId[]).forEach(player => {
+        (['up', 'down', 'left', 'right', 'fire'] as Array<keyof StarInput>)
+          .forEach(action => game.setInput(action, false, player));
+      });
+    },
+  });
+
   let previous = performance.now();
   function loop(now: number): void {
-    if (visible()) { game.update((now - previous) / 1000); render(); syncUi(); }
+    if (visible()) {
+      if (!isArcadeSessionPaused('star')) game.update((now - previous) / 1000);
+      render(); syncUi();
+    }
     previous = now; requestAnimationFrame(loop);
   }
   syncUi(); render(); requestAnimationFrame(loop);

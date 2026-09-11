@@ -1,6 +1,7 @@
 import { GameRoomClient } from './game-room.js';
 import { ArcadeResultReporter } from './stats.js';
 import { bindDirectionalJoystick } from './touch-controls.js';
+import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
 
 export type PaddlePlayer = 1 | 2;
 export type PaddleDirection = 'up' | 'down';
@@ -69,6 +70,10 @@ export class PaddleClashGame {
 
   setInput(player: PaddlePlayer, direction: PaddleDirection, pressed: boolean): void {
     this.inputs[player][direction] = pressed;
+  }
+
+  moveBatTo(player: PaddlePlayer, centerY: number): void {
+    this.players[player].y = Math.max(0, Math.min(PADDLE_HEIGHT - BAT_HEIGHT, centerY - BAT_HEIGHT / 2));
   }
 
   serve(): boolean {
@@ -177,8 +182,10 @@ export function initPaddleClash(): void {
   const coralScore = document.getElementById('paddleCoralScore');
   const serveButton = document.getElementById('paddleServeButton') as HTMLButtonElement | null;
   const restartButton = document.getElementById('paddleRestartButton');
+  const coralControls = document.getElementById('paddleCoralControls');
   const roomMount = document.querySelector<HTMLElement>('[data-game-room="paddle"]');
   let room: GameRoomClient | null = null;
+  let practiceBot = true;
   const resultReporter = new ArcadeResultReporter('paddle');
 
   function snapshot(): Record<string, unknown> {
@@ -198,6 +205,7 @@ export function initPaddleClash(): void {
   }
 
   function setPlayerInput(player: PaddlePlayer, direction: PaddleDirection, pressed: boolean): void {
+    if (pressed && isArcadeSessionPaused('paddle')) return;
     const session = room?.session();
     if (!session?.online) game.setInput(player, direction, pressed);
     else if (session.ready && room?.canControl(player)) {
@@ -207,6 +215,7 @@ export function initPaddleClash(): void {
   }
 
   function serve(): void {
+    if (isArcadeSessionPaused('paddle')) return;
     const session = room?.session();
     if (session?.online && !session.ready) return;
     if (room?.isGuest()) room.sendAction({ type: 'serve' });
@@ -226,6 +235,7 @@ export function initPaddleClash(): void {
     }
     if (mintScore) mintScore.textContent = String(game.players[1].score);
     if (coralScore) coralScore.textContent = String(game.players[2].score);
+    coralControls?.classList.toggle('solo-hidden', practiceBot && !room?.session().online);
     if (serveButton) {
       serveButton.disabled = game.phase !== 'ready';
       serveButton.textContent = game.phase === 'finished' ? 'Match over' : 'Serve ball';
@@ -354,6 +364,23 @@ export function initPaddleClash(): void {
     }, 'vertical');
   });
 
+  let directTouchId: number | null = null;
+  const moveMintToPointer = (event: PointerEvent): void => {
+    if (!practiceBot || room?.session().online || isArcadeSessionPaused('paddle')) return;
+    const bounds = canvas.getBoundingClientRect();
+    game.moveBatTo(1, (event.clientY - bounds.top) / Math.max(1, bounds.height) * PADDLE_HEIGHT);
+  };
+  canvas.addEventListener('pointerdown', event => {
+    if (!practiceBot || room?.session().online) return;
+    directTouchId = event.pointerId;
+    canvas.setPointerCapture?.(event.pointerId);
+    moveMintToPointer(event);
+  });
+  canvas.addEventListener('pointermove', event => { if (directTouchId === event.pointerId) moveMintToPointer(event); });
+  const releaseDirectTouch = (event: PointerEvent): void => { if (directTouchId === event.pointerId) directTouchId = null; };
+  canvas.addEventListener('pointerup', releaseDirectTouch);
+  canvas.addEventListener('pointercancel', releaseDirectTouch);
+
   serveButton?.addEventListener('click', serve);
   restartButton?.addEventListener('click', () => {
     if (room?.isGuest()) room.sendAction({ type: 'restart' });
@@ -368,10 +395,12 @@ export function initPaddleClash(): void {
       game: 'paddle',
       mount: roomMount,
       offlineModes: [
+        { id: 'bot', label: 'Practice bot', description: 'Drag the Mint paddle directly or use W/S.', onSelect: () => { practiceBot = true; game.restart(); syncUi(); render(); } },
         { id: 'local', label: 'Local 2P', description: 'Two players share this device.', onSelect: () => { game.restart(); syncUi(); render(); } },
       ],
-      initialOfflineMode: 'local',
+      initialOfflineMode: 'bot',
       onSessionChange: session => {
+        if (session.online) practiceBot = false;
         if (session.online && !session.ready && session.playerId === 1) {
           game.setInput(2, 'up', false); game.setInput(2, 'down', false);
         }
@@ -393,6 +422,19 @@ export function initPaddleClash(): void {
     });
   }
 
+  registerArcadeSession({
+    gameId: 'paddle',
+    view: paddleView,
+    mode: () => room?.session().online ? 'online' : practiceBot ? 'solo' : 'local',
+    isActive: () => game.phase === 'playing',
+    clearHeldInputs: () => {
+      ([1, 2] as PaddlePlayer[]).forEach(player => {
+        game.setInput(player, 'up', false);
+        game.setInput(player, 'down', false);
+      });
+    },
+  });
+
   let lastFrame = performance.now();
   function loop(now: number): void {
     const seconds = (now - lastFrame) / 1000;
@@ -401,7 +443,15 @@ export function initPaddleClash(): void {
       if (!room?.isGuest()) {
         const previousPhase = game.phase;
         const previousScore = game.players[1].score + game.players[2].score;
-        game.update(seconds);
+        if (!isArcadeSessionPaused('paddle')) {
+          if (practiceBot && !room?.session().online) {
+            const coralCenter = game.players[2].y + BAT_HEIGHT / 2;
+            const target = game.phase === 'playing' ? game.ball.y : PADDLE_HEIGHT / 2;
+            game.setInput(2, 'up', target < coralCenter - 34);
+            game.setInput(2, 'down', target > coralCenter + 34);
+          }
+          game.update(seconds);
+        }
         if (game.phase !== previousPhase || game.players[1].score + game.players[2].score !== previousScore) syncUi();
         room?.broadcastState(snapshot());
       }

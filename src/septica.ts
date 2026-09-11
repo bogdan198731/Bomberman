@@ -1,6 +1,7 @@
 import { GameRoomClient } from './game-room.js';
 import { ArcadeResultReporter } from './stats.js';
 import { translateArcadeText } from './i18n.js';
+import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
 
 export type SepticaPlayer = 1 | 2;
 export type SepticaRank = '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | 'A';
@@ -28,6 +29,7 @@ export interface SepticaOnlineState {
   leadRank: SepticaRank | null;
   phase: SepticaPhase;
   winner: SepticaPlayer | 0 | null;
+  lastTrickSummary: string;
 }
 
 const RANKS: SepticaRank[] = ['7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
@@ -51,6 +53,7 @@ export class SepticaGame {
   leadRank: SepticaRank | null = null;
   phase: SepticaPhase = 'playing';
   winner: SepticaPlayer | 0 | null = null;
+  lastTrickSummary = '';
   private random: () => number;
 
   constructor(random: () => number = Math.random) {
@@ -73,6 +76,7 @@ export class SepticaGame {
     this.leadRank = null;
     this.phase = 'playing';
     this.winner = null;
+    this.lastTrickSummary = '';
     this.refillHands(1);
   }
 
@@ -145,13 +149,16 @@ export class SepticaGame {
     if (this.phase === 'settling') return 'The cards stay on the table for a moment…';
     if (this.currentPlayer === 2) return 'Coral is thinking…';
     if (this.phase === 'continue-choice') return 'You were cut. Continue with a 7 or the opening rank, or concede the trick.';
-    if (this.table.length === 0) return 'Your turn: lead a new trick.';
+    if (this.table.length === 0) return this.lastTrickSummary || 'Your turn: lead a new trick.';
     return 'Play any card. A 7 or the opening rank cuts.';
   }
 
   private collectTrick(): void {
-    this.points[this.lastCutter] += this.table.reduce((total, entry) => total + cardPoints(entry.card), 0);
+    const trickPoints = this.table.reduce((total, entry) => total + cardPoints(entry.card), 0);
+    const cardCount = this.table.length;
+    this.points[this.lastCutter] += trickPoints;
     const nextLeader = this.lastCutter;
+    this.lastTrickSummary = `${nextLeader === 1 ? 'Mint' : 'Coral'} takes ${cardCount} cards with the last cut${trickPoints ? ` · ${trickPoints} point${trickPoints === 1 ? '' : 's'}` : ' · no points'}.`;
     this.table = [];
     this.leadRank = null;
     this.refillHands(nextLeader);
@@ -197,6 +204,7 @@ export function createSepticaOnlineState(game: SepticaGame, localPlayer: Septica
     leadRank: game.leadRank,
     phase: game.phase,
     winner: game.winner,
+    lastTrickSummary: game.lastTrickSummary,
   };
 }
 
@@ -214,6 +222,7 @@ export function applySepticaOnlineState(game: SepticaGame, state: SepticaOnlineS
   game.leadRank = state.leadRank;
   game.phase = state.phase;
   game.winner = state.winner;
+  game.lastTrickSummary = state.lastTrickSummary || '';
 }
 
 export function shouldConfirmSepticaRestart(game: SepticaGame): boolean {
@@ -274,6 +283,7 @@ export function initSeptica(): void {
     window.clearTimeout(settleTimer);
     if (game.phase !== 'settling' || room?.isGuest()) return;
     settleTimer = window.setTimeout(() => {
+      if (isArcadeSessionPaused('septica')) { scheduleSettlement(); return; }
       if (!game.settleTrick()) return;
       if (!room?.session().online && offlineMode === 'local') localHandVisible = false;
       render();
@@ -290,6 +300,7 @@ export function initSeptica(): void {
   }
 
   function playLocalCard(index: number): void {
+    if (isArcadeSessionPaused('septica')) return;
     const player = localPlayer();
     const session = room?.session();
     if (!session?.online) {
@@ -362,6 +373,7 @@ export function initSeptica(): void {
     if (room?.session().online || offlineMode === 'local') return;
     if (game.currentPlayer !== 2 || game.phase === 'finished' || game.phase === 'settling') return;
     botTimer = window.setTimeout(() => {
+      if (isArcadeSessionPaused('septica')) { scheduleBot(); return; }
       if (game.botMove()) afterAuthoritativeMove();
     }, 520);
   }
@@ -448,5 +460,13 @@ export function initSeptica(): void {
       },
     });
   }
+  registerArcadeSession({
+    gameId: 'septica',
+    view,
+    mode: () => room?.session().online ? 'online' : offlineMode === 'bot' ? 'solo' : 'local',
+    isActive: () => game.phase !== 'finished',
+    clearHeldInputs: () => undefined,
+    resumeCountdown: false,
+  });
   render();
 }

@@ -17,6 +17,9 @@ import {
 export type PlayerId = 1 | 2;
 export type RoomPhase = 'waiting' | 'countdown' | 'playing' | 'finished';
 export type BotDifficulty = 'easy' | 'normal' | 'hard';
+export const BOMBERMAN_MATCH_TARGET = 3;
+export const BOMBERMAN_PRESSURE_START_MS = 70_000;
+export const BOMBERMAN_PRESSURE_STEP_MS = 9_000;
 
 export type PlayerAction =
   | { type: 'move'; dx: -1 | 0 | 1; dy: -1 | 0 | 1 }
@@ -32,6 +35,7 @@ export interface OnlineSnapshot extends RenderState {
   botDifficulty?: BotDifficulty;
   overlayText: string;
   statusText: string;
+  pressureLevel: number;
 }
 
 const ROUND_INTRO_DURATION = 1_750;
@@ -64,6 +68,7 @@ export class OnlineRoom {
   gameStatus: GameStatus = 'playing';
   roundStartedAt = 0;
   statusText = 'Waiting for opponent';
+  pressureLevel = 0;
   botDifficulty?: BotDifficulty;
 
   private readonly lastMovedAt: Record<PlayerId, number> = { 1: 0, 2: 0 };
@@ -104,7 +109,13 @@ export class OnlineRoom {
     if (this.botDifficulty && playerId === 2) return;
 
     if (action.type === 'restart') {
-      if (this.connectedPlayers.size === 2) this.startRound(true, now);
+      if (this.connectedPlayers.size === 2) {
+        if (Math.max(this.scores[1], this.scores[2]) >= BOMBERMAN_MATCH_TARGET) {
+          this.scores = { 1: 0, 2: 0 };
+          this.round = 0;
+        }
+        this.startRound(true, now);
+      }
       return;
     }
 
@@ -160,6 +171,22 @@ export class OnlineRoom {
 
     this.updateBot(now);
     this.gameState.update(now);
+    const liveFor = now - this.roundStartedAt - ROUND_INTRO_DURATION;
+    const nextPressure = liveFor < BOMBERMAN_PRESSURE_START_MS
+      ? 0
+      : Math.min(4, 1 + Math.floor((liveFor - BOMBERMAN_PRESSURE_START_MS) / BOMBERMAN_PRESSURE_STEP_MS));
+    if (nextPressure > this.pressureLevel) {
+      this.pressureLevel = nextPressure;
+      this.statusText = `Danger closing in · safe ring ${5 - this.pressureLevel}`;
+      this.statusMessageUntil = now + 2_500;
+    }
+    if (this.pressureLevel > 0) {
+      for (const player of this.players) {
+        if (player.alive && (player.x <= this.pressureLevel || player.y <= this.pressureLevel
+          || player.x >= this.gameState.width - 1 - this.pressureLevel
+          || player.y >= this.gameState.height - 1 - this.pressureLevel)) killPlayer(player);
+      }
+    }
     for (const player of this.players) {
       if (player.alive && this.gameState.isExplosion(player.x, player.y)) {
         killPlayer(player);
@@ -179,10 +206,10 @@ export class OnlineRoom {
     this.phase = 'finished';
     if (nextStatus === 'player1-wins') {
       this.scores[1] += 1;
-      this.statusText = 'Mint wins';
+      this.statusText = this.scores[1] >= BOMBERMAN_MATCH_TARGET ? 'Mint wins the match!' : 'Mint wins the round';
     } else if (nextStatus === 'player2-wins') {
       this.scores[2] += 1;
-      this.statusText = 'Coral wins';
+      this.statusText = this.scores[2] >= BOMBERMAN_MATCH_TARGET ? 'Coral wins the match!' : 'Coral wins the round';
     } else {
       this.statusText = 'Double knockout';
     }
@@ -199,7 +226,11 @@ export class OnlineRoom {
     });
     const bombs = this.gameState.bombs
       .filter(bomb => bomb.explodedAt === undefined)
-      .map(bomb => ({ x: bomb.position.x, y: bomb.position.y }));
+      .map(bomb => ({
+        x: bomb.position.x,
+        y: bomb.position.y,
+        fuseProgress: bomb.placedAt === undefined ? 0 : (now - bomb.placedAt) / bomb.timer,
+      }));
 
     return {
       phase: this.phase,
@@ -210,6 +241,7 @@ export class OnlineRoom {
       botDifficulty: this.botDifficulty,
       overlayText: this.getOverlayText(now),
       statusText: this.statusText,
+      pressureLevel: this.pressureLevel,
       grid: {
         width: this.gameState.width,
         height: this.gameState.height,
@@ -228,6 +260,7 @@ export class OnlineRoom {
     this.gameState = new GameState(map);
     this.players = createPlayers();
     this.gameStatus = 'playing';
+    this.pressureLevel = 0;
     this.phase = 'countdown';
     this.roundStartedAt = now;
     this.lastMovedAt[1] = 0;

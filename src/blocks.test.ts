@@ -126,11 +126,26 @@ test('a blocked spawn tops out and awards the duel to the rival', () => {
 
 test('the Coral bot evaluates and locks pieces on its board', () => {
   const game = new BlockDropGame(() => .4);
+  game.setBotDifficulty('normal');
   game.start();
   game.update(.25);
   game.update(.25);
   game.update(.25);
   assert.ok(game.boards[2].flat().some(cell => cell !== null));
+});
+
+test('bot difficulty changes placement pace for new players and experts', () => {
+  const relaxed = new BlockDropGame(() => .4);
+  relaxed.setBotDifficulty('relaxed');
+  relaxed.restart(); relaxed.start();
+  relaxed.update(.25); relaxed.update(.25); relaxed.update(.2);
+  assert.equal(relaxed.boards[2].flat().some(cell => cell !== null), false);
+
+  const expert = new BlockDropGame(() => .4);
+  expert.setBotDifficulty('expert');
+  expert.restart(); expert.start();
+  expert.update(.25); expert.update(.14);
+  assert.equal(expert.boards[2].flat().some(cell => cell !== null), true);
 });
 
 test('the Coral bot can finish a complete duel against an idle player', () => {

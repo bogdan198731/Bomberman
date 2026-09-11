@@ -1,6 +1,7 @@
 import { GameRoomClient } from './game-room.js';
 import { ArcadeResultReporter } from './stats.js';
 import { translateArcadeText } from './i18n.js';
+import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
 
 export type TintarPlayer = 1 | 2;
 export type TintarPhase = 'placing' | 'moving' | 'removing' | 'finished';
@@ -357,6 +358,7 @@ export function initTintar(): void {
   if (typeof document === 'undefined') return;
   const boardElement = document.getElementById('tintarBoard');
   if (!boardElement) return;
+  const view = boardElement.closest('main') as HTMLElement;
 
   const game = new TintarGame();
   const statusElement = document.getElementById('tintarStatus');
@@ -502,6 +504,7 @@ export function initTintar(): void {
   }
 
   function playPoint(point: number): void {
+    if (isArcadeSessionPaused('tintar')) return;
     const session = room?.session();
     if (!session?.online) {
       if (botDifficulty && game.currentPlayer === 2) return;
@@ -609,6 +612,7 @@ export function initTintar(): void {
     const scheduledDifficulty = botDifficulty;
     botTimer = window.setTimeout(() => {
       botTimer = null;
+      if (isArcadeSessionPaused('tintar')) { scheduleBotTurn(); return; }
       if (botDifficulty !== scheduledDifficulty || game.phase === 'finished' || game.currentPlayer !== 2
         || room?.session().online) return;
       const action = chooseTintarBotAction(game, scheduledDifficulty);
@@ -672,9 +676,9 @@ export function initTintar(): void {
       mount: roomMount,
       offlineModes: [
         { id: 'local', label: 'Local 2P', description: 'Two players share the same board.', onSelect: () => { setBotDifficulty(null); matchStarted = true; game.reset(); render(); } },
-        { id: 'bot', label: 'Vs bot', description: 'Play Mint against the Coral bot.', onSelect: () => startBotMatch('normal') },
+        { id: 'bot', label: 'Vs bot', description: 'Play Mint against the Coral bot.', onSelect: () => startBotMatch('easy') },
       ],
-      initialOfflineMode: 'local',
+      initialOfflineMode: 'bot',
       onSessionChange: session => {
         if (session.online) setBotDifficulty(null);
         else { setBotDifficulty(null); matchStarted = true; game.reset(); }
@@ -700,6 +704,15 @@ export function initTintar(): void {
       if (target) setBotDifficulty(null);
     });
   }
+
+  registerArcadeSession({
+    gameId: 'tintar',
+    view,
+    mode: () => room?.session().online ? 'online' : botDifficulty ? 'solo' : 'local',
+    isActive: () => matchStarted && game.phase !== 'finished',
+    clearHeldInputs: () => undefined,
+    resumeCountdown: false,
+  });
 
   render();
 }

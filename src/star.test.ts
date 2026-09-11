@@ -134,3 +134,21 @@ test('a co-op mission continues until both fighters are destroyed', () => {
   game.damagePlayer(2); game.damagePlayer(2); game.damagePlayer(2);
   assert.equal(game.phase, 'finished');
 });
+
+test('clearing a co-op wave rescues one defeated wingmate once', () => {
+  const game = new StarDefenderGame(() => .5);
+  game.restart('coop');
+  game.start();
+  game.damagePlayer(1); game.damagePlayer(1); game.damagePlayer(1);
+  const score = game.players[1].score = 120;
+  game.enemies = [];
+  game.update(.01);
+  assert.equal(game.players[1].health, 1);
+  assert.equal(game.players[1].score, score);
+  assert.equal(game.recoveries, 0);
+
+  game.damagePlayer(1);
+  game.enemies = [];
+  game.update(.01);
+  assert.equal(game.players[1].health, 0);
+});
