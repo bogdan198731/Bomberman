@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blast-arcade-shell-v29';
+const CACHE_NAME = 'blast-arcade-ux-2026-09-23';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -8,6 +8,13 @@ const APP_SHELL = [
   '/public/apple-touch-icon.png',
   '/public/og-v3.png',
   '/dist/index.js',
+  '/public/arcade-ux.css',
+  '/dist/dialogs.js',
+  '/dist/session-state.js',
+  '/dist/navigation.js',
+  '/dist/hub-layout.js',
+  '/dist/game-metadata.js',
+  '/dist/game-previews.js',
   '/dist/invite.js',
   '/dist/leaderboard.js',
   '/dist/matchmaking.js',

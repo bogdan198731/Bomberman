@@ -1,3 +1,4 @@
+import { supportedLaunchMode } from './game-metadata.js';
 import { ArcadeResultReporter } from './stats.js';
 import { bindDirectionalJoystick } from './touch-controls.js';
 import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
@@ -415,7 +416,11 @@ export function initStarDefender(): void {
     if (mintHealth) mintHealth.textContent = `${game.players[1].health} hull`;
     if (coralHealth) coralHealth.textContent = solo ? `Boost in ${4 - game.kills % 4}` : `${game.players[2].health} hull`;
     if (startButton) startButton.textContent = game.phase === 'ready' ? 'Launch' : game.phase === 'finished' ? 'Fly again' : 'Mission live';
-    modeButtons.forEach(button => button.classList.toggle('active', button.dataset.starMode === game.mode));
+    modeButtons.forEach(button => {
+      const selected = button.dataset.starMode === game.mode;
+      button.classList.toggle('active', selected);
+      button.setAttribute('aria-selected', String(selected));
+    });
     coralControls?.classList.toggle('solo-hidden', game.mode === 'solo');
     const totalScore = game.players[1].score + (game.mode === 'coop' ? game.players[2].score : 0);
     resultReporter.report(game.phase === 'finished', { outcome: 'complete', score: totalScore });
@@ -517,6 +522,13 @@ export function initStarDefender(): void {
     bindDirectionalJoystick(track, (direction, pressed) => {
       if (!pressed || !isArcadeSessionPaused('star')) game.setInput(direction, pressed, player);
     });
+  });
+  window.addEventListener('arcade-launch-mode', event => {
+    const detail = (event as CustomEvent<{ gameId?: string; mode?: string }>).detail;
+    if (detail?.gameId !== 'star') return;
+    const mode = supportedLaunchMode('star', detail.mode);
+    if (!mode) return;
+    game.restart(mode === 'local' ? 'coop' : 'solo'); syncUi(); render();
   });
   modeButtons.forEach(button => button.addEventListener('click', () => {
     const mode = button.dataset.starMode;

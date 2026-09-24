@@ -10,12 +10,12 @@
   <meta name="description" content="Blast Arcade is a mobile-friendly hub with twelve instant browser games for solo, co-op, local, and online play.">
   <meta property="og:title" content="Blast Arcade">
   <meta property="og:description" content="Twelve games. One hub. Play solo, co-op, local, or online instantly in your browser.">
-  <meta property="og:image" content="/public/og-v3.png">
+  <meta property="og:image" content="/public/app-icon-512.png">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Blast Arcade">
   <meta name="twitter:description" content="Twelve games. One hub. Play. Compete. Repeat.">
-  <meta name="twitter:image" content="/public/og-v3.png">
+  <meta name="twitter:image" content="/public/app-icon-512.png">
   <link rel="manifest" href="/public/manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="192x192" href="/public/app-icon-192.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/public/apple-touch-icon.png">
@@ -3878,197 +3878,7 @@
         display: none;
       }
 
-      .mobile-controls:not(.hidden) {
-        position: sticky;
-        z-index: 4;
-        bottom: 0;
-        display: grid;
-        grid-template-columns: minmax(94px, 0.65fr) auto minmax(172px, 1fr);
-        align-items: center;
-        gap: 16px;
-        padding: 12px max(14px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
-        border-top: 1px solid var(--panel-border);
-        background: rgba(17, 23, 34, 0.96);
-        box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.24);
-        backdrop-filter: blur(14px);
-        touch-action: none;
-        user-select: none;
-        -webkit-user-select: none;
-      }
 
-      .mobile-player-label {
-        position: absolute;
-        top: 8px;
-        left: 50%;
-        color: var(--muted);
-        font-size: 0.62rem;
-        font-weight: 850;
-        letter-spacing: 0.1em;
-        text-transform: uppercase;
-        transform: translateX(-50%);
-        white-space: nowrap;
-      }
-
-      .mobile-joystick {
-        --joystick-x: 0px;
-        --joystick-y: 0px;
-        position: relative;
-        width: clamp(112px, 30vw, 128px);
-        aspect-ratio: 1;
-        margin-top: 8px;
-        border: 1px solid rgba(255, 255, 255, 0.14);
-        border-radius: 50%;
-        outline: none;
-        background:
-          linear-gradient(90deg, transparent 49.4%, rgba(255, 255, 255, 0.08) 50%, transparent 50.6%),
-          linear-gradient(transparent 49.4%, rgba(255, 255, 255, 0.08) 50%, transparent 50.6%),
-          radial-gradient(circle, rgba(77, 224, 147, 0.12) 0 24%, transparent 25%),
-          linear-gradient(145deg, #303d51, #1d2635);
-        box-shadow: inset 0 0 0 6px rgba(8, 12, 20, 0.2), 0 8px 20px rgba(0, 0, 0, 0.26);
-        touch-action: none;
-        user-select: none;
-        -webkit-user-select: none;
-        -webkit-tap-highlight-color: transparent;
-      }
-
-      .mobile-joystick:focus-visible {
-        box-shadow: inset 0 0 0 6px rgba(8, 12, 20, 0.2), 0 0 0 3px rgba(77, 224, 147, 0.72);
-      }
-
-      .mobile-joystick-arrow {
-        position: absolute;
-        color: rgba(235, 242, 251, 0.52);
-        font-size: 0.75rem;
-        font-weight: 950;
-        line-height: 1;
-        pointer-events: none;
-      }
-
-      .mobile-joystick-arrow.up { top: 8px; left: 50%; transform: translateX(-50%); }
-      .mobile-joystick-arrow.right { top: 50%; right: 8px; transform: translateY(-50%); }
-      .mobile-joystick-arrow.down { bottom: 8px; left: 50%; transform: translateX(-50%); }
-      .mobile-joystick-arrow.left { top: 50%; left: 8px; transform: translateY(-50%); }
-
-      .mobile-joystick-knob {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 54px;
-        height: 54px;
-        border: 2px solid rgba(255, 255, 255, 0.55);
-        border-bottom-width: 5px;
-        border-radius: 50%;
-        background: radial-gradient(circle at 36% 30%, #6bf0aa, #36bd78 60%, #238957);
-        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.36), inset 0 1px 1px rgba(255, 255, 255, 0.35);
-        pointer-events: none;
-        transform: translate(-50%, -50%) translate(var(--joystick-x), var(--joystick-y));
-        transition: transform 140ms ease-out, filter 140ms ease;
-        will-change: transform;
-      }
-
-      .mobile-joystick.is-active .mobile-joystick-knob {
-        filter: brightness(1.12);
-        transition: filter 100ms ease;
-      }
-
-      .mobile-round-button {
-        margin: 0;
-        padding: 9px 10px;
-        border: 1px solid rgba(255, 255, 255, 0.13);
-        border-radius: 10px;
-        color: #cbd5e4;
-        background: rgba(255, 255, 255, 0.06);
-        touch-action: manipulation;
-        font-size: 0.68rem;
-        font-weight: 850;
-        white-space: nowrap;
-      }
-
-      .mobile-control-actions {
-        display: grid;
-        grid-column: 2;
-        grid-row: 1;
-        align-self: center;
-        gap: 6px;
-      }
-
-      .mobile-layout-button {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 5px;
-        min-height: 31px;
-        padding: 6px 8px;
-        border: 1px solid rgba(77, 224, 147, 0.28);
-        border-radius: 10px;
-        color: #a9f3ca;
-        background: rgba(77, 224, 147, 0.08);
-        touch-action: manipulation;
-        font-size: 0.64rem;
-        font-weight: 900;
-        white-space: nowrap;
-      }
-
-      .mobile-layout-button:active {
-        background: rgba(77, 224, 147, 0.18);
-        transform: translateY(1px);
-      }
-
-      .mobile-bomb-button {
-        display: grid;
-        width: 84px;
-        height: 84px;
-        place-items: center;
-        justify-self: end;
-        border: 3px solid rgba(255, 255, 255, 0.72);
-        border-bottom-width: 7px;
-        border-radius: 50%;
-        color: #250b0e;
-        background: linear-gradient(#ff8790, #ed4658);
-        box-shadow: 0 8px 24px rgba(237, 70, 88, 0.3);
-        touch-action: none;
-        -webkit-tap-highlight-color: transparent;
-        font-size: 0.72rem;
-        font-weight: 950;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-      }
-
-      .mobile-bomb-button.pressed,
-      .mobile-bomb-button:active {
-        border-bottom-width: 3px;
-        filter: brightness(1.1);
-        transform: translateY(4px) scale(0.97);
-      }
-
-      .mobile-joystick,
-      .mobile-bomb-button {
-        grid-row: 1;
-      }
-
-      .mobile-controls[data-control-layout="joystick-right"] .mobile-joystick {
-        grid-column: 3;
-        justify-self: end;
-      }
-
-      .mobile-controls[data-control-layout="joystick-right"] .mobile-bomb-button {
-        grid-column: 1;
-        justify-self: start;
-      }
-
-      .mobile-controls[data-control-layout="joystick-left"] {
-        grid-template-columns: minmax(172px, 1fr) auto minmax(94px, 0.65fr);
-      }
-
-      .mobile-controls[data-control-layout="joystick-left"] .mobile-joystick {
-        grid-column: 1;
-        justify-self: start;
-      }
-
-      .mobile-controls[data-control-layout="joystick-left"] .mobile-bomb-button {
-        grid-column: 3;
-        justify-self: end;
-      }
     }
 
     @media (max-width: 700px) {
@@ -7440,6 +7250,7 @@
       }
     }
   </style>
+  <link rel="stylesheet" href="/public/arcade-ux.css">
 </head>
 <body>
   <main id="hubView" class="hub">
@@ -7459,29 +7270,13 @@
           <small>Profile</small>
         </button>
         <span id="connectivityStatus" class="connectivity-status" role="status"><i aria-hidden="true"></i><span id="connectivityLabel">Online</span></span>
-        <span class="live-chip">12 games live</span>
+        <span class="live-chip"><span data-game-count>12</span> games</span>
       </div>
     </header>
 
     <section class="hub-hero" aria-labelledby="hubTitle">
-      <div class="hero-copy">
-        <p class="eyebrow">Your pocket arcade</p>
-        <h1 id="hubTitle">Pick a game.<br><span>Make some noise.</span></h1>
-        <p>Fast browser games built for solo runs, couch-sized rivalries, and online challenges. No download—just choose and play.</p>
-        <div class="hero-actions">
-          <button class="primary-cta" type="button" data-launch-game="bomberman">Play Blast Buddies</button>
-          <a class="secondary-cta" href="#games">Browse games</a>
-          <button id="installAppButton" class="install-app-button" type="button" hidden>Install app</button>
-        </div>
-        <div class="hero-stats" aria-label="Arcade features">
-          <div class="hero-stat"><strong>3</strong><span>Bot levels</span></div>
-          <div class="hero-stat"><strong>2P</strong><span>Online rooms</span></div>
-          <div class="hero-stat"><strong>100%</strong><span>Mobile ready</span></div>
-        </div>
-      </div>
-      <div class="hub-visual">
-        <img src="/public/og-v3.png" alt="Blast Arcade heroes surrounded by twelve game arenas">
-      </div>
+      <div class="hero-copy"><p class="eyebrow">Your pocket arcade</p><h1 id="hubTitle">Find your next game.</h1><p>Play solo, share a device, or invite a friend online.</p></div>
+      <button id="installAppButton" class="install-app-button" type="button" hidden>Install app</button>
     </section>
 
     <section id="quickPlayPanel" class="quick-play-panel" aria-label="Quick Play recommendation" data-quick-play-game="bomberman">
@@ -7490,13 +7285,13 @@
         <span class="catalog-kicker">Quick Play pick</span>
         <div class="quick-play-title-row">
           <h2 id="quickPlayTitle">Blast Buddies</h2>
-          <small id="quickPlayCount">10 available</small>
+          <small id="quickPlayCount">12 available</small>
         </div>
-        <p><span id="quickPlayModes">Solo · Local 2P · Online</span> — <span id="quickPlayReason">A fresh cabinet pick — no recorded rounds yet.</span></p>
+        <p><span id="quickPlayModes">Solo · Same device · Online</span> — <span id="quickPlayReason">A fresh cabinet pick — no recorded rounds yet.</span></p>
         <div class="quick-play-filters" role="group" aria-label="Choose a Quick Play mode">
           <button class="quick-play-filter active" type="button" data-quick-play-mode="all" aria-pressed="true">Any mode</button>
           <button class="quick-play-filter" type="button" data-quick-play-mode="solo" aria-pressed="false">Solo</button>
-          <button class="quick-play-filter" type="button" data-quick-play-mode="local" aria-pressed="false">Local 2P</button>
+          <button class="quick-play-filter" type="button" data-quick-play-mode="local" aria-pressed="false">Same device</button>
           <button class="quick-play-filter" type="button" data-quick-play-mode="online" aria-pressed="false">Online</button>
         </div>
       </div>
@@ -7717,7 +7512,7 @@
           <div class="catalog-filters" role="group" aria-label="Filter games by play mode">
             <button class="catalog-filter active" type="button" data-catalog-filter="all" aria-pressed="true">All games</button>
             <button class="catalog-filter" type="button" data-catalog-filter="solo" aria-pressed="false">Solo</button>
-            <button class="catalog-filter" type="button" data-catalog-filter="local" aria-pressed="false">Local 2P</button>
+            <button class="catalog-filter" type="button" data-catalog-filter="local" aria-pressed="false">Same device</button>
             <button class="catalog-filter" type="button" data-catalog-filter="online" aria-pressed="false">Online</button>
             <button class="catalog-filter" type="button" data-catalog-filter="favorites" aria-pressed="false">★ Favorites</button>
           </div>
@@ -7759,7 +7554,7 @@
           </div>
         </article>
 
-        <article class="catalog-card featured" data-catalog-game="paddle" data-catalog-modes="local online">
+        <article class="catalog-card featured" data-catalog-game="paddle" data-catalog-modes="solo local online">
           <div class="game-cover paddle-cover">
             <span class="cover-label">Live now</span>
             <button class="favorite-button" type="button" data-favorite-game aria-label="Add Paddle Clash to favorites" aria-pressed="false">☆</button>
@@ -7926,11 +7721,10 @@
       </div>
     </section>
 
-    <nav class="mobile-hub-nav" aria-label="Arcade sections">
-      <a class="active" href="#hubView" data-mobile-hub-link="hubView"><span aria-hidden="true">⌂</span>Home</a>
-      <a href="#games" data-mobile-hub-link="games"><span aria-hidden="true">▦</span>Games</a>
-      <a href="#quickPlayPanel" data-mobile-hub-link="quickPlayPanel"><span aria-hidden="true">⚡</span>Quick</a>
-      <a href="#profilePanel" data-mobile-hub-link="profilePanel"><span aria-hidden="true">♟</span>Profile</a>
+    <nav class="mobile-hub-nav hub-navigation" aria-label="Arcade sections">
+      <a class="active" href="#games" data-hub-section="games"><span aria-hidden="true">▦</span>Games</a>
+      <a href="#challenges" data-hub-section="challenges"><span aria-hidden="true">⚡</span>Challenges</a>
+      <a href="#profile" data-hub-section="profile"><span aria-hidden="true">♟</span>Profile</a>
     </nav>
 
     <footer class="hub-footer">
@@ -7949,7 +7743,7 @@
         </div>
       </div>
       <div class="game-nav-actions">
-        <button id="backToHubButton" class="back-to-hub" type="button" data-back-to-hub>← Arcade</button>
+        <button id="backToHubButton" class="back-to-hub" type="button" data-back-to-hub aria-label="Back to games">← Arcade</button>
         <div class="status-pill" aria-live="polite">
           <i class="status-dot" aria-hidden="true"></i>
           <span id="gameStatusText">Choose a room</span>
@@ -7996,8 +7790,8 @@
             <h2>Choose how to play</h2>
             <p>Share this device, battle a smart bot, or challenge a friend online.</p>
             <div class="game-room-mode-tabs bomberman-mode-tabs" role="tablist" aria-label="Blast Buddies play mode">
-              <button class="game-room-mode-tab active" type="button" role="tab" aria-selected="true" data-bomberman-lobby-mode="local">Local 2P</button>
-              <button class="game-room-mode-tab" type="button" role="tab" aria-selected="false" data-bomberman-lobby-mode="bot">Vs bot</button>
+              <button class="game-room-mode-tab active" type="button" role="tab" aria-selected="true" data-bomberman-lobby-mode="local">Same device</button>
+              <button class="game-room-mode-tab" type="button" role="tab" aria-selected="false" data-bomberman-lobby-mode="bot">Solo · vs bot</button>
               <button class="game-room-mode-tab online" type="button" role="tab" aria-selected="false" data-bomberman-lobby-mode="online">Online</button>
             </div>
             <div id="lobbyActions">
@@ -8119,7 +7913,7 @@
         </div>
       </div>
       <div class="game-nav-actions">
-        <button class="back-to-hub" type="button" data-back-to-hub>← Arcade</button>
+        <button class="back-to-hub" type="button" data-back-to-hub aria-label="Back to games">← Arcade</button>
       </div>
     </header>
 
@@ -8224,11 +8018,11 @@
         <div class="paddle-brand-mark" aria-hidden="true"><i class="paddle-brand-ball"></i></div>
         <div>
           <h1>Paddle Clash</h1>
-          <p>Local or online arcade duel</p>
+          <p>Solo, same device, or online arcade duel</p>
         </div>
       </div>
       <div class="game-nav-actions">
-        <button class="back-to-hub" type="button" data-back-to-hub>← Arcade</button>
+        <button class="back-to-hub" type="button" data-back-to-hub aria-label="Back to games">← Arcade</button>
       </div>
     </header>
 
@@ -8263,7 +8057,7 @@
       </footer>
 
       <div class="paddle-touch-controls" aria-label="Touch paddle controls">
-        <div class="paddle-touch-team">
+        <div id="paddleMintControls" class="paddle-touch-team">
           <strong>Mint</strong>
           <div class="arcade-joystick" data-paddle-joystick="1" role="group" tabindex="0" aria-label="Mint movement joystick">
             <span class="arcade-joystick-arrow up" aria-hidden="true">▲</span>
@@ -8293,7 +8087,7 @@
         </div>
       </div>
       <div class="game-nav-actions">
-        <button class="back-to-hub" type="button" data-back-to-hub>← Arcade</button>
+        <button class="back-to-hub" type="button" data-back-to-hub aria-label="Back to games">← Arcade</button>
       </div>
     </header>
 
@@ -8371,7 +8165,7 @@
         <div class="tanks-brand-mark" aria-hidden="true"></div>
         <div><h1>Mini Tanks</h1><p>Ricochet arena · Bot, local, or online</p></div>
       </div>
-      <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub>← Arcade</button></div>
+      <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub aria-label="Back to games">← Arcade</button></div>
     </header>
 
     <div data-game-room="tanks"></div>
@@ -8436,7 +8230,7 @@
         <div class="septica-brand-mark" aria-hidden="true"></div>
         <div><h1>Șeptică</h1><p>Romanian card duel · Bot, local, or online</p></div>
       </div>
-      <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub>← Arcade</button></div>
+      <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub aria-label="Back to games">← Arcade</button></div>
     </header>
 
     <div data-game-room="septica"></div>
@@ -8446,7 +8240,7 @@
         <span>Sevens and the opening rank cut. Aces and tens score one point each.</span>
         <div class="snake-modes" aria-label="Șeptică game mode">
           <button class="snake-mode-button active" type="button" data-septica-mode="bot">Vs bot</button>
-          <button class="snake-mode-button" type="button" data-septica-mode="local">Local 2P</button>
+          <button class="snake-mode-button" type="button" data-septica-mode="local">Same device</button>
         </div>
       </div>
       <div class="paddle-scorebar">
@@ -8478,7 +8272,7 @@
         <div class="survival-brand-mark" aria-hidden="true"></div>
         <div><h1>Survival Arena</h1><p>Endless waves · Solo, local, or online co-op</p></div>
       </div>
-      <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub>← Arcade</button></div>
+      <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub aria-label="Back to games">← Arcade</button></div>
     </header>
 
     <div data-game-room="survival"></div>
@@ -8546,7 +8340,7 @@
         <div class="star-brand-mark" aria-hidden="true"></div>
         <div><h1>Star Defender</h1><p>Neon invasion · Solo or local co-op</p></div>
       </div>
-      <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub>← Arcade</button></div>
+      <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub aria-label="Back to games">← Arcade</button></div>
     </header>
 
     <section class="game-room-panel star-mode-panel" aria-label="Star Defender play mode">
@@ -8556,7 +8350,7 @@
       </div>
       <div class="game-room-mode-tabs" role="tablist" aria-label="Star Defender game mode">
         <button class="game-room-mode-tab active" type="button" role="tab" aria-selected="true" data-star-mode="solo">Solo</button>
-        <button class="game-room-mode-tab" type="button" role="tab" aria-selected="false" data-star-mode="coop">Local co-op</button>
+        <button class="game-room-mode-tab" type="button" role="tab" aria-selected="false" data-star-mode="coop">Same device</button>
       </div>
     </section>
 
@@ -8609,7 +8403,7 @@
         <div class="racing-brand-mark" aria-hidden="true"></div>
         <div><h1>Micro Racers</h1><p>Turbo circuit · Bot, local, or online</p></div>
       </div>
-      <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub>← Arcade</button></div>
+      <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub aria-label="Back to games">← Arcade</button></div>
     </header>
 
     <div data-game-room="racing"></div>
@@ -8679,7 +8473,7 @@
         <div class="blocks-brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
         <div><h1>Block Drop Duel</h1><p>Line attack battle · Bot, local, or online</p></div>
       </div>
-      <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub>← Arcade</button></div>
+      <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub aria-label="Back to games">← Arcade</button></div>
     </header>
 
     <div data-game-room="blocks"></div>
@@ -8746,7 +8540,7 @@
         <div class="twenty48-brand-mark" aria-hidden="true">2048</div>
         <div><h1>2048</h1><p>Slide, merge, and reach 2048</p></div>
       </div>
-      <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub>← Arcade</button></div>
+      <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub aria-label="Back to games">← Arcade</button></div>
     </header>
 
     <section class="twenty48-shell" aria-label="2048 number puzzle">
@@ -8802,7 +8596,7 @@
         <div class="sudoku-brand-mark" aria-hidden="true">9×9</div>
         <div><h1>Sudoku</h1><p>Classic logic puzzle · Easy, medium, or hard</p></div>
       </div>
-      <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub>← Arcade</button></div>
+      <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub aria-label="Back to games">← Arcade</button></div>
     </header>
 
     <section class="sudoku-shell" aria-label="Sudoku logic puzzle">

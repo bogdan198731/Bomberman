@@ -1,7 +1,10 @@
 import type { ArcadeGameId } from './stats.js';
+import { closeArcadeDialog, isDialogOpen, openArcadeDialog, registerArcadeDialog } from './dialogs.js';
+import { SessionState, type Interruption } from './session-state.js';
+import { translateArcadeText } from './i18n.js';
 
 export type ArcadeSessionMode = 'solo' | 'local' | 'online';
-export type ArcadeInterruptionReason = 'settings' | 'focus' | 'visibility' | 'manual';
+export type ArcadeInterruptionReason = Interruption;
 
 export interface ArcadeSessionRegistration {
   gameId: ArcadeGameId;
@@ -13,8 +16,10 @@ export interface ArcadeSessionRegistration {
 }
 
 const registrations = new Map<ArcadeGameId, ArcadeSessionRegistration>();
-const blockingReasons = new Set<Exclude<ArcadeInterruptionReason, 'manual'>>();
-let pausedGame: ArcadeGameId | null = null;
+const sessionState = new SessionState();
+const blockingReasons = sessionState.blockers;
+let pauseDismissed = false;
+const suspendedGames = new Set<string>();
 let resumeTimer = 0;
 let resumeToken = 0;
 
@@ -40,25 +45,29 @@ function overlayElements(): {
 }
 
 function reasonMessage(): string {
+  if (blockingReasons.has('help')) return 'Read the guide, then resume when you are ready.';
   if (blockingReasons.has('settings')) return 'Finish changing settings, then resume when you are ready.';
   if (blockingReasons.has('visibility')) return 'The page was hidden. Return to the game, then resume safely.';
   if (blockingReasons.has('focus')) return 'The game lost focus. Resume when your controls are ready.';
-  return 'Gameplay is paused. Your held controls were released.';
+  return 'Take your time. Resume when you are ready.';
 }
 
 function renderPauseOverlay(): void {
   const { overlay, title, message, resume } = overlayElements();
   if (!overlay) return;
-  const registration = pausedGame ? registrations.get(pausedGame) : undefined;
-  overlay.hidden = !registration;
+  const registration = sessionState.pausedGame ? registrations.get(sessionState.pausedGame as ArcadeGameId) : undefined;
+  if (!registration || pauseDismissed) closeArcadeDialog('pause');
   document.body.classList.toggle('arcade-session-paused', Boolean(registration));
   if (!registration) return;
-  if (title) title.textContent = 'Game paused';
-  if (message) message.textContent = reasonMessage();
+  const setup = document.getElementById('arcadeSessionSetup');
+  if (setup) setup.hidden = !registration.view.querySelector('.arcade-mode-panel,.star-mode-panel,.tintar-bot-panel');
+  if (title) title.textContent = translateArcadeText('Game paused');
+  if (message) message.textContent = translateArcadeText(reasonMessage());
   if (resume) {
     resume.disabled = blockingReasons.size > 0;
-    resume.textContent = blockingReasons.size > 0 ? 'Resume unavailable' : 'Resume game';
+    resume.textContent = translateArcadeText(blockingReasons.size > 0 ? 'Resume unavailable' : 'Resume game');
   }
+  if (!pauseDismissed) openArcadeDialog('pause');
 }
 
 function cancelCountdown(): void {
@@ -81,30 +90,31 @@ function interrupt(reason: ArcadeInterruptionReason): void {
     return;
   }
   cancelCountdown();
-  pausedGame = registration.gameId;
+  sessionState.interrupt(registration.gameId, registration.mode(), true);
+  pauseDismissed = false;
   renderPauseOverlay();
 }
 
 function setBlockingReason(reason: Exclude<ArcadeInterruptionReason, 'manual'>, active: boolean): void {
   if (active) {
-    blockingReasons.add(reason);
+    sessionState.block(reason, true);
     interrupt(reason);
   } else {
-    blockingReasons.delete(reason);
+    sessionState.block(reason, false);
   }
   renderPauseOverlay();
 }
 
 function finishResume(gameId: ArcadeGameId): void {
-  if (pausedGame !== gameId || blockingReasons.size) return;
-  pausedGame = null;
+  if (!sessionState.resume(gameId)) return;
+  registrations.get(gameId)?.view.classList.remove('game-setup-open');
   renderPauseOverlay();
   window.dispatchEvent(new CustomEvent('arcade-session-resumed', { detail: { gameId } }));
 }
 
 function resumeActiveGame(): void {
-  if (!pausedGame || blockingReasons.size) return;
-  const registration = registrations.get(pausedGame);
+  if (!sessionState.pausedGame || blockingReasons.size) return;
+  const registration = registrations.get(sessionState.pausedGame as ArcadeGameId);
   if (!registration) return;
   cancelCountdown();
   if (registration.resumeCountdown === false) {
@@ -116,9 +126,9 @@ function resumeActiveGame(): void {
   if (resume) resume.disabled = true;
   let count = 3;
   const tick = (): void => {
-    if (token !== resumeToken || blockingReasons.size || pausedGame !== registration.gameId) return;
-    if (title) title.textContent = count > 0 ? `Resuming in ${count}` : 'Go!';
-    if (message) message.textContent = count > 0 ? 'Get your hands back on the controls.' : 'Gameplay resumed.';
+    if (token !== resumeToken || blockingReasons.size || sessionState.pausedGame !== registration.gameId) return;
+    if (title) title.textContent = translateArcadeText(count > 0 ? `Resuming in ${count}` : 'Go!');
+    if (message) message.textContent = translateArcadeText(count > 0 ? 'Get your hands back on the controls.' : 'Gameplay resumed.');
     if (count <= 0) {
       resumeTimer = window.setTimeout(() => finishResume(registration.gameId), 240);
       return;
@@ -133,15 +143,26 @@ export function registerArcadeSession(registration: ArcadeSessionRegistration): 
   registrations.set(registration.gameId, registration);
   return () => {
     registrations.delete(registration.gameId);
-    if (pausedGame === registration.gameId) {
-      pausedGame = null;
+    if (sessionState.pausedGame === registration.gameId) {
+      sessionState.reset();
       renderPauseOverlay();
     }
   };
 }
 
 export function isArcadeSessionPaused(gameId: ArcadeGameId): boolean {
-  return pausedGame === gameId;
+  return registrations.get(gameId)?.mode() !== 'online' && sessionState.pausedGame === gameId;
+}
+
+export function arcadeSessionMode(gameId: ArcadeGameId): ArcadeSessionMode {
+  return registrations.get(gameId)?.mode() ?? 'solo';
+}
+
+export function clearArcadePause(): void {
+  cancelCountdown();
+  sessionState.reset();
+  pauseDismissed = false;
+  renderPauseOverlay();
 }
 
 export function initArcadeSessionControl(): void {
@@ -152,13 +173,24 @@ export function initArcadeSessionControl(): void {
   overlay.hidden = true;
   overlay.innerHTML = `
     <section class="arcade-session-card" role="dialog" aria-modal="true" aria-labelledby="arcadeSessionTitle">
-      <span class="arcade-session-kicker">Session protected</span>
+      <span class="arcade-session-kicker">Take a break</span>
       <h2 id="arcadeSessionTitle">Game paused</h2>
-      <p id="arcadeSessionMessage">Gameplay is paused. Your held controls were released.</p>
+      <p id="arcadeSessionMessage">Take your time. Resume when you are ready.</p>
       <button id="arcadeSessionResume" type="button">Resume game</button>
+      <div class="pause-secondary-actions"><button id="arcadeSessionSetup" type="button">Game setup</button><button id="arcadeSessionHelp" type="button">How to play</button><button id="arcadeSessionSettings" type="button">Settings</button><button id="arcadeSessionRestart" type="button">Restart game</button><button id="arcadeSessionClose" type="button">Close — stay paused</button></div>
     </section>`;
   document.body.append(overlay);
+  const dismissPause = (): void => { cancelCountdown(); pauseDismissed = true; closeArcadeDialog('pause'); };
+  registerArcadeDialog({ id: 'pause', overlay, priority: 10, dismiss: dismissPause });
+  document.getElementById('arcadeSessionSetup')?.addEventListener('click', () => {
+    registrationForActiveView()?.view.classList.add('game-setup-open');
+    dismissPause();
+  });
   document.getElementById('arcadeSessionResume')?.addEventListener('click', resumeActiveGame);
+  document.getElementById('arcadeSessionRestart')?.addEventListener('click', () => window.dispatchEvent(new CustomEvent('arcade-restart-active')));
+  document.getElementById('arcadeSessionClose')?.addEventListener('click', dismissPause);
+  document.getElementById('arcadeSessionHelp')?.addEventListener('click', () => registrationForActiveView()?.view.querySelector<HTMLButtonElement>('[data-game-help]')?.click());
+  document.getElementById('arcadeSessionSettings')?.addEventListener('click', () => registrationForActiveView()?.view.querySelector<HTMLButtonElement>('[data-open-settings]')?.click());
 
   document.querySelectorAll<HTMLElement>('.paddle-app > .topbar .game-nav-actions, .tintar-app > .topbar .game-nav-actions, #gameView > .topbar .game-nav-actions')
     .forEach(actions => {
@@ -170,7 +202,8 @@ export function initArcadeSessionControl(): void {
       button.textContent = 'Ⅱ Pause';
       button.addEventListener('click', () => {
         const registration = registrationForActiveView();
-        if (!registration || !registration.isActive()) return;
+        if (!registration || (!registration.isActive() && !isArcadeSessionPaused(registration.gameId))) return;
+        if (isArcadeSessionPaused(registration.gameId)) { pauseDismissed = false; renderPauseOverlay(); return; }
         if (registration.mode() === 'online') {
           registration.clearHeldInputs();
           window.dispatchEvent(new CustomEvent('arcade-clear-inputs', {
@@ -198,16 +231,54 @@ export function initArcadeSessionControl(): void {
           : 'This game is paused while Settings is open.';
       }
     } else if (note) note.hidden = true;
-    setBlockingReason('settings', open);
   });
+  window.addEventListener('arcade-dialog-change', () => {
+    for (const reason of ['help', 'settings', 'result'] as const) {
+      const open = isDialogOpen(reason);
+      if (blockingReasons.has(reason) !== open) setBlockingReason(reason, open);
+    }
+  });
+  window.addEventListener('arcade-language-change', renderPauseOverlay);
+  window.addEventListener('arcade-game-result', clearArcadePause);
   window.addEventListener('blur', () => setBlockingReason('focus', true));
   window.addEventListener('focus', () => setBlockingReason('focus', false));
   document.addEventListener('visibilitychange', () => setBlockingReason('visibility', document.hidden));
+  window.addEventListener('arcade-view-leaving', () => {
+    const registration = registrationForActiveView();
+    if (registration?.isActive() && registration.mode() !== 'online') suspendedGames.add(registration.gameId);
+  });
   window.addEventListener('arcade-view-changed', () => {
     registrations.forEach(registration => registration.clearHeldInputs());
     window.dispatchEvent(new CustomEvent('arcade-clear-inputs', { detail: { reason: 'view-change' } }));
-    cancelCountdown();
-    pausedGame = null;
-    renderPauseOverlay();
+    clearArcadePause();
+    const registration = registrationForActiveView();
+    if (registration && suspendedGames.delete(registration.gameId)) interrupt('manual');
   });
+  let lastControlState = '';
+  const syncSessionControls = (): void => {
+    const registration = registrationForActiveView();
+    if (registration?.mode() === 'online' && sessionState.pausedGame === registration.gameId) clearArcadePause();
+    // Async starts can become active after Help or Settings has already opened.
+    if (registration?.isActive() && registration.mode() !== 'online' && blockingReasons.size && sessionState.pausedGame !== registration.gameId) {
+      interrupt(blockingReasons.values().next().value!);
+    }
+    const key = registration ? `${registration.gameId}:${registration.isActive()}:${registration.mode()}:${isArcadeSessionPaused(registration.gameId)}` : '';
+    if (key !== lastControlState) {
+      lastControlState = key;
+      registrations.forEach(item => {
+        item.view.classList.toggle('session-active', item === registration && item.isActive());
+        item.view.dataset.sessionMode = item.mode();
+        const button = item.view.querySelector<HTMLButtonElement>('[data-pause-game]');
+        if (button) {
+          button.dataset.paused = String(isArcadeSessionPaused(item.gameId));
+          button.dataset.online = String(item.mode() === 'online');
+          button.disabled = !item.isActive() && !isArcadeSessionPaused(item.gameId);
+          button.textContent = isArcadeSessionPaused(item.gameId) ? '▶ Resume' : item.mode() === 'online' ? '● Live' : 'Ⅱ Pause';
+          button.setAttribute('aria-label', isArcadeSessionPaused(item.gameId) ? 'Resume game' : item.mode() === 'online' ? 'Online play continues' : 'Pause game');
+        }
+      });
+    }
+    requestAnimationFrame(syncSessionControls);
+  };
+  requestAnimationFrame(syncSessionControls);
 }

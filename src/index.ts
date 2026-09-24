@@ -1,3 +1,7 @@
+import { createArcadeNavigation, type ArcadeView } from './navigation.js';
+import { initHubLayout } from './hub-layout.js';
+import { ActiveClock } from './session-state.js';
+import { supportedLaunchMode } from './game-metadata.js';
 import { initTintar } from './tintar.js';
 import { initPaddleClash } from './paddle.js';
 import { initNeonSnake } from './snake.js';
@@ -45,41 +49,6 @@ export const EXPLOSION_DURATION = 500;
 export const EXPLOSION_RADIUS = 2;
 export const PLAYER_MOVE_DURATION = 125;
 export const MIN_PLAYER_MOVE_DURATION = 75;
-
-function arrangeHubContent(): void {
-  const quickPlay = document.getElementById('quickPlayPanel');
-  const gameLibrary = document.getElementById('games');
-  if (!quickPlay || !gameLibrary || quickPlay.nextElementSibling === gameLibrary) return;
-  quickPlay.insertAdjacentElement('afterend', gameLibrary);
-}
-
-function initMobileHubNavigation(): void {
-  const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('[data-mobile-hub-link]'));
-  if (!links.length) return;
-  const select = (targetId: string): void => {
-    links.forEach(link => {
-      const active = link.dataset.mobileHubLink === targetId;
-      link.classList.toggle('active', active);
-      if (active) link.setAttribute('aria-current', 'page');
-      else link.removeAttribute('aria-current');
-    });
-  };
-  select('hubView');
-  links.forEach(link => link.addEventListener('click', () => select(link.dataset.mobileHubLink ?? 'hubView')));
-  const targets = ['quickPlayPanel', 'games', 'profilePanel']
-    .map(id => document.getElementById(id))
-    .filter((target): target is HTMLElement => Boolean(target));
-  if (typeof IntersectionObserver === 'undefined') return;
-  const observer = new IntersectionObserver(entries => {
-    const visible = entries
-      .filter(entry => entry.isIntersecting)
-      .sort((left, right) => right.intersectionRatio - left.intersectionRatio)[0];
-    if (visible?.target.id) select(visible.target.id);
-    else if (window.scrollY < 120) select('hubView');
-  }, { rootMargin: '-8% 0px -68% 0px', threshold: [0, .15, .4] });
-  targets.forEach(target => observer.observe(target));
-  window.addEventListener('scroll', () => { if (window.scrollY < 120) select('hubView'); }, { passive: true });
-}
 
 export enum PowerUpType {
   BOMB_UP = 'bomb-up',
@@ -1373,7 +1342,12 @@ export function initGame(): void {
     else showLobbyMessage('Quick match, create an invite, or join with a code.');
   }
 
-  function setActiveView(view: 'hub' | 'bomberman' | 'tintar' | 'paddle' | 'snake' | 'tanks' | 'septica' | 'survival' | 'star' | 'racing' | 'blocks' | 'twenty48' | 'sudoku'): void {
+  let navigation: ReturnType<typeof createArcadeNavigation> | undefined;
+  let localClock = new ActiveClock(Date.now());
+  function setActiveView(view: ArcadeView): void {
+    if (navigation) navigation.open(view); else renderActiveView(view);
+  }
+  function renderActiveView(view: ArcadeView): void {
     elements.hubView?.classList.toggle('view-hidden', view !== 'hub');
     elements.gameView?.classList.toggle('view-hidden', view !== 'bomberman');
     elements.tintarView?.classList.toggle('view-hidden', view !== 'tintar');
@@ -1530,8 +1504,8 @@ export function initGame(): void {
         activeRoomCode = response.roomCode;
         activeBotDifficulty = response.botDifficulty;
         quickMatching = response.quickMatch === true;
-        if (activeBotDifficulty) history.replaceState(null, '', clearArcadeInviteUrl(location.href));
-        else history.replaceState(null, '', createArcadeInviteUrl(location.href, 'bomberman', activeRoomCode));
+        if (activeBotDifficulty) history.replaceState(history.state, '', clearArcadeInviteUrl(location.href));
+        else history.replaceState(history.state, '', createArcadeInviteUrl(location.href, 'bomberman', activeRoomCode));
         syncUi();
         return;
       }
@@ -1566,7 +1540,7 @@ export function initGame(): void {
   function sendPlayerAction(player: 1 | 2, action: PlayerAction): void {
     if (isArcadeSessionPaused('bomberman')) return;
     if (action.type === 'bomb') emitArcadeGameplayCue('danger', 'FUSE LIT — FIND COVER');
-    if (localRoom) localRoom.handleAction(player, action);
+    if (localRoom) localRoom.handleAction(player, action, localClock.value);
     else sendAction(action);
   }
 
@@ -1577,6 +1551,7 @@ export function initGame(): void {
     previousSocket?.close();
     const { OnlineRoom: LocalRoom } = await import('./multiplayer.js');
     const now = Date.now();
+    localClock = new ActiveClock(now);
     localRoom = new LocalRoom('LOCAL');
     localRoom.connectPlayer(1, now);
     localRoom.connectPlayer(2, now);
@@ -1586,7 +1561,7 @@ export function initGame(): void {
     quickMatching = false;
     onlineState = localRoom.snapshot(now);
     mergePlayers(onlineState.players, onlineState.round);
-    history.replaceState(null, '', clearArcadeInviteUrl(location.href));
+    history.replaceState(history.state, '', clearArcadeInviteUrl(location.href));
     syncUi();
   }
 
@@ -1597,6 +1572,7 @@ export function initGame(): void {
     previousSocket?.close();
     const { OnlineRoom: LocalRoom } = await import('./multiplayer.js');
     const now = Date.now();
+    localClock = new ActiveClock(now);
     localRoom = new LocalRoom('BOT');
     localRoom.connectPlayer(1, now);
     localRoom.connectBot(difficulty, now);
@@ -1607,7 +1583,7 @@ export function initGame(): void {
     quickMatching = false;
     onlineState = localRoom.snapshot(now);
     mergePlayers(onlineState.players, onlineState.round);
-    history.replaceState(null, '', clearArcadeInviteUrl(location.href));
+    history.replaceState(history.state, '', clearArcadeInviteUrl(location.href));
     syncUi();
   }
 
@@ -1626,7 +1602,7 @@ export function initGame(): void {
         activeRoomCode = '';
         activeBotDifficulty = undefined;
         quickMatching = false;
-        history.replaceState(null, '', clearArcadeInviteUrl(location.href));
+        history.replaceState(history.state, '', clearArcadeInviteUrl(location.href));
         syncUi();
       }
       selectBombermanLobbyMode(mode);
@@ -1637,7 +1613,7 @@ export function initGame(): void {
       const game = button.dataset.launchGame;
       if (game === 'bomberman' || game === 'tintar' || game === 'paddle' || game === 'snake' || game === 'tanks' || game === 'septica' || game === 'survival' || game === 'star' || game === 'racing' || game === 'blocks' || game === 'twenty48' || game === 'sudoku') {
         setActiveView(game);
-        const requestedMode = button.dataset.launchMode;
+        const requestedMode = supportedLaunchMode(game, button.dataset.launchMode);
         if (requestedMode === 'solo' || requestedMode === 'local' || requestedMode === 'online') {
           window.dispatchEvent(new CustomEvent('arcade-launch-mode', { detail: { gameId: game, mode: requestedMode } }));
           if (game === 'bomberman') selectBombermanLobbyMode(requestedMode === 'solo' ? 'bot' : requestedMode);
@@ -1652,13 +1628,14 @@ export function initGame(): void {
       && game !== 'septica' && game !== 'survival' && game !== 'star' && game !== 'racing' && game !== 'blocks'
       && game !== 'twenty48' && game !== 'sudoku') return;
     setActiveView(game);
-    window.dispatchEvent(new CustomEvent('arcade-launch-mode', { detail: { gameId: game, mode: detail.mode } }));
+    window.dispatchEvent(new CustomEvent('arcade-launch-mode', { detail: { gameId: game, mode: supportedLaunchMode(game, detail.mode) } }));
     if (game === 'bomberman' && (detail.mode === 'solo' || detail.mode === 'local' || detail.mode === 'online')) {
       selectBombermanLobbyMode(detail.mode === 'solo' ? 'bot' : detail.mode);
     }
   });
-  elements.backToHubButtons.forEach(button => {
-    button.addEventListener('click', () => {
+  elements.backToHubButtons.forEach(button => button.addEventListener('click', () => setActiveView('hub')));
+  window.addEventListener('arcade-view-leaving', event => {
+    if ((event as CustomEvent<{ view: string }>).detail.view !== 'bomberman') return;
       if (socket && socket.readyState <= WebSocket.OPEN) socket.close();
       socket = undefined;
       localRoom = undefined;
@@ -1667,15 +1644,12 @@ export function initGame(): void {
       activeRoomCode = '';
       activeBotDifficulty = undefined;
       quickMatching = false;
-      history.replaceState(null, '', clearArcadeInviteUrl(location.href));
       elements.lobbyOverlay?.classList.remove('hidden');
       elements.lobbyActions?.classList.remove('hidden');
       elements.roomReady?.classList.add('hidden');
       elements.mobileControls?.classList.add('hidden');
       elements.localMobileControls?.classList.add('hidden');
-      selectBombermanLobbyMode('local');
-      setActiveView('hub');
-    });
+      selectBombermanLobbyMode(selectedLobbyMode);
   });
   elements.botButtons.forEach(button => {
     button.addEventListener('click', () => {
@@ -1934,24 +1908,35 @@ export function initGame(): void {
     registerArcadeSession({
       gameId: 'bomberman',
       view: elements.gameView,
-      mode: () => activeBotDifficulty ? 'solo' : localMode ? 'local' : 'online',
-      isActive: () => onlineState.phase === 'playing',
+      mode: () => activeBotDifficulty || (!socket && selectedLobbyMode === 'bot') ? 'solo' : localMode || (!socket && selectedLobbyMode === 'local') ? 'local' : 'online',
+      isActive: () => Boolean(elements.lobbyOverlay?.classList.contains('hidden')) && (onlineState.phase === 'playing' || onlineState.phase === 'countdown'),
       clearHeldInputs: () => window.dispatchEvent(new CustomEvent('arcade-clear-bomberman-inputs')),
     });
   }
 
-  selectBombermanLobbyMode('local');
+  window.addEventListener('arcade-view-changed', event => {
+    if ((event as CustomEvent<{ view: string }>).detail.view !== 'bomberman' || socket) return;
+    const invite = parseArcadeInvite(location.search);
+    if (invite?.game !== 'bomberman' || !elements.roomCodeInput) return;
+    selectBombermanLobbyMode('online');
+    elements.roomCodeInput.value = invite.roomCode;
+    connectAndSend({ type: 'join', roomCode: invite.roomCode });
+  });
+  selectBombermanLobbyMode('bot');
   const inviteFromUrl = parseArcadeInvite(location.search);
   if (inviteFromUrl?.game === 'bomberman' && elements.roomCodeInput) {
     selectBombermanLobbyMode('online');
     elements.roomCodeInput.value = inviteFromUrl.roomCode;
     connectAndSend({ type: 'join', roomCode: inviteFromUrl.roomCode });
   }
-  setActiveView(inviteFromUrl?.game ?? 'hub');
+  renderActiveView(inviteFromUrl?.game ?? 'hub');
+  navigation = createArcadeNavigation(renderActiveView);
+  window.addEventListener('arcade-ready', () => navigation?.start(), { once: true });
 
   function gameLoop(): void {
-    if (localRoom && !isArcadeSessionPaused('bomberman')) {
-      const now = Date.now();
+    const running = document.body.dataset.view === 'bomberman' && !isArcadeSessionPaused('bomberman');
+    const now = localClock.tick(Date.now(), running);
+    if (localRoom && running) {
       localRoom.update(now);
       const snapshot = localRoom.snapshot(now);
       mergePlayers(snapshot.players, snapshot.round);
@@ -1973,8 +1958,7 @@ export function initGame(): void {
 
 if (typeof window !== 'undefined') {
   window.addEventListener('DOMContentLoaded', () => {
-    arrangeHubContent();
-    initMobileHubNavigation();
+    initHubLayout();
     initArcadeSettings();
     initArcadeSessionControl();
     initArcadeGameplayFeedback();
@@ -1997,5 +1981,6 @@ if (typeof window !== 'undefined') {
     initTwenty48();
     initSudoku();
     initGameExperience();
+    window.dispatchEvent(new CustomEvent('arcade-ready'));
   });
 }

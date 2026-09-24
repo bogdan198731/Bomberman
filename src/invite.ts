@@ -1,3 +1,4 @@
+import { GAME_META } from './game-metadata.js';
 import { ONLINE_GAME_IDS, isOnlineGameId, type OnlineGameId } from './relay.js';
 
 export const INVITE_GAME_IDS = ['bomberman', ...ONLINE_GAME_IDS] as const;
@@ -16,17 +17,6 @@ export interface ArcadeInviteShareData {
 
 export type InviteDeliveryResult = 'shared' | 'copied' | 'cancelled' | 'unavailable';
 
-const GAME_NAMES: Record<InviteGameId, string> = {
-  bomberman: 'Blast Buddies',
-  tintar: 'Țintar',
-  paddle: 'Paddle Clash',
-  snake: 'Neon Snake Arena',
-  tanks: 'Mini Tanks',
-  septica: 'Șeptică',
-  survival: 'Survival Arena',
-  racing: 'Micro Racers',
-  blocks: 'Block Drop Duel',
-};
 
 export function normalizeInviteCode(value: unknown): string | null {
   if (typeof value !== 'string') return null;
@@ -62,7 +52,7 @@ export function clearArcadeInviteUrl(baseUrl: string): string {
 }
 
 export function arcadeInviteShareData(baseUrl: string, game: InviteGameId, roomCode: string): ArcadeInviteShareData {
-  const name = GAME_NAMES[game];
+  const name = GAME_META[game].name;
   const code = normalizeInviteCode(roomCode);
   if (!code) throw new Error('Invalid room code');
   return {

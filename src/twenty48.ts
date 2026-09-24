@@ -1,6 +1,6 @@
 import { ArcadeResultReporter } from './stats.js';
 import { translateArcadeText } from './i18n.js';
-import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
+import { clearArcadePause, isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
 
 export const TWENTY48_SIZE = 4;
 export const TWENTY48_BEST_STORAGE_KEY = 'blast-arcade-2048-best-v1';
@@ -395,6 +395,7 @@ export function initTwenty48(): void {
   function requestReset(): void {
     if (shouldConfirmTwenty48Reset(game.phase, game.movesMade)
       && !window.confirm(translateArcadeText('Start a new 2048 game? Your current board and score will be lost.'))) return;
+    clearArcadePause();
     reset();
   }
 

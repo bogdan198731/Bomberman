@@ -2,6 +2,18 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { translateArcadeText } from './i18n.js';
 
+test('new navigation, interruption, and mode labels have Romanian translations', () => {
+  for (const text of ['Find your next game.', 'Play solo, share a device, or invite a friend online.', 'Back to games',
+    'Challenges', 'Recently played', 'Same device', 'Solo · vs bot', 'Solo · Same device · Online',
+    'Got it', 'Game setup', 'Game paused', 'Pause game', 'Resume game', 'Resume unavailable',
+    'Close — stay paused', 'Restart game', 'Continue playing', 'Online play continues', 'Online stays live',
+    'This game is paused while Settings is open.',
+    'Online play continues while Settings is open. Your held controls were released.', 'Resuming in 3']) {
+    assert.notEqual(translateArcadeText(text, 'ro'), text, text);
+    assert.equal(translateArcadeText(text, 'en'), text);
+  }
+});
+
 test('Romanian translations cover shared arcade and revenge actions', () => {
   assert.equal(translateArcadeText('Arcade settings', 'ro'), 'Setările arcadei');
   assert.equal(translateArcadeText('Play revenge match', 'ro'), 'Joacă revanșa');

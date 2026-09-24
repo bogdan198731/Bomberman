@@ -431,7 +431,15 @@ const attributeRecords = new WeakMap<Element, Map<string, { source: string; rend
 const translatedAttributes = ['aria-label', 'placeholder', 'title', 'alt'] as const;
 
 function translateRomanianPattern(value: string): string | null {
-  let match = value.match(/^(\d+) games live$/);
+  let match = value.match(/^Round (\d+) · First to 3$/);
+  if (match) return `Runda ${match[1]} · Primul la 3`;
+  match = value.match(/^ROUND (\d+)$/);
+  if (match) return `RUNDA ${match[1]}`;
+  match = value.match(/^Play (.+)$/);
+  if (match) return `Joacă ${match[1]}`;
+  match = value.match(/^Race starts in (\d+)…$/);
+  if (match) return `Cursa începe în ${match[1]}…`;
+  match = value.match(/^(\d+) games live$/);
   if (match) return `${match[1]} jocuri active`;
   match = value.match(/^(\d+) games$/);
   if (match) return `${match[1]} jocuri`;
@@ -519,13 +527,56 @@ function translateRomanianPattern(value: string): string | null {
   return null;
 }
 
+const UX_TRANSLATIONS: Record<string, string> = {
+  'games': 'jocuri',
+  'You': 'Tu', 'Local P1': 'Jucător 1', 'Local P2': 'Jucător 2',
+  'easy bot': 'Bot ușor', 'normal bot': 'Bot normal', 'hard bot': 'Bot greu',
+  'New round': 'Rundă nouă', 'Bomb': 'Bombă',
+  'A saved puzzle with notes is ready.': 'Ai un puzzle salvat, cu notițe.',
+  'Saved puzzle restored. Continue when you are ready.': 'Puzzle restaurat. Continuă când ești pregătit.',
+  'Saved puzzle continued. Only visible row, column, and box conflicts are flagged.': 'Puzzle reluat. Sunt marcate doar conflictele din rând, coloană sau careu.',
+  'A saved run is ready on this device.': 'Ai un joc salvat pe acest dispozitiv.',
+  'Saved run restored. Continue when you are ready.': 'Joc restaurat. Continuă când ești pregătit.',
+  'Saved run continued — swipe or use the arrow controls.': 'Joc reluat — glisează sau folosește săgețile.',
+  'Arcade sections': 'Secțiunile arcadei', 'Quick Play recommendation': 'Recomandare de Joc Rapid',
+  'Change': 'Schimbă', 'Start race': 'Pornește cursa', 'Reset race': 'Resetează cursa',
+  'Get ready': 'Pregătește-te', 'Mint lap': 'Tură Mint', 'Coral lap': 'Tură Coral', 'First to finish': 'Primul la sosire',
+  'Race the Coral bot through three turbo-charged laps.': 'Întrece botul Coral în trei ture cu turbo.',
+  'Find your next game.': 'Găsește următorul joc.',
+  'Play solo, share a device, or invite a friend online.': 'Joacă solo, pe același dispozitiv sau invită un prieten online.',
+  'Back to games': 'Înapoi la jocuri',
+  'Solo, same device, or online arcade duel': 'Duel arcade solo, pe același dispozitiv sau online',
+  'Game setup': 'Configurarea jocului',
+  'Challenges': 'Provocări', 'Recently played': 'Jucate recent',
+  'Same device': 'Același dispozitiv', 'Solo · vs bot': 'Solo · cu bot',
+  'Solo · Same device · Online': 'Solo · Același dispozitiv · Online',
+  'Solo · Same device': 'Solo · Același dispozitiv',
+  'Got it': 'Am înțeles', 'Take a break': 'Ia o pauză',
+  'Game paused': 'Joc în pauză', 'Pause game': 'Pune jocul în pauză',
+  'Resume game': 'Reia jocul', 'Resume unavailable': 'Reluare indisponibilă',
+  '▶ Resume': '▶ Reia', 'Ⅱ Pause': 'Ⅱ Pauză', '● Live': '● În direct',
+  'Close — stay paused': 'Închide — păstrează pauza',
+  'Take your time. Resume when you are ready.': 'Ia-ți timpul necesar. Reia jocul când ești pregătit.',
+  'Read the guide, then resume when you are ready.': 'Citește ghidul, apoi reia jocul când ești pregătit.',
+  'Finish changing settings, then resume when you are ready.': 'Termină setările, apoi reia jocul când ești pregătit.',
+  'The page was hidden. Return to the game, then resume safely.': 'Pagina a fost ascunsă. Revino la joc și reia când ești pregătit.',
+  'The game lost focus. Resume when your controls are ready.': 'Ai părăsit fereastra jocului. Reia când ești pregătit.',
+  'Get your hands back on the controls.': 'Pregătește comenzile.',
+  'Gameplay resumed.': 'Jocul a fost reluat.', 'Go!': 'Start!',
+  'How to play': 'Cum se joacă', '? How to play': '? Cum se joacă',
+  'Settings': 'Setări', 'Online play continues': 'Jocul online continuă',
+  'This game is paused while Settings is open.': 'Jocul este în pauză cât timp setările sunt deschise.',
+  'Online play continues while Settings is open. Your held controls were released.': 'Meciul online continuă cât timp setările sunt deschise. Comenzile apăsate au fost eliberate.',
+  'Online stays live': 'Meciul online continuă',
+  'Restart game': 'Reîncepe jocul', 'Continue playing': 'Continuă jocul',
+};
 export function translateArcadeText(value: string, language: ArcadeLanguage = activeLanguage): string {
   if (language === 'en' || !value) return value;
   const leading = value.match(/^\s*/)?.[0] ?? '';
   const trailing = value.match(/\s*$/)?.[0] ?? '';
   const core = value.slice(leading.length, value.length - trailing.length);
   if (!core) return value;
-  const translated = ROMANIAN_TRANSLATIONS[core] ?? translateRomanianPattern(core) ?? core;
+  const translated = UX_TRANSLATIONS[core] ?? (core.startsWith('Resuming in ') ? core.replace('Resuming in ', 'Reluare în ') : undefined) ?? ROMANIAN_TRANSLATIONS[core] ?? translateRomanianPattern(core) ?? core;
   return `${leading}${translated}${trailing}`;
 }
 

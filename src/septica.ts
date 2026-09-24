@@ -1,7 +1,7 @@
 import { GameRoomClient } from './game-room.js';
 import { ArcadeResultReporter } from './stats.js';
 import { translateArcadeText } from './i18n.js';
-import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
+import { clearArcadePause, isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
 
 export type SepticaPlayer = 1 | 2;
 export type SepticaRank = '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | 'A';
@@ -409,6 +409,7 @@ export function initSeptica(): void {
   document.getElementById('septicaRestartButton')?.addEventListener('click', () => {
     if (shouldConfirmSepticaRestart(game)
       && !window.confirm(translateArcadeText('Start a new deal? The current Șeptică hand will be lost.'))) return;
+    clearArcadePause();
     if (room?.isGuest()) room.sendAction({ type: 'restart' });
     else {
       window.clearTimeout(settleTimer);

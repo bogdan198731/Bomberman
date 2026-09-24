@@ -1,3 +1,4 @@
+import { GAME_META, MODE_LABELS } from './game-metadata.js';
 import { ARCADE_GAME_IDS, type ArcadeGameId } from './stats.js';
 
 export type CatalogFilter = 'all' | 'solo' | 'local' | 'online' | 'favorites';
@@ -78,6 +79,13 @@ export function initGameCatalog(): void {
   const resetButton = document.getElementById('catalogResetButton');
   if (!cards.length || !search) return;
   const activeSearch = search;
+  cards.forEach(card => {
+    const meta = GAME_META[card.dataset.catalogGame as ArcadeGameId];
+    if (!meta) return;
+    card.dataset.catalogModes = meta.modes.join(' ');
+    const label = card.querySelector<HTMLElement>('.mode-label');
+    if (label) label.textContent = meta.modes.map(mode => MODE_LABELS[mode]).join(' · ');
+  });
 
   let activeFilter: CatalogFilter = 'all';
   let favorites = loadFavorites();
@@ -97,9 +105,9 @@ export function initGameCatalog(): void {
     if (!ARCADE_GAME_IDS.includes(id as ArcadeGameId)) return null;
     return {
       id: id as ArcadeGameId,
-      title: card.querySelector('h3')?.textContent?.trim() ?? '',
+      title: GAME_META[id as ArcadeGameId].name,
       description: card.querySelector('.catalog-card-body p')?.textContent?.trim() ?? '',
-      modes: (card.dataset.catalogModes ?? '').split(' ').filter(Boolean) as CatalogMode[],
+      modes: GAME_META[id as ArcadeGameId].modes,
     };
   }
 
@@ -110,6 +118,11 @@ export function initGameCatalog(): void {
       if (!game) return;
       const matches = matchesCatalogGame(game, activeSearch.value, activeFilter, favorites);
       card.hidden = !matches;
+      const launch = card.querySelector<HTMLElement>('[data-launch-game]');
+      if (launch) {
+        if (activeFilter === 'solo' || activeFilter === 'local' || activeFilter === 'online') launch.dataset.launchMode = activeFilter;
+        else delete launch.dataset.launchMode;
+      }
       if (matches) visible += 1;
       const favorite = favorites.includes(game.id);
       const button = card.querySelector<HTMLButtonElement>('[data-favorite-game]');
@@ -129,6 +142,7 @@ export function initGameCatalog(): void {
     if (emptyState) emptyState.hidden = visible !== 0;
     if (clearSearch) clearSearch.hidden = !activeSearch.value;
     window.requestAnimationFrame(updateFilterCue);
+    window.dispatchEvent(new Event('arcade-catalog-change'));
   }
 
   filterButtons.forEach(button => button.addEventListener('click', () => {
@@ -157,6 +171,12 @@ export function initGameCatalog(): void {
       launchButton.click();
     };
     card.addEventListener('click', event => activateCard(event.target));
+  });
+  window.addEventListener('arcade-catalog-restore', event => {
+    const saved = (event as CustomEvent<{ query?: string; filter?: string }>).detail;
+    activeSearch.value = saved.query ?? '';
+    activeFilter = CATALOG_FILTERS.includes(saved.filter as CatalogFilter) ? saved.filter as CatalogFilter : 'all';
+    render();
   });
   activeSearch.addEventListener('input', render);
   activeSearch.addEventListener('search', render);

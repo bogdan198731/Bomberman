@@ -1,3 +1,4 @@
+import { supportedLaunchMode } from './game-metadata.js';
 import type { OnlineGameId, RelayPlayerId } from './relay.js';
 import {
   arcadeInviteShareData,
@@ -61,8 +62,8 @@ export class GameRoomClient {
     this.game = options.game;
     this.mount = options.mount;
     this.offlineModes = options.offlineModes?.length
-      ? options.offlineModes
-      : [{ id: 'local', label: 'Local 2P', description: 'Two players on this device.', onSelect: options.onPlayLocal ?? (() => {}) }];
+      ? options.offlineModes.map(mode => ({ ...mode, label: mode.id === 'local' ? 'Same device' : mode.id === 'bot' ? 'Solo · vs bot' : mode.label }))
+      : [{ id: 'local', label: 'Same device', description: 'Two players on this device.', onSelect: options.onPlayLocal ?? (() => {}) }];
     this.initialOfflineMode = this.loadPreferredMode() ?? options.initialOfflineMode ?? this.offlineModes[0].id;
     if (!this.offlineModes.some(mode => mode.id === this.initialOfflineMode)) this.initialOfflineMode = this.offlineModes[0].id;
     this.mount.classList.add('game-room-panel', 'arcade-mode-panel');
@@ -113,11 +114,19 @@ export class GameRoomClient {
     this.launchModeListener = event => {
       const detail = (event as CustomEvent<{ gameId?: string; mode?: string }>).detail;
       if (detail?.gameId !== this.game) return;
-      this.chooseRequestedMode(detail.mode);
+      this.chooseRequestedMode(supportedLaunchMode(this.game, detail.mode));
     };
     window.addEventListener('arcade-launch-mode', this.launchModeListener);
-    this.mount.closest('main')?.querySelector('[data-back-to-hub]')?.addEventListener('click', () => {
-      this.leave();
+    window.addEventListener('arcade-view-leaving', event => {
+      if ((event as CustomEvent<{ view: string }>).detail.view === this.game && this.socket) this.leave(false);
+    });
+    window.addEventListener('arcade-view-changed', event => {
+      if ((event as CustomEvent<{ view: string }>).detail.view !== this.game || this.socket) return;
+      const invite = parseArcadeInvite(location.search);
+      if (invite?.game !== this.game) return;
+      this.input.value = invite.roomCode;
+      this.selectMode('online', false);
+      this.joinFromInput();
     });
     const invite = parseArcadeInvite(location.search);
     if (invite?.game === this.game) {
@@ -153,10 +162,10 @@ export class GameRoomClient {
     return true;
   }
 
-  leave(): void {
+  leave(updateUrl = true): void {
     this.disconnect();
     this.selectMode(this.initialOfflineMode, false);
-    history.replaceState(null, '', clearArcadeInviteUrl(location.href));
+    if (updateUrl) history.replaceState(history.state, '', clearArcadeInviteUrl(location.href));
     this.options.onSessionChange(this.session());
   }
 
@@ -175,7 +184,7 @@ export class GameRoomClient {
         const offlineMode = this.offlineModes.find(candidate => candidate.id === mode);
         if (!offlineMode) return;
         this.disconnect();
-        history.replaceState(null, '', clearArcadeInviteUrl(location.href));
+        history.replaceState(history.state, '', clearArcadeInviteUrl(location.href));
         this.selectMode(offlineMode.id, false);
         this.savePreferredMode(offlineMode.id);
         offlineMode.onSelect();
@@ -275,7 +284,7 @@ export class GameRoomClient {
       this.ready = false;
       this.quickMatching = data.quickMatch === true;
       this.codeElement.textContent = this.roomCode;
-      history.replaceState(null, '', arcadeInviteShareData(location.href, this.game, this.roomCode).url);
+      history.replaceState(history.state, '', arcadeInviteShareData(location.href, this.game, this.roomCode).url);
       this.onlineActions.hidden = true;
       this.joinedActions.hidden = false;
       this.statusElement.textContent = this.quickMatching
@@ -339,6 +348,7 @@ export class GameRoomClient {
   }
 
   private chooseRequestedMode(requested: string | undefined): void {
+    if (!requested) return;
     const mode = requested === 'online'
       ? 'online'
       : requested === 'local'

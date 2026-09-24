@@ -1,5 +1,5 @@
-export const ARCADE_GAME_IDS = ['bomberman', 'tintar', 'paddle', 'snake', 'tanks', 'septica', 'survival', 'star', 'racing', 'blocks', 'twenty48', 'sudoku'] as const;
-export type ArcadeGameId = typeof ARCADE_GAME_IDS[number];
+import { ARCADE_GAME_IDS, GAME_META, type ArcadeGameId } from './game-metadata.js';
+export { ARCADE_GAME_IDS, GAME_META, type ArcadeGameId } from './game-metadata.js';
 export type ArcadeOutcome = 'win' | 'loss' | 'draw' | 'complete';
 
 export const PROFILE_STORAGE_KEY = 'blast-arcade-profile-v1';
@@ -98,21 +98,6 @@ interface StorageLike {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
 }
-
-export const GAME_META: Record<ArcadeGameId, { name: string; icon: string }> = {
-  bomberman: { name: 'Blast Buddies', icon: '💣' },
-  tintar: { name: 'Țintar', icon: '◎' },
-  paddle: { name: 'Paddle Clash', icon: '⚡' },
-  snake: { name: 'Neon Snake', icon: '〰' },
-  tanks: { name: 'Mini Tanks', icon: '▰' },
-  septica: { name: 'Șeptică', icon: '7♥' },
-  survival: { name: 'Survival Arena', icon: '✦' },
-  star: { name: 'Star Defender', icon: '▲' },
-  racing: { name: 'Micro Racers', icon: '🏁' },
-  blocks: { name: 'Block Drop', icon: '▦' },
-  twenty48: { name: '2048', icon: '2048' },
-  sudoku: { name: 'Sudoku', icon: '9×9' },
-};
 
 export const ACHIEVEMENTS: ReadonlyArray<AchievementDefinition> = [
   { id: 'first-round', name: 'First Round', description: 'Finish your first arcade match.', icon: '★' },

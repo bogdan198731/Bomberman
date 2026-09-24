@@ -7,6 +7,7 @@ const indexSource = readFileSync(new URL('../src/index.ts', import.meta.url), 'u
 const gameRoomSource = readFileSync(new URL('../src/game-room.ts', import.meta.url), 'utf8');
 const catalogSource = readFileSync(new URL('../src/catalog.ts', import.meta.url), 'utf8');
 const tintarSource = readFileSync(new URL('../src/tintar.ts', import.meta.url), 'utf8');
+const uxStyles = readFileSync(new URL('../public/arcade-ux.css', import.meta.url), 'utf8');
 const snakeSource = readFileSync(new URL('../src/snake.ts', import.meta.url), 'utf8');
 const tanksSource = readFileSync(new URL('../src/tanks.ts', import.meta.url), 'utf8');
 const racingSource = readFileSync(new URL('../src/racing.ts', import.meta.url), 'utf8');
@@ -59,8 +60,8 @@ test('active game screens reserve short viewports for the playfield', () => {
 test('mobile Blast Buddies uses a drag-and-hold virtual joystick', () => {
   assert.match(html, /id="mobileJoystick" class="mobile-joystick"[^>]*tabindex="0"[^>]*data-direction="idle"/);
   assert.match(html, /id="mobileJoystickKnob" class="mobile-joystick-knob"/);
-  assert.match(html, /\.mobile-joystick\s*\{[^}]*aspect-ratio:\s*1;[^}]*border-radius:\s*50%;[^}]*touch-action:\s*none;/s);
-  assert.match(html, /\.mobile-joystick-knob\s*\{[^}]*transform:\s*translate\(-50%, -50%\) translate\(var\(--joystick-x\), var\(--joystick-y\)\);/s);
+  assert.match(uxStyles, /\.mobile-joystick\s*\{[^}]*aspect-ratio:\s*1;[^}]*border-radius:\s*50%;[^}]*touch-action:\s*none;/s);
+  assert.match(uxStyles, /\.mobile-joystick-knob\s*\{[^}]*transform:\s*translate\(-50%, -50%\) translate\(var\(--joystick-x\), var\(--joystick-y\)\);/s);
   assert.equal((html.match(/data-move-x=/g) ?? []).length, 0);
   assert.equal((html.match(/data-bomberman-player=/g) ?? []).length, 2);
   assert.equal((html.match(/data-bomberman-local-joystick=/g) ?? []).length, 2);
@@ -69,12 +70,12 @@ test('mobile Blast Buddies uses a drag-and-hold virtual joystick', () => {
 test('mobile Blast Buddies defaults to joystick right and offers a persistent side swap', () => {
   assert.match(html, /id="mobileControls"[^>]*data-control-layout="joystick-right"/);
   assert.match(html, /id="mobileControlLayoutButton"[^>]*data-joystick-side="right"/);
-  assert.match(html, /\.mobile-controls\[data-control-layout="joystick-right"\] \.mobile-joystick\s*\{[^}]*grid-column:\s*3;/s);
-  assert.match(html, /\.mobile-controls\[data-control-layout="joystick-right"\] \.mobile-bomb-button\s*\{[^}]*grid-column:\s*1;/s);
-  assert.match(html, /\.mobile-controls\[data-control-layout="joystick-left"\] \.mobile-joystick\s*\{[^}]*grid-column:\s*1;/s);
-  assert.match(html, /\.mobile-controls\[data-control-layout="joystick-left"\] \.mobile-bomb-button\s*\{[^}]*grid-column:\s*3;/s);
-  assert.match(html, /\.mobile-control-actions\s*\{[^}]*grid-column:\s*2;[^}]*grid-row:\s*1;[^}]*align-self:\s*center;/s);
-  assert.match(html, /\.mobile-joystick,\s*\.mobile-bomb-button\s*\{[^}]*grid-row:\s*1;/s);
+  assert.match(uxStyles, /\.mobile-controls\[data-control-layout="joystick-right"\] \.mobile-joystick\s*\{[^}]*grid-column:\s*3;/s);
+  assert.match(uxStyles, /\.mobile-controls\[data-control-layout="joystick-right"\] \.mobile-bomb-button\s*\{[^}]*grid-column:\s*1;/s);
+  assert.match(uxStyles, /\.mobile-controls\[data-control-layout="joystick-left"\] \.mobile-joystick\s*\{[^}]*grid-column:\s*1;/s);
+  assert.match(uxStyles, /\.mobile-controls\[data-control-layout="joystick-left"\] \.mobile-bomb-button\s*\{[^}]*grid-column:\s*3;/s);
+  assert.match(uxStyles, /\.mobile-control-actions\s*\{[^}]*grid-column:\s*2;[^}]*grid-row:\s*1;[^}]*align-self:\s*center;/s);
+  assert.match(uxStyles, /\.mobile-joystick,\s*\.mobile-bomb-button\s*\{[^}]*grid-row:\s*1;/s);
 });
 
 test('short landscape Bomberman keeps the arena visible between overlay controls', () => {
@@ -132,7 +133,7 @@ test('remaining game setup and reset actions use clear, safe mobile copy', () =>
   assert.match(indexSource, /let selectedLobbyMode: 'local' \| 'bot' \| 'online' = 'local'/);
   assert.match(indexSource, /previewingLobby && selectedLobbyMode === 'local'/);
   assert.match(html, /class="game-room-panel star-mode-panel"/);
-  assert.match(html, /data-star-mode="coop">Local co-op<\/button>/);
+  assert.match(html, /data-star-mode="coop">Same device<\/button>/);
   assert.match(html, /\.tintar-turn-card \{ display: none; \}/);
   assert.match(html, /id="septicaRestartButton"[^>]*>New deal<\/button>/);
   assert.match(html, /class="new-puzzle"[^>]*data-sudoku-new/);
@@ -234,27 +235,10 @@ test('Țintar exposes three responsive single-player bot levels', () => {
   assert.match(html, /id="tintarCoralName"/);
 });
 
-test('mobile game library uses compact three-column tiles with a narrow-screen fallback', () => {
-  assert.match(mobileStyles, /\.game-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\);[^}]*gap:\s*7px;/s);
-  assert.match(mobileStyles, /\.game-cover\s*\{[^}]*min-height:\s*76px;/s);
-  assert.match(mobileStyles, /\.game-glyph\s*\{[^}]*font-size:\s*1\.75rem;/s);
-  assert.match(mobileStyles, /\.cover-label\s*\{[^}]*display:\s*block;[^}]*text-overflow:\s*ellipsis;/s);
-  assert.match(mobileStyles, /\.catalog-card-body p\s*\{[^}]*display:\s*none;/s);
-  assert.match(mobileStyles, /\.catalog-card-footer\s*\{[^}]*display:\s*block;/s);
-  assert.match(mobileStyles, /\.mode-label\s*\{[^}]*display:\s*block;[^}]*text-overflow:\s*ellipsis;/s);
-  assert.match(mobileStyles, /\.card-play-button\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;[^}]*width:\s*100%;[^}]*height:\s*100%;/s);
-  assert.equal((html.match(/class="card-play-button"[^>]*aria-label="Play /g) ?? []).length, 12);
-  assert.doesNotMatch(catalogSource, /card\.tabIndex = 0/);
-  assert.match(catalogSource, /const activateCard[\s\S]*?launchButton\.click\(\)/);
-  assert.match(catalogSource, /card\.addEventListener\('click', event => activateCard\(event\.target\)\)/);
-  assert.match(html, /@media \(max-width: 340px\)[\s\S]*?\.game-grid\s*\{[^}]*repeat\(2, minmax\(0, 1fr\)\)/s);
-});
-
-test('hub promotes game discovery directly after Quick Play with a compact responsive hero', () => {
-  assert.match(indexSource, /quickPlay\.insertAdjacentElement\('afterend', gameLibrary\)/);
-  assert.match(html, /\.hub-hero\s*\{[^}]*min-height:\s*460px;[^}]*padding:\s*clamp\(28px, 4\.5vw, 52px\);/s);
-  assert.match(mobileStyles, /\.hub-hero\s*\{[^}]*gap:\s*18px;[^}]*padding:\s*22px 18px;/s);
-  assert.match(mobileStyles, /\.hero-stats\s*\{[^}]*display:\s*none;/s);
+test('hub uses the shared navigation layout and responsive stylesheet', () => {
+  assert.match(indexSource, /initHubLayout\(\)/);
+  assert.match(html, /href="\/public\/arcade-ux.css"/);
+  assert.match(html, /Find your next game/);
 });
 
 test('mobile progression panels expose accessible fold controls and notice badges', () => {
@@ -270,17 +254,10 @@ test('mobile progression panels expose accessible fold controls and notice badge
   assert.match(mobileStyles, /\.mobile-fold-toggle\[aria-expanded="false"\][\s\S]*?\.mobile-fold-content\s*\{[^}]*display:\s*none;/s);
 });
 
-test('mobile hub adds thumb navigation and a visible horizontal-filter cue', () => {
-  assert.equal((html.match(/data-mobile-hub-link=/g) ?? []).length, 4);
-  assert.match(mobileStyles, /\.mobile-hub-nav\s*\{[^}]*position:\s*fixed;[^}]*grid-template-columns:\s*repeat\(4, 1fr\);/s);
-  assert.match(mobileStyles, /\.mobile-hub-nav a\s*\{[^}]*min-height:\s*48px;/s);
-  assert.match(html, /class="catalog-filter-cue" aria-hidden="true">›<\/span>/);
-  assert.match(mobileStyles, /\.catalog-filter-cue\s*\{[^}]*display:\s*grid;/s);
-  assert.match(indexSource, /function initMobileHubNavigation\(\)/);
-  assert.match(indexSource, /setAttribute\('aria-current', 'page'\)/);
+test('hub exposes Games, Challenges, and Profile destinations and filter cues', () => {
+  assert.equal((html.match(/data-hub-section=/g) ?? []).length, 3);
+  for (const section of ['games','challenges','profile']) assert.ok(html.includes('data-hub-section="' + section + '"'));
   assert.match(catalogSource, /function updateFilterCue\(\)/);
-  assert.match(catalogSource, /filterScroller\.scrollLeft \+ filterScroller\.clientWidth/);
-  assert.match(catalogSource, /button\.scrollIntoView/);
 });
 
 test('wide desktop game library uses a denser four-column arcade shelf', () => {

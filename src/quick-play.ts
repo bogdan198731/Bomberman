@@ -1,3 +1,4 @@
+import { GAME_META, MODE_LABELS } from './game-metadata.js';
 import {
   ARCADE_GAME_IDS,
   loadArcadeProfile,
@@ -17,20 +18,9 @@ export interface QuickPlayGame {
   modes: readonly GameMode[];
 }
 
-export const QUICK_PLAY_GAMES: readonly QuickPlayGame[] = [
-  { id: 'bomberman', title: 'Blast Buddies', icon: '💣', modes: ['solo', 'local', 'online'] },
-  { id: 'tintar', title: 'Țintar', icon: '◎', modes: ['solo', 'local', 'online'] },
-  { id: 'paddle', title: 'Paddle Clash', icon: '⚡', modes: ['solo', 'local', 'online'] },
-  { id: 'snake', title: 'Neon Snake Arena', icon: '〰', modes: ['solo', 'local', 'online'] },
-  { id: 'tanks', title: 'Mini Tanks', icon: '▰', modes: ['solo', 'local', 'online'] },
-  { id: 'septica', title: 'Șeptică', icon: '7♥', modes: ['solo', 'local', 'online'] },
-  { id: 'survival', title: 'Survival Arena', icon: '✦', modes: ['solo', 'local', 'online'] },
-  { id: 'star', title: 'Star Defender', icon: '▲', modes: ['solo', 'local'] },
-  { id: 'racing', title: 'Micro Racers', icon: '🏁', modes: ['solo', 'local', 'online'] },
-  { id: 'blocks', title: 'Block Drop Duel', icon: '▦', modes: ['solo', 'local', 'online'] },
-  { id: 'twenty48', title: '2048', icon: '2048', modes: ['solo'] },
-  { id: 'sudoku', title: 'Sudoku', icon: '9×9', modes: ['solo'] },
-];
+export const QUICK_PLAY_GAMES: readonly QuickPlayGame[] = ARCADE_GAME_IDS.map(id => ({
+  id, title: GAME_META[id].name, icon: GAME_META[id].icon, modes: GAME_META[id].modes,
+}));
 
 export function gamesForQuickPlay(mode: QuickPlayMode): QuickPlayGame[] {
   return QUICK_PLAY_GAMES.filter(game => mode === 'all' || game.modes.includes(mode));
@@ -107,13 +97,14 @@ export function initQuickPlay(): void {
     if (icon) icon.textContent = game.icon;
     activeTitle.textContent = game.title;
     if (reason) reason.textContent = quickPlayReason(game, profile);
-    if (modes) modes.textContent = game.modes.map(mode => mode === 'local' ? 'Local 2P' : mode[0].toUpperCase() + mode.slice(1)).join(' · ');
+    if (modes) modes.textContent = game.modes.map(mode => MODE_LABELS[mode]).join(' · ');
     if (count) count.textContent = `${available.length} available`;
     activeLaunch.dataset.launchGame = game.id;
     activeLaunch.dataset.launchMode = activeMode === 'all'
       ? game.modes.includes('solo') ? 'solo' : game.modes[0]
       : activeMode;
-    activeLaunch.textContent = `Play ${game.title}`;
+    activeLaunch.textContent = 'Play now';
+    activeLaunch.setAttribute('aria-label', `Play ${game.title}`);
   }
 
   modeButtons.forEach(button => button.addEventListener('click', () => {

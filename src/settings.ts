@@ -1,3 +1,4 @@
+import { closeArcadeDialog, openArcadeDialog, registerArcadeDialog } from './dialogs.js';
 import type { ArcadeResult } from './stats.js';
 import { setArcadeLanguage, type ArcadeLanguage } from './i18n.js';
 
@@ -126,6 +127,7 @@ export function initArcadeSettings(): void {
     button.type = 'button';
     button.dataset.openSettings = '';
     button.textContent = '⚙ Settings';
+    button.setAttribute('aria-label', 'Settings');
     actions.append(button);
   });
   const overlay = document.getElementById('settingsOverlay');
@@ -148,7 +150,6 @@ export function initArcadeSettings(): void {
 
   const soundPlayer = new ArcadeSoundPlayer();
   let settings = loadSettings();
-  let previouslyFocused: HTMLElement | null = null;
 
   function applySettings(save = true): void {
     settings = save ? saveSettings(settings) : normalizeSettings(settings);
@@ -168,19 +169,16 @@ export function initArcadeSettings(): void {
   }
 
   function openSettings(): void {
-    previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    activeOverlay.hidden = false;
     document.body.classList.add('settings-open');
+    openArcadeDialog('settings');
     window.dispatchEvent(new CustomEvent('arcade-settings-change', { detail: { open: true } }));
-    closeButton?.focus();
     soundPlayer.play('ui', settings);
   }
 
   function closeSettings(): void {
-    activeOverlay.hidden = true;
     document.body.classList.remove('settings-open');
+    closeArcadeDialog('settings');
     window.dispatchEvent(new CustomEvent('arcade-settings-change', { detail: { open: false } }));
-    previouslyFocused?.focus();
   }
 
   function updateFullscreenLabel(): void {
@@ -190,19 +188,9 @@ export function initArcadeSettings(): void {
   }
 
   openButtons.forEach(button => button.addEventListener('click', openSettings));
+  registerArcadeDialog({ id: 'settings', overlay: activeOverlay, priority: 80, dismiss: closeSettings, initialFocus: () => closeButton });
   closeButton?.addEventListener('click', closeSettings);
   activeOverlay.addEventListener('click', event => { if (event.target === activeOverlay) closeSettings(); });
-  window.addEventListener('keydown', event => {
-    if (activeOverlay.hidden) return;
-    if (event.key === 'Escape') closeSettings();
-    if (event.key !== 'Tab') return;
-    const focusable = Array.from(activePanel.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), select:not(:disabled)'));
-    if (!focusable.length) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-  });
   soundToggle?.addEventListener('change', () => {
     settings.soundEnabled = soundToggle.checked;
     applySettings();

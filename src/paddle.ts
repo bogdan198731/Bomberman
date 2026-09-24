@@ -235,7 +235,9 @@ export function initPaddleClash(): void {
     }
     if (mintScore) mintScore.textContent = String(game.players[1].score);
     if (coralScore) coralScore.textContent = String(game.players[2].score);
-    coralControls?.classList.toggle('solo-hidden', practiceBot && !room?.session().online);
+    const touchSession = room?.session();
+    document.getElementById('paddleMintControls')?.classList.toggle('solo-hidden', Boolean(touchSession?.online && touchSession.playerId === 2));
+    coralControls?.classList.toggle('solo-hidden', touchSession?.online ? touchSession.playerId !== 2 : practiceBot);
     if (serveButton) {
       serveButton.disabled = game.phase !== 'ready';
       serveButton.textContent = game.phase === 'finished' ? 'Match over' : 'Serve ball';
@@ -396,7 +398,7 @@ export function initPaddleClash(): void {
       mount: roomMount,
       offlineModes: [
         { id: 'bot', label: 'Practice bot', description: 'Drag the Mint paddle directly or use W/S.', onSelect: () => { practiceBot = true; game.restart(); syncUi(); render(); } },
-        { id: 'local', label: 'Local 2P', description: 'Two players share this device.', onSelect: () => { game.restart(); syncUi(); render(); } },
+        { id: 'local', label: 'Local 2P', description: 'Two players share this device.', onSelect: () => { practiceBot = false; game.restart(); syncUi(); render(); } },
       ],
       initialOfflineMode: 'bot',
       onSessionChange: session => {

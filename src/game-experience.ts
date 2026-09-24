@@ -1,3 +1,5 @@
+import { closeArcadeDialog, dismissArcadeDialogs, openArcadeDialog, registerArcadeDialog } from './dialogs.js';
+import { arcadeSessionMode, clearArcadePause } from './session-control.js';
 import { currentArcadeLanguage, translateArcadeText } from './i18n.js';
 import { circuitCurrentGame, circuitIsComplete, loadCircuitProgress } from './circuit.js';
 import { GAME_META, type ArcadeGameId, type ArcadeResult } from './stats.js';
@@ -14,20 +16,20 @@ interface GuideCopy {
 const copy = (en: string, ro: string): [string, string] => [en, ro];
 export const GAME_GUIDES: Record<ArcadeGameId, GuideCopy> = {
   bomberman: {
-    objective: copy('Trap Coral with an explosion and be the last buddy standing.', 'Prinde-l pe Coral într-o explozie și rămâi ultimul jucător în viață.'),
+    objective: copy('Trap your opponent with an explosion and be the last buddy standing.', 'Prinde adversarul într-o explozie și rămâi ultimul jucător în viață.'),
     controls: copy('Move with WASD, arrows, or the joystick. Place a bomb with Space, Enter, or Bomb.', 'Mișcă-te cu WASD, săgețile sau joystickul. Pune o bombă cu Spațiu, Enter sau Bombă.'),
     rules: [copy('Practice: place one bomb beside a crate, then turn a corner before its fuse ends.', 'Exercițiu: pune o bombă lângă o ladă, apoi treci după colț înainte să expire fitilul.'), copy('Bomb Up adds capacity, Fire Up extends the blast, and Speed Up improves movement.', 'Bomb Up mărește capacitatea, Fire Up extinde explozia, iar Speed Up grăbește mișcarea.'), copy('First to 3 rounds wins; danger tiles appear late to stop stalemates.', 'Primul la 3 runde câștigă; spre final apar zone periculoase pentru a evita blocajele.')],
     tip: copy('Never place a bomb without spotting an escape corner first.', 'Nu pune o bombă înainte să vezi un colț sigur pentru retragere.'),
   },
   tintar: {
-    objective: copy('Form mills—three pieces in a line—to capture pieces and reduce Coral below three.', 'Formează mori—trei piese în linie—pentru a captura și a-l lăsa pe Coral cu mai puțin de trei.'),
+    objective: copy('Form mills—three pieces in a line—to capture pieces and reduce your opponent below three.', 'Formează mori—trei piese în linie—pentru a captura și a lăsa adversarul cu mai puțin de trei.'),
     controls: copy('Tap or click a highlighted point. In movement, select a piece then its destination.', 'Apasă un punct evidențiat. La mutare, alege o piesă și apoi destinația.'),
     rules: [copy('Placement: players alternate placing all nine pieces.', 'Așezare: jucătorii pun alternativ toate cele nouă piese.'), copy('A new mill lets you remove one unprotected rival piece.', 'O moară nouă îți permite să elimini o piesă adversă neprotejată.'), copy('Movement follows lines; with only three pieces you may fly anywhere.', 'Mutarea urmează liniile; cu doar trei piese poți zbura oriunde.')],
     tip: copy('Build two nearly complete mills so one move can reopen either threat.', 'Construiește două mori aproape complete pentru a putea redeschide oricare amenințare.'),
   },
   paddle: {
-    objective: copy('Return the ball past Coral. The first player to 7 wins.', 'Trimite mingea dincolo de Coral. Primul jucător la 7 puncte câștigă.'),
-    controls: copy('Practice: drag the Mint paddle directly. Keyboard uses W/S; local Coral uses arrows.', 'Antrenament: trage direct paleta Mint. Tastatura folosește W/S; Coral local folosește săgețile.'),
+    objective: copy('Return the ball past your opponent. The first player to 7 wins.', 'Trimite mingea dincolo de adversar. Primul jucător la 7 puncte câștigă.'),
+    controls: copy('Move your paddle with its on-screen joystick. In solo, you can also drag the Mint paddle directly.', 'Mișcă paleta cu joystickul de pe ecran. Solo, poți și să tragi direct paleta Mint.'),
     rules: [copy('Hit nearer a paddle edge for a sharper angle.', 'Lovește mai aproape de marginea paletei pentru un unghi mai ascuțit.'), copy('Long rallies gradually accelerate the ball.', 'Schimburile lungi accelerează treptat mingea.')],
     tip: copy('Return toward open space instead of chasing the ball at the last moment.', 'Trimite spre spațiul liber în loc să urmărești mingea în ultima clipă.'),
   },
@@ -50,7 +52,7 @@ export const GAME_GUIDES: Record<ArcadeGameId, GuideCopy> = {
     tip: copy('Save sevens to contest valuable ace-and-ten tricks.', 'Păstrează șeptarii pentru mesele valoroase cu ași și zecari.'),
   },
   survival: {
-    objective: copy('Survive waves, protect the center, and build a stronger loadout.', 'Supraviețuiește valurilor, apără centrul și construiește un echipament mai puternic.'),
+    objective: copy('Survive waves and build a stronger loadout.', 'Supraviețuiește valurilor și construiește un echipament mai puternic.'),
     controls: copy('Move with the joystick/WASD. Hold Fire, or enable Auto-fire, to shoot the nearest enemy.', 'Mișcă-te cu joystickul/WASD. Ține Foc sau activează Foc automat pentru a trage în cel mai apropiat inamic.'),
     rules: [copy('Fast scouts flank; heavy enemies are slower but tougher.', 'Cercetașii rapizi flanchează; inamicii grei sunt mai lenți, dar rezistenți.'), copy('Choose one upgrade between waves instead of receiving a fixed bonus.', 'Alege o îmbunătățire între valuri în locul unui bonus fix.')],
     tip: copy('Keep moving across the center so auto-aim can isolate the nearest threat.', 'Mișcă-te prin centru pentru ca țintirea automată să izoleze amenințarea apropiată.'),
@@ -62,13 +64,13 @@ export const GAME_GUIDES: Record<ArcadeGameId, GuideCopy> = {
     tip: copy('Clear one side first to create a safe lane through enemy fire.', 'Curăță întâi o parte pentru a crea un culoar sigur printre proiectile.'),
   },
   racing: {
-    objective: copy('Pass checkpoints in order and finish three laps before Coral.', 'Treci punctele de control în ordine și termină trei ture înaintea lui Coral.'),
+    objective: copy('Pass checkpoints in order and finish three laps before your opponent.', 'Treci punctele de control în ordine și termină trei ture înaintea adversarului.'),
     controls: copy('Steer left/right; hold Go or enable Auto-accelerate. Brake for tight turns.', 'Virează stânga/dreapta; ține Accelerează sau activează Auto-accelerare. Frânează în viraje strânse.'),
     rules: [copy('The highlighted gate and arrow show your next checkpoint.', 'Poarta evidențiată și săgeata indică următorul punct de control.'), copy('Turbo bolts give a short speed boost.', 'Bonusurile turbo oferă o creștere scurtă de viteză.')],
     tip: copy('Release steering just before exiting a corner to settle the car.', 'Eliberează direcția chiar înainte de ieșirea din viraj pentru a stabiliza mașina.'),
   },
   blocks: {
-    objective: copy('Clear lines and send garbage until Coral tops out.', 'Elimină linii și trimite blocuri până când Coral nu mai are loc.'),
+    objective: copy('Clear lines and send garbage until your opponent tops out.', 'Elimină linii și trimite blocuri până când adversarul nu mai are loc.'),
     controls: copy('Move, rotate, soft drop, or hard drop with the on-screen controls or keyboard.', 'Mută, rotește, coboară lent sau instant cu comenzile de pe ecran ori tastatura.'),
     rules: [copy('The ghost shows exactly where the piece will land.', 'Umbra arată exact unde va ateriza piesa.'), copy('Clearing multiple lines sends more garbage; clears can cancel incoming rows.', 'Eliminarea mai multor linii trimite mai multe blocuri; liniile pot anula rândurile primite.')],
     tip: copy('Keep one vertical well open for the long I piece.', 'Păstrează un puț vertical liber pentru piesa I lungă.'),
@@ -89,15 +91,27 @@ export const GAME_GUIDES: Record<ArcadeGameId, GuideCopy> = {
 
 const REPLAY_SELECTORS: Record<ArcadeGameId, string> = {
   bomberman: '#restartButton', tintar: '#tintarRevengeButton, #tintarRestartButton', paddle: '#paddleRestartButton',
-  snake: '#snakeRestartButton', tanks: '#tanksRestartButton', septica: '#septicaRestartButton',
-  survival: '#survivalRestartButton', star: '#starRestartButton', racing: '#racingRestartButton',
-  blocks: '#blocksRestartButton', twenty48: '[data-twenty48-reset]', sudoku: '[data-sudoku-new]',
+  snake: '#snakeStartButton', tanks: '#tanksLaunchButton', septica: '#septicaRestartButton',
+  survival: '#survivalStartButton', star: '#starStartButton', racing: '#racingStartButton',
+  blocks: '#blocksStartButton', twenty48: '[data-twenty48-reset]', sudoku: '[data-sudoku-new]',
 };
 
 const RESULT_STATUS_SELECTORS: Record<ArcadeGameId, string> = {
   bomberman: '#statusText', tintar: '#tintarStatus', paddle: '#paddleStatus', snake: '#snakeStatus',
   tanks: '#tanksStatus', septica: '#septicaStatus', survival: '#survivalStatus', star: '#starStatus',
   racing: '#racingStatus', blocks: '#blocksStatus', twenty48: '#twenty48Status', sudoku: '#sudokuStatus',
+};
+
+
+const KEYBOARD_CONTROLS: Partial<Record<ArcadeGameId, [string, string]>> = {
+  bomberman: copy('Mint: WASD + Space for bombs. Coral: arrow keys + Enter for bombs.', 'Mint: WASD + Spațiu pentru bombe. Coral: săgeți + Enter pentru bombe.'),
+  paddle: copy('Mint: W/S. Coral: Up/Down arrows. Space serves the ball.', 'Mint: W/S. Coral: săgețile Sus/Jos. Spațiu servește mingea.'),
+  snake: copy('Mint: WASD. Coral: arrow keys. Space starts the run.', 'Mint: WASD. Coral: săgețile. Spațiu pornește jocul.'),
+  racing: copy('Mint: A/D steer, W accelerates, S brakes. Coral: Left/Right steer, Up accelerates, Down brakes. Space starts a race.', 'Mint: A/D virează, W accelerează, S frânează. Coral: Stânga/Dreapta virează, Sus accelerează, Jos frânează. Spațiu pornește cursa.'),
+  blocks: copy('Mint: A/D move, W rotates, S soft drops, F hard drops. Coral: Left/Right move, Up rotates, Down soft drops, Enter hard drops.', 'Mint: A/D mută, W rotește, S coboară lent, F coboară instant. Coral: Stânga/Dreapta mută, Sus rotește, Jos coboară lent, Enter coboară instant.'),
+  tanks: copy('Mint: WASD to move/aim, F to fire. Coral: arrow keys to move/aim, Enter to fire.', 'Mint: WASD pentru mișcare/țintire, F pentru foc. Coral: săgeți pentru mișcare/țintire, Enter pentru foc.'),
+  survival: copy('Mint: WASD to move, F to fire. Coral: arrow keys to move, Enter to fire. Auto-fire is optional.', 'Mint: WASD pentru mișcare, F pentru foc. Coral: săgeți pentru mișcare, Enter pentru foc. Focul automat este opțional.'),
+  star: copy('Mint: WASD to move, F to fire. Coral in co-op: arrow keys and Enter. In solo, either movement key set controls Mint.', 'Mint: WASD pentru mișcare, F pentru foc. Coral în cooperare: săgeți și Enter. Solo: ambele seturi de direcție controlează Mint.'),
 };
 
 function localized(pair: [string, string]): string { return pair[currentArcadeLanguage() === 'ro' ? 1 : 0]; }
@@ -122,6 +136,7 @@ export function initGameExperience(): void {
   guideOverlay.innerHTML = '<section class="game-help-card" role="dialog" aria-modal="true" aria-labelledby="gameHelpTitle"><span class="game-help-kicker"></span><h2 id="gameHelpTitle"></h2><p class="game-help-objective"></p><h3></h3><p class="game-help-controls"></p><ol class="game-help-rules"></ol><p class="game-help-tip"></p><button class="game-help-close" type="button"></button></section>';
   document.body.append(guideOverlay);
   let activeGuide: ArcadeGameId = 'bomberman';
+  let guideTimer = 0;
 
   const renderGuide = (gameId: ArcadeGameId): void => {
     activeGuide = gameId;
@@ -131,21 +146,31 @@ export function initGameExperience(): void {
     guideOverlay.querySelector<HTMLElement>('#gameHelpTitle')!.textContent = GAME_META[gameId].name;
     guideOverlay.querySelector<HTMLElement>('.game-help-objective')!.textContent = localized(guide.objective);
     guideOverlay.querySelector<HTMLElement>('h3')!.textContent = ro ? 'Comenzi și reguli' : 'Controls & rules';
-    guideOverlay.querySelector<HTMLElement>('.game-help-controls')!.textContent = localized(guide.controls);
+    const touch = document.documentElement.dataset.touchControls === 'on' || (document.documentElement.dataset.touchControls !== 'off' && matchMedia('(pointer: coarse), (max-width: 700px)').matches);
+    const controls = touch ? guide.controls : KEYBOARD_CONTROLS[gameId] ?? guide.controls;
+    const mode = arcadeSessionMode(gameId);
+    const online = mode === 'online';
+    const roleNote = !online && GAME_META[gameId].modes.includes('local')
+      ? localized(mode === 'solo'
+        ? copy('Solo: you control Mint.', 'Solo: controlezi Mint.')
+        : copy('Same device: each player uses the controls for their color.', 'Același dispozitiv: fiecare jucător folosește comenzile culorii sale.'))
+      : '';
+    const liveNote = online ? localized(copy('Online match stays live while this guide is open. Use the controls for your assigned player.', 'Meciul online continuă cât timp ghidul este deschis. Folosește comenzile jucătorului tău.')) : '';
+    guideOverlay.querySelector<HTMLElement>('.game-help-controls')!.textContent = [liveNote, roleNote, localized(controls)].filter(Boolean).join(' ');
     const list = guideOverlay.querySelector<HTMLOListElement>('.game-help-rules')!;
     list.replaceChildren(...guide.rules.map(rule => {
       const item = document.createElement('li'); item.textContent = localized(rule); return item;
     }));
     guideOverlay.querySelector<HTMLElement>('.game-help-tip')!.textContent = `${ro ? 'Sfat' : 'Player tip'}: ${localized(guide.tip)}`;
-    guideOverlay.querySelector<HTMLButtonElement>('.game-help-close')!.textContent = ro ? 'Am înțeles — joacă' : 'Got it — play';
+    guideOverlay.querySelector<HTMLButtonElement>('.game-help-close')!.textContent = ro ? 'Am înțeles' : 'Got it';
   };
   const openGuide = (gameId: ArcadeGameId): void => {
+    window.clearTimeout(guideTimer);
     renderGuide(gameId);
-    guideOverlay.hidden = false;
-    saveSeen(gameId);
-    guideOverlay.querySelector<HTMLButtonElement>('.game-help-close')?.focus();
+    openArcadeDialog('help');
   };
-  const closeGuide = (): void => { guideOverlay.hidden = true; };
+  const closeGuide = (): void => { saveSeen(activeGuide); closeArcadeDialog('help'); };
+  registerArcadeDialog({ id: 'help', overlay: guideOverlay, priority: 70, dismiss: closeGuide });
   guideOverlay.querySelector('.game-help-close')?.addEventListener('click', closeGuide);
   guideOverlay.addEventListener('click', event => { if (event.target === guideOverlay) closeGuide(); });
 
@@ -157,6 +182,7 @@ export function initGameExperience(): void {
     const button = document.createElement('button');
     button.type = 'button'; button.className = 'game-help-button'; button.dataset.gameHelp = gameId;
     button.textContent = '? How to play';
+    button.setAttribute('aria-label', 'How to play');
     button.addEventListener('click', () => openGuide(gameId));
     actions.insertBefore(button, actions.querySelector('[data-pause-game]'));
   });
@@ -164,15 +190,35 @@ export function initGameExperience(): void {
   const resultOverlay = document.createElement('div');
   resultOverlay.className = 'arcade-result-overlay';
   resultOverlay.hidden = true;
-  resultOverlay.innerHTML = '<section class="arcade-result-card" role="dialog" aria-modal="true" aria-labelledby="arcadeResultTitle"><span class="arcade-result-kicker"></span><h2 id="arcadeResultTitle"></h2><p class="arcade-result-explanation"></p><div class="arcade-result-actions"><button type="button" data-result-replay></button><button type="button" data-result-next hidden></button><button type="button" data-result-close></button></div></section>';
+  resultOverlay.innerHTML = '<section class="arcade-result-card" role="dialog" aria-modal="true" aria-labelledby="arcadeResultTitle"><span class="arcade-result-kicker"></span><h2 id="arcadeResultTitle"></h2><p class="arcade-result-explanation"></p><div class="arcade-result-actions"><button type="button" data-result-replay></button><button type="button" data-result-continue hidden>Continue playing</button><button type="button" data-result-next hidden></button><button type="button" data-result-close></button></div></section>';
   document.body.append(resultOverlay);
   let resultGame: ArcadeGameId = 'bomberman';
-  const closeResult = (): void => { resultOverlay.hidden = true; };
+  window.addEventListener('arcade-restart-active', () => {
+    const gameId = document.body.dataset.view as ArcadeGameId;
+    const reset: Record<ArcadeGameId, string> = {
+      bomberman: '#restartButton', tintar: '#tintarRestartButton', paddle: '#paddleRestartButton',
+      snake: '#snakeRestartButton', tanks: '#tanksRestartButton', septica: '#septicaRestartButton',
+      survival: '#survivalRestartButton', star: '#starRestartButton', racing: '#racingRestartButton',
+      blocks: '#blocksRestartButton', twenty48: '[data-twenty48-reset]', sudoku: '[data-sudoku-new]',
+    };
+    if (!reset[gameId]) return;
+    // These reset handlers confirm progress loss and clear pause only after acceptance.
+    if (!['sudoku', 'twenty48', 'septica', 'tintar'].includes(gameId)) {
+      dismissArcadeDialogs(); clearArcadePause();
+    }
+    document.querySelector<HTMLElement>(reset[gameId])?.click();
+  });
+  const closeResult = (): void => { closeArcadeDialog('result'); };
+  registerArcadeDialog({ id: 'result', overlay: resultOverlay, priority: 100, dismiss: closeResult });
+  document.body.classList.add('arcade-managed-results');
   resultOverlay.querySelector('[data-result-close]')?.addEventListener('click', closeResult);
   resultOverlay.querySelector('[data-result-replay]')?.addEventListener('click', () => {
     closeResult();
+    clearArcadePause();
     document.querySelector<HTMLElement>(REPLAY_SELECTORS[resultGame])?.click();
+    if (resultGame === 'paddle') document.getElementById('paddleServeButton')?.click();
   });
+  resultOverlay.querySelector('[data-result-continue]')?.addEventListener('click', () => { closeResult(); clearArcadePause(); document.getElementById('twenty48ContinueButton')?.click(); });
   resultOverlay.querySelector('[data-result-next]')?.addEventListener('click', () => {
     const circuit = loadCircuitProgress().current;
     const next = circuit && !circuitIsComplete(circuit) ? circuitCurrentGame(circuit) : null;
@@ -183,14 +229,22 @@ export function initGameExperience(): void {
   });
 
   window.addEventListener('arcade-view-changed', event => {
-    closeResult();
+    window.clearTimeout(guideTimer);
+    dismissArcadeDialogs();
     const view = (event as CustomEvent<{ view?: string }>).detail?.view as ArcadeGameId | undefined;
-    if (view && GAME_GUIDES[view] && !seenGuides().has(view)) window.setTimeout(() => openGuide(view), 180);
+    if (view && GAME_GUIDES[view] && !seenGuides().has(view)) {
+      guideTimer = window.setTimeout(() => {
+        if (document.body.dataset.view === view) openGuide(view);
+      }, 180);
+    }
   });
   window.addEventListener('arcade-language-change', () => { if (!guideOverlay.hidden) renderGuide(activeGuide); });
   window.addEventListener('arcade-game-result', event => {
     const detail = (event as CustomEvent<{ gameId: ArcadeGameId; result: ArcadeResult }>).detail;
-    if (!detail || !GAME_GUIDES[detail.gameId]) return;
+    if (!detail || !GAME_GUIDES[detail.gameId] || document.body.dataset.view !== detail.gameId) return;
+    window.clearTimeout(guideTimer);
+    dismissArcadeDialogs('result');
+    clearArcadePause();
     resultGame = detail.gameId;
     const ro = currentArcadeLanguage() === 'ro';
     const label = detail.result.outcome === 'win' ? (ro ? 'VICTORIE' : 'VICTORY')
@@ -213,7 +267,9 @@ export function initGameExperience(): void {
     const next = circuit && !circuitIsComplete(circuit) ? circuitCurrentGame(circuit) : null;
     nextButton.hidden = !next;
     if (next) nextButton.textContent = `${ro ? 'Etapa următoare' : 'Next stage'} · ${GAME_META[next].name}`;
-    resultOverlay.hidden = false;
-    resultOverlay.querySelector<HTMLButtonElement>('[data-result-replay]')?.focus();
+    const keepPlaying = resultOverlay.querySelector<HTMLButtonElement>('[data-result-continue]')!;
+    keepPlaying.hidden = detail.gameId !== 'twenty48' || document.getElementById('twenty48ContinueButton')?.hidden !== false;
+    keepPlaying.textContent = ro ? 'Continuă jocul' : 'Continue playing';
+    openArcadeDialog('result');
   });
 }
