@@ -1,5 +1,5 @@
-import { createReadStream, existsSync, statSync } from 'node:fs';
-import { createServer } from 'node:http';
+import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
+import { createServer, type ServerResponse } from 'node:http';
 import { networkInterfaces } from 'node:os';
 import { extname, join, normalize } from 'node:path';
 import { WebSocketServer, type WebSocket } from 'ws';
@@ -11,6 +11,7 @@ import {
 } from './multiplayer.js';
 import { InviteRoom, isOnlineGameId, isRelayPayload, type OnlineGameId, type RelayPlayerId } from './relay.js';
 import { MatchmakingQueue } from './matchmaking.js';
+import { buildRobotsTxt, buildSitemapXml, gameFromPath, renderPageForView, type SeoView } from './seo.js';
 
 const PORT = Number(process.env.PORT || 4173);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -32,16 +33,72 @@ const mimeTypes: Record<string, string> = {
   '.map': 'application/json; charset=utf-8',
   '.png': 'image/png',
   '.webp': 'image/webp',
+  '.txt': 'text/plain; charset=utf-8',
+  '.xml': 'application/xml; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
 };
+
+const indexPath = join(root, 'index.html');
+let indexCache: { mtimeMs: number; html: string } | undefined;
+
+/** index.html rarely changes, so parse it once per deploy rather than per request. */
+function readIndexHtml(): string {
+  const { mtimeMs } = statSync(indexPath);
+  if (!indexCache || indexCache.mtimeMs !== mtimeMs) {
+    indexCache = { mtimeMs, html: readFileSync(indexPath, 'utf8') };
+  }
+  return indexCache.html;
+}
+
+function sitemapLastModified(): string {
+  return new Date(statSync(indexPath).mtimeMs).toISOString().slice(0, 10);
+}
+
+function sendText(response: ServerResponse, body: string, type: string, cacheControl: string): void {
+  response.writeHead(200, {
+    'Content-Type': type,
+    'Cache-Control': cacheControl,
+    'Content-Length': Buffer.byteLength(body),
+  });
+  response.end(body);
+}
+
+/** Assets are unhashed, so they revalidate; only the stable images get cached hard. */
+function cacheControlFor(publicPath: string): string {
+  if (publicPath.startsWith('public/') && /\.(png|webp|svg|ico)$/.test(publicPath)) {
+    return 'public, max-age=604800';
+  }
+  return 'no-cache';
+}
 
 const server = createServer((request, response) => {
   const requestPath = new URL(request.url || '/', `http://${request.headers.host}`).pathname;
-  const relativePath = requestPath === '/' ? 'index.html' : requestPath.slice(1);
-  const safePath = normalize(relativePath).replace(/^(\.\.[/\\])+/, '');
+
+  if (requestPath === '/robots.txt') {
+    sendText(response, buildRobotsTxt(), mimeTypes['.txt'], 'public, max-age=86400');
+    return;
+  }
+  if (requestPath === '/sitemap.xml') {
+    sendText(response, buildSitemapXml(sitemapLastModified()), mimeTypes['.xml'], 'public, max-age=86400');
+    return;
+  }
+
+  // The hub and every /play/<game> route render the same shell with route-specific
+  // metadata, so crawlers see real titles and canonicals without running JavaScript.
+  const routedGame = gameFromPath(requestPath);
+  const isShellRoute = requestPath === '/' || requestPath === '/index.html' || Boolean(routedGame);
+  if (isShellRoute) {
+    const view: SeoView = routedGame ?? 'hub';
+    sendText(response, renderPageForView(readIndexHtml(), view), mimeTypes['.html'], 'no-cache');
+    return;
+  }
+
+  // An unknown /play/<something> is a genuine 404, not the hub in disguise.
+  const safePath = normalize(requestPath.slice(1)).replace(/^(\.\.[/\\])+/, '');
   const publicPath = safePath.replace(/\\/g, '/');
   const filePath = join(root, safePath);
   const isPublicFile =
-    publicPath === 'index.html' ||
     publicPath === 'service-worker.js' ||
     publicPath.startsWith('dist/') ||
     publicPath.startsWith('public/');
@@ -59,7 +116,7 @@ const server = createServer((request, response) => {
 
   response.writeHead(200, {
     'Content-Type': mimeTypes[extname(filePath)] || 'application/octet-stream',
-    'Cache-Control': 'no-store',
+    'Cache-Control': cacheControlFor(publicPath),
   });
   createReadStream(filePath).pipe(response);
 });

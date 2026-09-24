@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blast-arcade-ux-2026-09-23';
+const CACHE_NAME = 'blast-arcade-seo-2026-09-24';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -43,6 +43,7 @@ const APP_SHELL = [
   '/dist/tanks.js',
   '/dist/tintar.js',
   '/dist/touch-controls.js',
+  '/dist/seo.js',
 ];
 
 self.addEventListener('install', event => {
@@ -66,7 +67,10 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin || url.pathname === '/service-worker.js') return;
-  const cacheKey = request.mode === 'navigate' ? '/' : request;
+  // Each route returns its own metadata, so navigations cache under their own
+  // path and fall back to the hub shell when that exact page was never visited.
+  const isNavigation = request.mode === 'navigate';
+  const cacheKey = isNavigation ? url.pathname : request;
   event.respondWith(
     fetch(request)
       .then(response => {
@@ -76,6 +80,8 @@ self.addEventListener('fetch', event => {
         }
         return response;
       })
-      .catch(() => caches.match(cacheKey).then(response => response || Response.error())),
+      .catch(() => caches.match(cacheKey)
+        .then(response => response || (isNavigation ? caches.match('/') : undefined))
+        .then(response => response || Response.error())),
   );
 });
