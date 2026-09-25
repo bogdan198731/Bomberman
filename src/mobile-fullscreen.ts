@@ -11,6 +11,16 @@
 export const IMMERSIVE_STORAGE_KEY = 'blast-arcade-immersive-v1';
 export const IMMERSIVE_BODY_CLASS = 'immersive-play';
 export const IMMERSIVE_FALLBACK_CLASS = 'immersive-fallback';
+/**
+ * Announced immediately before a fullscreen request or exit. Mobile browsers
+ * blur the window across that transition, and the pause logic must not read
+ * that as the player leaving.
+ */
+export const FULLSCREEN_TRANSITION_EVENT = 'arcade-fullscreen-transition';
+
+function announceTransition(): void {
+  window.dispatchEvent(new CustomEvent(FULLSCREEN_TRANSITION_EVENT));
+}
 
 interface ImmersiveStorage {
   getItem(key: string): string | null;
@@ -88,6 +98,7 @@ export function initMobileImmersiveMode(): ImmersiveController | undefined {
   const release = (): void => {
     applyClasses(false, false);
     if (inNativeFullscreen() && typeof document.exitFullscreen === 'function') {
+      announceTransition();
       void document.exitFullscreen().catch(() => undefined);
     }
   };
@@ -103,6 +114,7 @@ export function initMobileImmersiveMode(): ImmersiveController | undefined {
         return;
       }
       if (typeof root.requestFullscreen !== 'function') return;
+      announceTransition();
       try {
         await root.requestFullscreen({ navigationUI: 'hide' } as FullscreenOptions);
         applyClasses(true, false);

@@ -65,8 +65,10 @@ test('the hub is never immersive, every game is', () => {
 });
 
 /** Minimal DOM/window doubles so the controller can be exercised headlessly. */
-function immersiveHarness(options: { coarse?: boolean; fullscreenApi?: boolean; reject?: boolean } = {}) {
-  const { coarse = true, fullscreenApi = true, reject = false } = options;
+function immersiveHarness(
+  options: { coarse?: boolean; fullscreenApi?: boolean; reject?: boolean; announce?: string[] } = {},
+) {
+  const { coarse = true, fullscreenApi = true, reject = false, announce } = options;
   const classes = new Set<string>();
   const listeners = new Map<string, ((event: Event) => void)[]>();
   const store = new Map<string, string>();
@@ -76,6 +78,7 @@ function immersiveHarness(options: { coarse?: boolean; fullscreenApi?: boolean; 
   const root: Record<string, unknown> = {};
   if (fullscreenApi) {
     root.requestFullscreen = async () => {
+      announce?.push('request');
       if (reject) throw new Error('refused');
       fullscreenElement = root;
     };
@@ -101,10 +104,17 @@ function immersiveHarness(options: { coarse?: boolean; fullscreenApi?: boolean; 
       listeners.set(type, [...(listeners.get(type) ?? []), fn]);
     },
     removeEventListener() {},
+    dispatchEvent(event: Event) {
+      if (event.type === 'arcade-fullscreen-transition') announce?.push('announce');
+      (listeners.get(event.type) ?? []).forEach(fn => fn(event));
+      return true;
+    },
   };
   const globals = {
     document: doc,
     window: win,
+    CustomEvent: class { type: string; detail: unknown;
+      constructor(type: string, init?: { detail?: unknown }) { this.type = type; this.detail = init?.detail; } },
     localStorage: {
       getItem: (k: string) => store.get(k) ?? null,
       setItem: (k: string, v: string) => { store.set(k, v); },
@@ -205,4 +215,39 @@ test('the page carries the immersive styles and the opt-out control', () => {
   assert.match(html, /id="settingsImmersive"/);
   // The viewport has to opt into the safe-area insets for env() to resolve.
   assert.match(html, /viewport-fit=cover/);
+});
+
+test('a fullscreen transition announces itself before touching the API', async () => {
+  // Order matters: mobile browsers blur the window as the request is made, so
+  // the announcement has to precede the call, not follow it.
+  const order: string[] = [];
+  const harness = immersiveHarness({ announce: order });
+  try {
+    initMobileImmersiveMode()?.update('bomberman');
+    await Promise.resolve();
+    await Promise.resolve();
+    assert.deepEqual(order, ['announce', 'request'], 'announce first, then request fullscreen');
+  } finally {
+    harness.restore();
+  }
+});
+
+test('the pause overlay never covers live touch controls', () => {
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  // The overlay outranks the controls by design, so the only safe guarantee is
+  // that a fullscreen switch cannot be what raises it.
+  const session = readFileSync(new URL('../src/session-control.ts', import.meta.url), 'utf8');
+  assert.match(
+    session,
+    /window\.addEventListener\('blur', \(\) => \{\s*if \(duringFullscreenSwitch\(\)\) return;/,
+    'a blur during a fullscreen switch must not pause the game',
+  );
+  assert.match(
+    session,
+    /if \(!document\.hidden\) \{ setBlockingReason\('visibility', false\); return; \}\s*if \(duringFullscreenSwitch\(\)\) return;/,
+    'nor may a visibility blip during that switch',
+  );
+  assert.match(session, /window\.addEventListener\(FULLSCREEN_TRANSITION_EVENT, markFullscreenSwitch\)/);
+  assert.match(session, /document\.addEventListener\('fullscreenchange', markFullscreenSwitch\)/);
+  assert.ok(html.includes('arcade-session-overlay'), 'the overlay still exists for real pauses');
 });

@@ -1,4 +1,5 @@
 import type { ArcadeGameId } from './stats.js';
+import { FULLSCREEN_TRANSITION_EVENT } from './mobile-fullscreen.js';
 import { closeArcadeDialog, isDialogOpen, openArcadeDialog, registerArcadeDialog } from './dialogs.js';
 import { SessionState, type Interruption } from './session-state.js';
 import { translateArcadeText } from './i18n.js';
@@ -240,9 +241,28 @@ export function initArcadeSessionControl(): void {
   });
   window.addEventListener('arcade-language-change', renderPauseOverlay);
   window.addEventListener('arcade-game-result', clearArcadePause);
-  window.addEventListener('blur', () => setBlockingReason('focus', true));
+  /*
+   * Entering or leaving fullscreen blurs the window on mobile browsers. That
+   * is the immersive layout switching, not the player walking away, so it must
+   * not pause the game and drop the pause overlay over the touch controls.
+   */
+  let lastFullscreenChange = 0;
+  const duringFullscreenSwitch = (): boolean => Date.now() - lastFullscreenChange < 1500;
+  const markFullscreenSwitch = (): void => { lastFullscreenChange = Date.now(); };
+  // The request fires before the browser blurs us; the change event after it.
+  window.addEventListener(FULLSCREEN_TRANSITION_EVENT, markFullscreenSwitch);
+  document.addEventListener('fullscreenchange', markFullscreenSwitch);
+
+  window.addEventListener('blur', () => {
+    if (duringFullscreenSwitch()) return;
+    setBlockingReason('focus', true);
+  });
   window.addEventListener('focus', () => setBlockingReason('focus', false));
-  document.addEventListener('visibilitychange', () => setBlockingReason('visibility', document.hidden));
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) { setBlockingReason('visibility', false); return; }
+    if (duringFullscreenSwitch()) return;
+    setBlockingReason('visibility', true);
+  });
   window.addEventListener('arcade-view-leaving', () => {
     const registration = registrationForActiveView();
     if (registration?.isActive() && registration.mode() !== 'online') suspendedGames.add(registration.gameId);
