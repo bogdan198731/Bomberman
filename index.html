@@ -5513,23 +5513,6 @@
       grid-row: 3;
     }
 
-    .touch-swap-button {
-      display: none;
-      min-height: 34px;
-      padding: 0 10px;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      border: 1px solid rgba(255, 255, 255, .16);
-      border-radius: 11px;
-      color: var(--ink);
-      background: rgba(255, 255, 255, .05);
-      cursor: pointer;
-      font: inherit;
-      font-size: .62rem;
-      font-weight: 900;
-      white-space: nowrap;
-    }
 
     .bomberman-local-restart {
       grid-column: 1 / -1;
@@ -6750,6 +6733,7 @@
       .game-room-actions button,
       .game-room-join input { min-height: 44px; }
 
+      .paddle-touch-controls:has(.solo-hidden),
       .snake-touch-controls:has(.solo-hidden),
       .tanks-touch-controls:has(.solo-hidden) { grid-template-columns: 1fr; }
 
@@ -6757,6 +6741,28 @@
       .tanks-touch-controls:has(.solo-hidden) > :not(.solo-hidden) {
         width: min(100%, 420px);
         margin-inline: auto;
+      }
+
+      /*
+       * Games whose solo pad is a single cluster - a lone joystick (Paddle
+       * Clash, Neon Snake) or a button group (Block Drop) - have nothing to
+       * mirror internally, so the whole cluster moves to the chosen side.
+       */
+      :is(.paddle-touch-controls, .snake-touch-controls, .block-touch-controls)[data-touch-layout]:has(.solo-hidden)
+      > :not(.solo-hidden) {
+        /* Hug the controls, or the side shift just moves a wide empty block. */
+        width: max-content;
+        max-width: min(100%, 420px);
+      }
+
+      :is(.paddle-touch-controls, .snake-touch-controls, .block-touch-controls)[data-touch-layout="joystick-right"]:has(.solo-hidden)
+      > :not(.solo-hidden) {
+        margin-inline: auto 0;
+      }
+
+      :is(.paddle-touch-controls, .snake-touch-controls, .block-touch-controls)[data-touch-layout="joystick-left"]:has(.solo-hidden)
+      > :not(.solo-hidden) {
+        margin-inline: 0 auto;
       }
 
       /* Match Blast Buddies' one-handed action-left, joystick-right layout. */
@@ -6843,11 +6849,6 @@
       .racing-touch-controls:has(.solo-hidden) .racing-pedal { min-height: 50px; }
 
       /* One-handed swap: mirror the joystick and the action control. */
-      .tanks-touch-controls:has(.solo-hidden) > .touch-swap-button {
-        display: inline-flex;
-        margin: 6px auto 0;
-        grid-column: 1 / -1;
-      }
 
       .tanks-touch-controls[data-touch-layout="joystick-left"]:has(.solo-hidden)
       > .joystick-team:has(.tank-touch-button.fire):not(.solo-hidden) > .arcade-joystick {
@@ -7281,8 +7282,7 @@
         pointer-events: auto;
       }
 
-      #gameView .mobile-round-button,
-      #gameView .mobile-layout-button {
+      #gameView .mobile-round-button {
         min-height: 28px;
         padding: 5px 6px;
         border-radius: 8px;
@@ -8000,14 +8000,11 @@
         </div>
         <div class="mobile-control-actions">
           <button id="mobileRestartButton" class="mobile-round-button" type="button">New round</button>
-          <button id="mobileControlLayoutButton" class="mobile-layout-button" type="button" aria-label="Joystick is on the right. Move joystick to the left and swap the bomb button." data-joystick-side="right">
-            <span aria-hidden="true">⇄</span><span>Swap sides</span>
-          </button>
         </div>
         <button id="mobileBombButton" class="mobile-bomb-button" type="button" aria-label="Place bomb">Bomb</button>
       </div>
 
-      <div id="bombermanLocalControls" class="tanks-touch-controls hidden" aria-label="Local touch Bomberman controls">
+      <div id="bombermanLocalControls" class="tanks-touch-controls hidden" aria-label="Local touch Bomberman controls" data-touch-layout="joystick-right">
         <div class="tank-touch-team joystick-team">
           <strong>Mint</strong>
           <div class="arcade-joystick" data-bomberman-local-joystick="1" role="group" tabindex="0" aria-label="Mint movement joystick">
@@ -8188,7 +8185,7 @@
         <div class="paddle-key-guide coral">Coral moves with <kbd>↑</kbd> / <kbd>↓</kbd></div>
       </footer>
 
-      <div class="paddle-touch-controls" aria-label="Touch paddle controls">
+      <div class="paddle-touch-controls" aria-label="Touch paddle controls" data-touch-layout="joystick-right">
         <div id="paddleMintControls" class="paddle-touch-team">
           <strong>Mint</strong>
           <div class="arcade-joystick" data-paddle-joystick="1" role="group" tabindex="0" aria-label="Mint movement joystick">
@@ -8266,7 +8263,7 @@
         <div class="paddle-key-guide coral">Coral uses <kbd>Arrows</kbd></div>
       </footer>
 
-      <div class="snake-touch-controls" aria-label="Touch snake controls">
+      <div class="snake-touch-controls" aria-label="Touch snake controls" data-touch-layout="joystick-right">
         <div id="snakeMintControls" class="snake-dpad">
           <strong>Mint</strong>
           <div class="arcade-joystick" data-snake-joystick="1" role="group" tabindex="0" aria-label="Mint movement joystick">
@@ -8352,7 +8349,6 @@
           </div>
           <button class="tank-touch-button fire" type="button" data-tank-player="2" data-tank-action="fire">Fire</button>
         </div>
-        <button id="tanksTouchSwap" class="touch-swap-button" type="button" data-joystick-side="right" aria-label="Joystick is on the right. Move joystick to the left and swap the action button."><span aria-hidden="true">⇄</span><span>Swap sides</span></button>
       </div>
     </section>
   </main>
@@ -8463,7 +8459,6 @@
           </div>
           <button class="tank-touch-button fire" type="button" data-survival-player="2" data-survival-action="fire">Fire</button>
         </div>
-        <button id="survivalTouchSwap" class="touch-swap-button" type="button" data-joystick-side="right" aria-label="Joystick is on the right. Move joystick to the left and swap the action button."><span aria-hidden="true">⇄</span><span>Swap sides</span></button>
       </div>
     </section>
   </main>
@@ -8527,7 +8522,6 @@
           </div>
           <button class="tank-touch-button fire" type="button" data-star-player="2" data-star-action="fire">Fire</button>
         </div>
-        <button id="starTouchSwap" class="touch-swap-button" type="button" data-joystick-side="right" aria-label="Joystick is on the right. Move joystick to the left and swap the action button."><span aria-hidden="true">⇄</span><span>Swap sides</span></button>
       </div>
     </section>
   </main>
@@ -8598,7 +8592,6 @@
             <button class="racing-pedal racing-accelerate" type="button" data-racing-player="2" data-racing-action="accelerate" aria-label="Hold to accelerate Coral">Go</button>
           </div>
         </div>
-        <button id="racingTouchSwap" class="touch-swap-button" type="button" data-joystick-side="right" aria-label="Joystick is on the right. Move joystick to the left and swap the action button."><span aria-hidden="true">⇄</span><span>Swap sides</span></button>
       </div>
     </section>
   </main>
@@ -8649,7 +8642,7 @@
         <button id="blocksRestartButton" class="paddle-restart" type="button">Reset duel</button>
         <div class="paddle-key-guide coral">Coral: <kbd>Arrows</kbd> · drop <kbd>Enter</kbd></div>
       </footer>
-      <div class="tanks-touch-controls block-touch-controls" aria-label="Touch Block Drop controls">
+      <div class="tanks-touch-controls block-touch-controls" aria-label="Touch Block Drop controls" data-touch-layout="joystick-right">
         <div id="blocksMintControls" class="tank-touch-team block-team">
           <strong>Mint</strong>
           <button class="tank-touch-button block-left" type="button" data-blocks-player="1" data-blocks-action="left" aria-label="Move Mint piece left">←</button>
@@ -8841,6 +8834,14 @@
         <label class="settings-toggle-row" for="settingsImmersive">
           <span class="settings-language-copy"><strong>Immersive play</strong><span>On phones, hide the status bar and browser chrome while a game is open.</span></span>
           <input id="settingsImmersive" type="checkbox" checked>
+        </label>
+
+        <label class="settings-language-row" for="settingsControlsSide">
+          <span class="settings-language-copy"><strong>Controls side</strong><span>Which side of the screen holds the joystick. The action buttons take the other side, in every game.</span></span>
+          <select id="settingsControlsSide" class="settings-language-select">
+            <option value="joystick-right">Joystick right</option>
+            <option value="joystick-left">Joystick left</option>
+          </select>
         </label>
 
         <label class="settings-language-row" for="settingsTouchControls">

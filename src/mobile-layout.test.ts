@@ -67,9 +67,10 @@ test('mobile Blast Buddies uses a drag-and-hold virtual joystick', () => {
   assert.equal((html.match(/data-bomberman-local-joystick=/g) ?? []).length, 2);
 });
 
-test('mobile Blast Buddies defaults to joystick right and offers a persistent side swap', () => {
+test('mobile Blast Buddies defaults to joystick right and follows the Settings side', () => {
   assert.match(html, /id="mobileControls"[^>]*data-control-layout="joystick-right"/);
-  assert.match(html, /id="mobileControlLayoutButton"[^>]*data-joystick-side="right"/);
+  // The side is chosen once in Settings rather than per game.
+  assert.match(html, /id="settingsControlsSide"/);
   assert.match(uxStyles, /\.mobile-controls\[data-control-layout="joystick-right"\] \.mobile-joystick\s*\{[^}]*grid-column:\s*3;/s);
   assert.match(uxStyles, /\.mobile-controls\[data-control-layout="joystick-right"\] \.mobile-bomb-button\s*\{[^}]*grid-column:\s*1;/s);
   assert.match(uxStyles, /\.mobile-controls\[data-control-layout="joystick-left"\] \.mobile-joystick\s*\{[^}]*grid-column:\s*1;/s);

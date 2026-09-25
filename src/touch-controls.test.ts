@@ -7,7 +7,8 @@ import {
   BOMBERMAN_TOUCH_LAYOUT_STORAGE_KEY,
   DEFAULT_ARCADE_TOUCH_LAYOUT,
   DEFAULT_BOMBERMAN_TOUCH_LAYOUT,
-  initTouchLayoutSwap,
+  broadcastTouchLayout,
+  initArcadeTouchLayout,
   loadArcadeTouchLayout,
   saveArcadeTouchLayout,
   swapArcadeTouchLayout,
@@ -110,33 +111,32 @@ test('the swap label names the side and the action being moved', () => {
   assert.match(touchLayoutSwapLabel('joystick-left', 'pedals'), /^Joystick is on the left\..*swap the pedals\.$/);
 });
 
-test('every joystick-and-action game exposes a swap control that CSS can mirror', () => {
+test('games with a joystick and an action control mirror both', () => {
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  for (const id of ['tanksTouchSwap', 'survivalTouchSwap', 'starTouchSwap', 'racingTouchSwap']) {
-    assert.match(html, new RegExp(`id="${id}"[^>]*class="touch-swap-button"`), `${id} should exist`);
-  }
-  // Four containers opt in, and the CSS must mirror both control shapes.
-  assert.equal((html.match(/data-touch-layout="joystick-right"/g) ?? []).length, 4);
+  // Mini Tanks, Survival, Star Defender share the fire-button layout; Micro
+  // Racers uses pedals. Both shapes have to swap sides, not just the joystick.
   assert.match(html, /\[data-touch-layout="joystick-left"\][\s\S]*?\.arcade-joystick \{\s*grid-column: 1;/);
   assert.match(html, /\[data-touch-layout="joystick-left"\][\s\S]*?\.tank-touch-button\.fire \{\s*grid-column: 3;/);
   assert.match(html, /\[data-touch-layout="joystick-left"\][\s\S]*?\.racing-pedals \{\s*grid-column: 3;/);
 });
 
-test('swapping in one game applies to the others without a reload', () => {
+test('the Settings choice applies to every game at once', () => {
   const listeners = new Map<string, ((event: Event) => void)[]>();
-  const makeEl = () => {
-    const el = {
-      dataset: {} as Record<string, string>,
-      attributes: {} as Record<string, string>,
-      setAttribute(name: string, value: string) { this.attributes[name] = value; },
-      handlers: [] as (() => void)[],
-      addEventListener(_type: string, fn: () => void) { this.handlers.push(fn); },
-      removeEventListener() {},
-    };
-    return el;
-  };
   const store = new Map<string, string>();
+  const containers = ['paddle', 'tanks', 'blocks'].map(name => ({
+    name, dataset: { touchLayout: 'joystick-right' } as Record<string, string>,
+  }));
+  const select = {
+    value: 'joystick-right',
+    handlers: [] as (() => void)[],
+    addEventListener(_t: string, fn: () => void) { this.handlers.push(fn); },
+    removeEventListener() {},
+  };
   const globals = {
+    document: {
+      getElementById: (id: string) => (id === 'settingsControlsSide' ? select : null),
+      querySelectorAll: () => containers,
+    },
     localStorage: {
       getItem: (k: string) => store.get(k) ?? null,
       setItem: (k: string, v: string) => { store.set(k, v); },
@@ -160,26 +160,50 @@ test('swapping in one game applies to the others without a reload', () => {
     Object.defineProperty(globalThis, key, { value, configurable: true });
   }
   try {
-    const tanks = { container: makeEl(), button: makeEl() };
-    const racing = { container: makeEl(), button: makeEl() };
-    initTouchLayoutSwap({ container: tanks.container as never, button: tanks.button as never, actionLabel: 'fire button' });
-    initTouchLayoutSwap({ container: racing.container as never, button: racing.button as never, actionLabel: 'pedals' });
+    initArcadeTouchLayout();
+    assert.equal(select.value, 'joystick-right', 'Settings shows the stored side');
 
-    assert.equal(tanks.container.dataset.touchLayout, 'joystick-right');
-    assert.equal(racing.container.dataset.touchLayout, 'joystick-right');
+    // The player picks the other side in Settings.
+    select.value = 'joystick-left';
+    select.handlers.forEach(fn => fn());
 
-    tanks.button.handlers.forEach(fn => fn());
-
-    assert.equal(tanks.container.dataset.touchLayout, 'joystick-left', 'the game you tapped updates');
-    assert.equal(racing.container.dataset.touchLayout, 'joystick-left', 'and so does every other game');
+    assert.deepEqual(
+      containers.map(c => c.dataset.touchLayout),
+      ['joystick-left', 'joystick-left', 'joystick-left'],
+      'every game follows the one setting, joystick-only ones included',
+    );
     assert.equal(store.get(ARCADE_TOUCH_LAYOUT_STORAGE_KEY), 'joystick-left', 'and it is remembered');
-    assert.match(racing.button.attributes['aria-label'], /swap the pedals/);
+
+    // A change broadcast from elsewhere keeps Settings honest.
+    broadcastTouchLayout('joystick-right');
+    assert.equal(select.value, 'joystick-right');
+    assert.deepEqual(containers.map(c => c.dataset.touchLayout), ['joystick-right', 'joystick-right', 'joystick-right']);
   } finally {
     for (const [key, descriptor] of saved) {
       if (descriptor) Object.defineProperty(globalThis, key, descriptor);
       else Reflect.deleteProperty(globalThis, key);
     }
   }
+});
+
+test('the side control lives in Settings, not on the game screens', () => {
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.match(html, /id="settingsControlsSide"/, 'Settings owns the choice');
+  assert.match(html, /<option value="joystick-right">/);
+  assert.match(html, /<option value="joystick-left">/);
+  assert.doesNotMatch(html, /touch-swap-button/, 'the per-game swap buttons are gone');
+  assert.doesNotMatch(html, /mobileControlLayoutButton/, 'including the one in Blast Buddies');
+
+  // Every touch pad opts in, joystick-only and button-only games included.
+  assert.equal((html.match(/<div[^>]*data-touch-layout="joystick-right"/g) ?? []).length, 8);
+  for (const label of ['Touch paddle controls', 'Touch snake controls', 'Touch Block Drop controls']) {
+    assert.match(
+      html,
+      new RegExp(`<div[^>]*aria-label="${label}"[^>]*data-touch-layout=`),
+      `${label} must follow the setting too`,
+    );
+  }
+  assert.match(html, /\.block-touch-controls\)\[data-touch-layout="joystick-left"\]/, 'single-cluster games shift side');
 });
 
 test('a failed pointer capture never swallows the press', () => {

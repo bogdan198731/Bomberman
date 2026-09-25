@@ -73,42 +73,47 @@ export function saveArcadeTouchLayout(
   return normalized;
 }
 
-export interface TouchLayoutSwapOptions {
-  /** The element carrying data-touch-layout, which the CSS keys off. */
-  container: HTMLElement | null;
-  button: HTMLElement | null;
-  /** Names the action button in the accessible label, e.g. "fire button". */
-  actionLabel: string;
+/**
+ * Applies the arcade-wide joystick side to every touch pad on the page.
+ * Games opt in with a data-touch-layout attribute; the CSS does the mirroring.
+ */
+export function applyTouchLayout(layout: ArcadeTouchLayout, root: ParentNode = document): void {
+  root.querySelectorAll<HTMLElement>('[data-touch-layout]').forEach(container => {
+    container.dataset.touchLayout = layout;
+  });
+}
+
+export function broadcastTouchLayout(layout: ArcadeTouchLayout): ArcadeTouchLayout {
+  const normalized = saveArcadeTouchLayout(layout);
+  window.dispatchEvent(new CustomEvent(ARCADE_TOUCH_LAYOUT_CHANGE_EVENT, { detail: { layout: normalized } }));
+  return normalized;
 }
 
 /**
- * Wires one game's swap button. Every game shares the stored preference, so a
- * change made in one is broadcast and applied everywhere without a reload.
+ * Owns the single control-side preference: seeds the Settings select, applies
+ * the stored choice to every game, and keeps them in step when it changes.
  */
-export function initTouchLayoutSwap(options: TouchLayoutSwapOptions): () => void {
-  const { container, button, actionLabel } = options;
-  if (!container) return () => undefined;
+export function initArcadeTouchLayout(): () => void {
+  if (typeof document === 'undefined') return () => undefined;
+  const select = document.getElementById('settingsControlsSide') as HTMLSelectElement | null;
 
   const apply = (layout: ArcadeTouchLayout): void => {
-    container.dataset.touchLayout = layout;
-    button?.setAttribute('aria-label', touchLayoutSwapLabel(layout, actionLabel));
-    button?.setAttribute('data-joystick-side', layout === 'joystick-right' ? 'right' : 'left');
+    applyTouchLayout(layout);
+    if (select) select.value = layout;
   };
-  const onClick = (): void => {
-    const next = swapArcadeTouchLayout(loadArcadeTouchLayout());
-    saveArcadeTouchLayout(next);
-    window.dispatchEvent(new CustomEvent(ARCADE_TOUCH_LAYOUT_CHANGE_EVENT, { detail: { layout: next } }));
+  const onSelect = (): void => {
+    if (select) broadcastTouchLayout(normalizeArcadeTouchLayout(select.value));
   };
   const onChange = (event: Event): void => {
     apply(normalizeArcadeTouchLayout((event as CustomEvent<{ layout: string }>).detail?.layout));
   };
 
   apply(loadArcadeTouchLayout());
-  button?.addEventListener('click', onClick);
+  select?.addEventListener('change', onSelect);
   window.addEventListener(ARCADE_TOUCH_LAYOUT_CHANGE_EVENT, onChange);
 
   return () => {
-    button?.removeEventListener('click', onClick);
+    select?.removeEventListener('change', onSelect);
     window.removeEventListener(ARCADE_TOUCH_LAYOUT_CHANGE_EVENT, onChange);
   };
 }

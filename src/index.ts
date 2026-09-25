@@ -45,10 +45,9 @@ import {
   bindVirtualJoystick,
   capturePointer,
   clampJoystickOffset,
-  initTouchLayoutSwap,
+  initArcadeTouchLayout,
   joystickDirection,
   normalizeBombermanTouchLayout,
-  swapBombermanTouchLayout,
   type BombermanTouchLayout,
   type JoystickDirection,
 } from './touch-controls.js';
@@ -1278,25 +1277,6 @@ type ClientMessage =
   | { type: 'state'; state: OnlineClientState }
   | { type: 'error'; message: string };
 
-/** Games whose touch layout can mirror: a joystick plus an action control. */
-const TOUCH_SWAP_GAMES: readonly { label: string; button: string; action: string }[] = [
-  { label: 'Touch tank controls', button: 'tanksTouchSwap', action: 'fire button' },
-  { label: 'Touch survival controls', button: 'survivalTouchSwap', action: 'fire button' },
-  { label: 'Touch star-fighter controls', button: 'starTouchSwap', action: 'fire button' },
-  { label: 'Touch racing controls', button: 'racingTouchSwap', action: 'pedals' },
-];
-
-export function initArcadeTouchLayoutSwaps(): void {
-  if (typeof document === 'undefined') return;
-  for (const game of TOUCH_SWAP_GAMES) {
-    initTouchLayoutSwap({
-      container: document.querySelector<HTMLElement>(`[aria-label="${game.label}"]`),
-      button: document.getElementById(game.button),
-      actionLabel: game.action,
-    });
-  }
-}
-
 export function initGame(): void {
   if (typeof document === 'undefined') return;
 
@@ -1352,7 +1332,6 @@ export function initGame(): void {
     mobileJoystick: document.getElementById('mobileJoystick'),
     mobileJoystickKnob: document.getElementById('mobileJoystickKnob'),
     mobileBombButton: document.getElementById('mobileBombButton') as HTMLButtonElement | null,
-    mobileControlLayoutButton: document.getElementById('mobileControlLayoutButton') as HTMLButtonElement | null,
     mobileRestartButton: document.getElementById('mobileRestartButton'),
     localMobileControls: document.getElementById('bombermanLocalControls'),
     localMobileRestartButton: document.getElementById('bombermanLocalRestartButton'),
@@ -1394,16 +1373,8 @@ export function initGame(): void {
   })();
 
   function applyMobileTouchLayout(): void {
+    // The side itself is chosen in Settings; this only mirrors the bomber pad.
     if (elements.mobileControls) elements.mobileControls.dataset.controlLayout = mobileTouchLayout;
-    const button = elements.mobileControlLayoutButton;
-    if (!button) return;
-    const currentSide = mobileTouchLayout === 'joystick-right' ? 'right' : 'left';
-    const nextSide = currentSide === 'right' ? 'left' : 'right';
-    button.dataset.joystickSide = currentSide;
-    button.setAttribute(
-      'aria-label',
-      `Joystick is on the ${currentSide}. Move joystick to the ${nextSide} and swap the bomb button.`,
-    );
   }
 
   function saveMobileTouchLayout(): void {
@@ -1805,13 +1776,6 @@ export function initGame(): void {
   elements.restartButton?.addEventListener('click', () => sendPlayerAction(1, { type: 'restart' }));
   elements.mobileRestartButton?.addEventListener('click', () => sendPlayerAction(1, { type: 'restart' }));
   elements.localMobileRestartButton?.addEventListener('click', () => sendPlayerAction(1, { type: 'restart' }));
-  elements.mobileControlLayoutButton?.addEventListener('click', () => {
-    mobileTouchLayout = swapBombermanTouchLayout(mobileTouchLayout);
-    saveMobileTouchLayout();
-    applyMobileTouchLayout();
-    // The layout is arcade-wide, so tell the other games about the change.
-    window.dispatchEvent(new CustomEvent(ARCADE_TOUCH_LAYOUT_CHANGE_EVENT, { detail: { layout: mobileTouchLayout } }));
-  });
   window.addEventListener(ARCADE_TOUCH_LAYOUT_CHANGE_EVENT, event => {
     const next = normalizeBombermanTouchLayout((event as CustomEvent<{ layout: string }>).detail?.layout);
     if (next === mobileTouchLayout) return;
@@ -2101,7 +2065,7 @@ if (typeof window !== 'undefined') {
     initTwenty48();
     initSudoku();
     initGameExperience();
-    initArcadeTouchLayoutSwaps();
+    initArcadeTouchLayout();
     initMobileImmersiveMode();
     window.dispatchEvent(new CustomEvent('arcade-ready'));
   });
