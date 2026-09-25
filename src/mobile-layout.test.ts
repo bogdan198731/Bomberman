@@ -278,5 +278,5 @@ test('interface polish includes consistent focus, touch, and twelve-game metadat
   assert.match(html, /:where\(button, a, input, select, \[tabindex\]\):focus-visible/);
   assert.match(html, /@media \(hover: none\)[\s\S]*?\.catalog-card:hover/);
   assert.match(html, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?animation-duration:\s*0\.001ms/);
-  assert.match(html, /content="Blast Arcade is a mobile-friendly hub with twelve instant browser games/);
+  assert.match(html, /content="Play twelve free browser games instantly/);
 });

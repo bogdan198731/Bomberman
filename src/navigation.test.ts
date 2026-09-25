@@ -17,6 +17,16 @@ test('all game routes and hub sections survive URL serialization and reload', ()
   }
   assert.equal(readArcadeRoute('http://localhost/#play/not-a-game').view, 'hub');
 });
+test('games live at crawlable /play paths while legacy hash links still resolve', () => {
+  for (const view of ARCADE_GAME_IDS) {
+    const url = new URL(arcadeRouteUrl('http://localhost/#games', { view, section: 'games' }));
+    assert.equal(url.pathname, `/play/${view}`, 'game routes use a real path, not a fragment');
+    assert.equal(url.hash, '', 'no leftover fragment for crawlers to ignore');
+    assert.equal(readArcadeRoute(`http://localhost/#play/${view}`).view, view, 'old shared links keep working');
+  }
+  assert.equal(new URL(arcadeRouteUrl('http://localhost/play/snake', { view: 'hub', section: 'profile' })).pathname, '/');
+  assert.equal(readArcadeRoute('http://localhost/play/not-a-game').view, 'hub');
+});
 test('invite route wins over stale hashes; leaving removes only invite parameters', () => {
   const invite = createArcadeInviteUrl('http://localhost/?theme=dark#games', 'racing', 'ABCDE');
   assert.equal(readArcadeRoute(invite + '#profile').view, 'racing');
@@ -66,9 +76,21 @@ test('Back/Forward and reload retain edited library state and emit cleanup befor
     const event = Object.assign(new Event('popstate'), { state: historyMock.state });
     win.dispatchEvent(event); flush();
   };
+  // Navigation now rewrites <head> metadata, so the mock answers those queries too.
+  const metaTags = new Map<string, { attributes: Record<string, string>; textContent: string | null }>();
+  const queryMock = (selector: string): unknown => {
+    if (selector.startsWith('[data-catalog-filter]')) return filter;
+    if (!metaTags.has(selector)) metaTags.set(selector, { attributes: {}, textContent: null });
+    const tag = metaTags.get(selector)!;
+    return {
+      setAttribute(name: string, value: string) { tag.attributes[name] = value; },
+      set textContent(value: string | null) { tag.textContent = value; },
+      get textContent() { return tag.textContent; },
+    };
+  };
   const globals = {
     window: win, history: historyMock, location: url,
-    document: { body, getElementById: () => search, querySelector: () => filter },
+    document: { body, title: '', getElementById: () => search, querySelector: queryMock },
     requestAnimationFrame: (callback: FrameRequestCallback) => { frames.push(callback); return frames.length; },
   };
   for (const [key, value] of Object.entries(globals)) {

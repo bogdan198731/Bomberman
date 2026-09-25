@@ -1,5 +1,6 @@
 import { isArcadeGameId, type ArcadeGameId } from './game-metadata.js';
 import { clearArcadeInviteUrl, parseArcadeInvite } from './invite.js';
+import { applyRouteMeta, gameFromPath, gamePath } from './seo.js';
 
 export type HubSection = 'games' | 'challenges' | 'profile';
 export type ArcadeView = 'hub' | ArcadeGameId;
@@ -11,7 +12,10 @@ export function readArcadeRoute(href: string): ArcadeRoute {
   const url = new URL(href);
   const invite = parseArcadeInvite(url.search);
   if (invite) return { view: invite.game, section: 'games' };
+  const routed = gameFromPath(url.pathname);
+  if (routed) return { view: routed, section: 'games' };
   const hash = url.hash.slice(1);
+  // Legacy `#play/<id>` links stay valid; start() rewrites them to /play/<id>.
   const game = hash.startsWith('play/') ? hash.slice(5) : '';
   if (isArcadeGameId(game)) return { view: game, section: 'games' };
   return { view: 'hub', section: hash === 'challenges' || hash === 'circuitPanel' ? 'challenges'
@@ -20,7 +24,8 @@ export function readArcadeRoute(href: string): ArcadeRoute {
 
 export function arcadeRouteUrl(href: string, route: ArcadeRoute): string {
   const url = new URL(clearArcadeInviteUrl(href));
-  url.hash = route.view === 'hub' ? route.section : `play/${route.view}`;
+  url.pathname = route.view === 'hub' ? '/' : gamePath(route.view);
+  url.hash = route.view === 'hub' ? route.section : '';
   return url.toString();
 }
 
@@ -47,6 +52,7 @@ export function createArcadeNavigation(showView: (view: ArcadeView) => void): {
     }
     route = next;
     showView(next.view);
+    applyRouteMeta(next.view, document);
     document.body.dataset.hubSection = next.section;
     window.dispatchEvent(new CustomEvent('arcade-hub-section', { detail: { section: next.section } }));
     const token = ++restoreToken;
