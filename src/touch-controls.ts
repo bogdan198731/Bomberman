@@ -17,20 +17,108 @@ export type JoystickInputDirection = 'up' | 'down' | 'left' | 'right';
 export type JoystickInputMode = 'free' | 'cardinal' | 'horizontal' | 'vertical';
 export type JoystickDigitalState = Record<JoystickInputDirection, boolean>;
 
-export type BombermanTouchLayout = 'joystick-left' | 'joystick-right';
+/** Which side of the screen the movement joystick sits on. */
+export type ArcadeTouchLayout = 'joystick-left' | 'joystick-right';
 
-export const BOMBERMAN_TOUCH_LAYOUT_STORAGE_KEY = 'blast-arcade-bomberman-touch-layout-v1';
-export const DEFAULT_BOMBERMAN_TOUCH_LAYOUT: BombermanTouchLayout = 'joystick-right';
+/**
+ * Shared by every game with a joystick and an action button, so a player sets
+ * their handedness once. The key still says "bomberman" because that is where
+ * the setting started; renaming it would discard everyone's saved choice.
+ */
+export const ARCADE_TOUCH_LAYOUT_STORAGE_KEY = 'blast-arcade-bomberman-touch-layout-v1';
+export const DEFAULT_ARCADE_TOUCH_LAYOUT: ArcadeTouchLayout = 'joystick-right';
+export const ARCADE_TOUCH_LAYOUT_CHANGE_EVENT = 'arcade-touch-layout-change';
 
-export function normalizeBombermanTouchLayout(value: unknown): BombermanTouchLayout {
+export function normalizeArcadeTouchLayout(value: unknown): ArcadeTouchLayout {
   return value === 'joystick-left' || value === 'joystick-right'
     ? value
-    : DEFAULT_BOMBERMAN_TOUCH_LAYOUT;
+    : DEFAULT_ARCADE_TOUCH_LAYOUT;
 }
 
-export function swapBombermanTouchLayout(layout: BombermanTouchLayout): BombermanTouchLayout {
+export function swapArcadeTouchLayout(layout: ArcadeTouchLayout): ArcadeTouchLayout {
   return layout === 'joystick-right' ? 'joystick-left' : 'joystick-right';
 }
+
+/** Describes the swap in terms of the game's own action, for screen readers. */
+export function touchLayoutSwapLabel(layout: ArcadeTouchLayout, actionLabel: string): string {
+  const current = layout === 'joystick-right' ? 'right' : 'left';
+  const next = current === 'right' ? 'left' : 'right';
+  return `Joystick is on the ${current}. Move joystick to the ${next} and swap the ${actionLabel}.`;
+}
+
+interface TouchLayoutStorage {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+}
+
+function layoutStorage(): TouchLayoutStorage | undefined {
+  try { return typeof localStorage === 'undefined' ? undefined : localStorage; }
+  catch { return undefined; }
+}
+
+export function loadArcadeTouchLayout(
+  storage: TouchLayoutStorage | undefined = layoutStorage(),
+): ArcadeTouchLayout {
+  try { return normalizeArcadeTouchLayout(storage?.getItem(ARCADE_TOUCH_LAYOUT_STORAGE_KEY)); }
+  catch { return DEFAULT_ARCADE_TOUCH_LAYOUT; }
+}
+
+export function saveArcadeTouchLayout(
+  layout: ArcadeTouchLayout,
+  storage: TouchLayoutStorage | undefined = layoutStorage(),
+): ArcadeTouchLayout {
+  const normalized = normalizeArcadeTouchLayout(layout);
+  try { storage?.setItem(ARCADE_TOUCH_LAYOUT_STORAGE_KEY, normalized); }
+  catch { /* The layout still applies this session when storage is unavailable. */ }
+  return normalized;
+}
+
+export interface TouchLayoutSwapOptions {
+  /** The element carrying data-touch-layout, which the CSS keys off. */
+  container: HTMLElement | null;
+  button: HTMLElement | null;
+  /** Names the action button in the accessible label, e.g. "fire button". */
+  actionLabel: string;
+}
+
+/**
+ * Wires one game's swap button. Every game shares the stored preference, so a
+ * change made in one is broadcast and applied everywhere without a reload.
+ */
+export function initTouchLayoutSwap(options: TouchLayoutSwapOptions): () => void {
+  const { container, button, actionLabel } = options;
+  if (!container) return () => undefined;
+
+  const apply = (layout: ArcadeTouchLayout): void => {
+    container.dataset.touchLayout = layout;
+    button?.setAttribute('aria-label', touchLayoutSwapLabel(layout, actionLabel));
+    button?.setAttribute('data-joystick-side', layout === 'joystick-right' ? 'right' : 'left');
+  };
+  const onClick = (): void => {
+    const next = swapArcadeTouchLayout(loadArcadeTouchLayout());
+    saveArcadeTouchLayout(next);
+    window.dispatchEvent(new CustomEvent(ARCADE_TOUCH_LAYOUT_CHANGE_EVENT, { detail: { layout: next } }));
+  };
+  const onChange = (event: Event): void => {
+    apply(normalizeArcadeTouchLayout((event as CustomEvent<{ layout: string }>).detail?.layout));
+  };
+
+  apply(loadArcadeTouchLayout());
+  button?.addEventListener('click', onClick);
+  window.addEventListener(ARCADE_TOUCH_LAYOUT_CHANGE_EVENT, onChange);
+
+  return () => {
+    button?.removeEventListener('click', onClick);
+    window.removeEventListener(ARCADE_TOUCH_LAYOUT_CHANGE_EVENT, onChange);
+  };
+}
+
+// Blast Buddies' original names, kept so its existing wiring and tests hold.
+export type BombermanTouchLayout = ArcadeTouchLayout;
+export const BOMBERMAN_TOUCH_LAYOUT_STORAGE_KEY = ARCADE_TOUCH_LAYOUT_STORAGE_KEY;
+export const DEFAULT_BOMBERMAN_TOUCH_LAYOUT = DEFAULT_ARCADE_TOUCH_LAYOUT;
+export const normalizeBombermanTouchLayout = normalizeArcadeTouchLayout;
+export const swapBombermanTouchLayout = swapArcadeTouchLayout;
 
 export function joystickDirection(
   deltaX: number,
