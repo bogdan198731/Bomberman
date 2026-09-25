@@ -1618,6 +1618,16 @@ export function initGame(): void {
 
   function sendAction(action: unknown): void {
     if (isArcadeSessionPaused('bomberman')) return;
+    /*
+     * A bot match runs in a local room with no socket, so anything sent only
+     * over the wire is dropped. The touch joystick and bomb button come
+     * through here, which is why they did nothing against a bot while the
+     * keyboard, which calls sendPlayerAction directly, worked fine.
+     */
+    if (localRoom && localPlayerId) {
+      sendPlayerAction(localPlayerId, action as PlayerAction);
+      return;
+    }
     if (socket?.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify({ type: 'action', action }));
     }

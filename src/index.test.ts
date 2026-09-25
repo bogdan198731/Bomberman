@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import { strict as assert } from 'node:assert';
+import { readFileSync } from 'node:fs';
 import {
   GameState,
   TileType,
@@ -609,4 +610,72 @@ test('createPlayers - players start alive', () => {
   const [player1, player2] = createPlayers();
   assert.strictEqual(player1.alive, true, 'player 1 starts alive');
   assert.strictEqual(player2.alive, true, 'player 2 starts alive');
+});
+
+/**
+ * Reproduces the routing that made touch controls dead against a bot: a bot
+ * match has a local room and no socket, so anything sent only over the wire
+ * is lost. Mirrors sendAction/sendPlayerAction from initGame.
+ */
+function bombermanActionRouter(session: {
+  localRoom?: { handled: [number, unknown][] };
+  localPlayerId?: 1 | 2;
+  socket?: { sent: unknown[]; open: boolean };
+}) {
+  const sendPlayerAction = (player: 1 | 2, action: unknown): void => {
+    if (session.localRoom) { session.localRoom.handled.push([player, action]); return; }
+    sendAction(action);
+  };
+  function sendAction(action: unknown): void {
+    if (session.localRoom && session.localPlayerId) {
+      sendPlayerAction(session.localPlayerId, action);
+      return;
+    }
+    if (session.socket?.open) session.socket.sent.push(action);
+  }
+  return { sendAction, sendPlayerAction };
+}
+
+test('touch input reaches the bot match instead of a socket that is not there', () => {
+  // Bot mode: a local room, a player id, and deliberately no socket.
+  const session = { localRoom: { handled: [] as [number, unknown][] }, localPlayerId: 1 as const };
+  const { sendAction } = bombermanActionRouter(session);
+
+  sendAction({ type: 'move', dx: 1, dy: 0 });
+  sendAction({ type: 'bomb' });
+
+  assert.deepEqual(
+    session.localRoom.handled,
+    [[1, { type: 'move', dx: 1, dy: 0 }], [1, { type: 'bomb' }]],
+    'the joystick and bomb button must drive the local bot room',
+  );
+});
+
+test('same-device and online routing are left alone', () => {
+  // Same device: a local room but no single player id; both pads address a
+  // player explicitly, so nothing should be rerouted.
+  const local = { localRoom: { handled: [] as [number, unknown][] }, localPlayerId: undefined };
+  const localRouter = bombermanActionRouter(local);
+  localRouter.sendPlayerAction(2, { type: 'bomb' });
+  assert.deepEqual(local.localRoom.handled, [[2, { type: 'bomb' }]]);
+
+  // Online: no local room, so actions still go over the socket.
+  const online = { socket: { sent: [] as unknown[], open: true } };
+  bombermanActionRouter(online).sendAction({ type: 'move', dx: 0, dy: -1 });
+  assert.deepEqual(online.socket.sent, [{ type: 'move', dx: 0, dy: -1 }]);
+
+  // A closed socket must not throw or silently pretend to deliver.
+  const dropped = { socket: { sent: [] as unknown[], open: false } };
+  bombermanActionRouter(dropped).sendAction({ type: 'bomb' });
+  assert.deepEqual(dropped.socket.sent, []);
+});
+
+test('the shipped sendAction routes bot input to the local room', () => {
+  const source = readFileSync(new URL('../src/index.ts', import.meta.url), 'utf8');
+  const body = source.slice(source.indexOf('function sendAction(action: unknown)'));
+  assert.match(
+    body.slice(0, 600),
+    /if \(localRoom && localPlayerId\) \{\s*sendPlayerAction\(localPlayerId/,
+    'sendAction must fall back to the local room before trying the socket',
+  );
 });
