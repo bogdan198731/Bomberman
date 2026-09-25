@@ -92,6 +92,45 @@
       display: none !important;
     }
 
+    /* Immersive play: the game owns the screen, nothing else competes for it. */
+    body.immersive-play {
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+
+    body.immersive-play::before {
+      display: none;
+    }
+
+    body.immersive-play .hub-topbar,
+    body.immersive-play .install-app-button,
+    body.immersive-play .pwa-update-banner {
+      display: none !important;
+    }
+
+    body.immersive-play main:not(.view-hidden) {
+      min-height: 100dvh;
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    /*
+     * Fallback when the Fullscreen API is unavailable or refused (iPhone
+     * Safari). The page cannot hide the system status bar there, so it takes
+     * every pixel it is allowed and scrolls the browser chrome out of view.
+     */
+    body.immersive-fallback main:not(.view-hidden) {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      overflow-y: auto;
+      background:
+        radial-gradient(circle at 15% 10%, rgba(84, 227, 142, 0.12), transparent 28rem),
+        radial-gradient(circle at 85% 80%, rgba(255, 107, 120, 0.12), transparent 30rem),
+        #0c111a;
+      -webkit-overflow-scrolling: touch;
+    }
+
     .hub {
       position: relative;
       width: min(1180px, 100%);
@@ -8746,6 +8785,11 @@
           <span class="settings-toggle-copy"><strong>Higher contrast</strong><span>Strengthen borders and secondary text throughout the arcade.</span></span>
           <input id="settingsContrastToggle" type="checkbox">
         </label>
+        <label class="settings-toggle-row" for="settingsImmersive">
+          <span class="settings-language-copy"><strong>Immersive play</strong><span>On phones, hide the status bar and browser chrome while a game is open.</span></span>
+          <input id="settingsImmersive" type="checkbox" checked>
+        </label>
+
         <label class="settings-language-row" for="settingsTouchControls">
           <span class="settings-language-copy"><strong>Touch controls</strong><span>Automatically detect touch, always show controls, or hide them on hybrid devices.</span></span>
           <select id="settingsTouchControls" class="settings-language-select">
