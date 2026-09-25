@@ -1,4 +1,5 @@
 import { createArcadeNavigation, type ArcadeView } from './navigation.js';
+import { initMobileImmersiveMode } from './mobile-fullscreen.js';
 import {
   drawRetroBomb,
   drawRetroBrick,
@@ -2090,6 +2091,7 @@ if (typeof window !== 'undefined') {
     initSudoku();
     initGameExperience();
     initArcadeTouchLayoutSwaps();
+    initMobileImmersiveMode();
     window.dispatchEvent(new CustomEvent('arcade-ready'));
   });
 }

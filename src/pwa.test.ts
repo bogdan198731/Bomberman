@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { connectivityPresentation, isIosDevice, pwaInstallMode, shouldOfferServiceWorkerUpdate } from './pwa.js';
 
 const pwaSource = readFileSync(new URL('../src/pwa.ts', import.meta.url), 'utf8');
@@ -48,6 +48,19 @@ test('service worker refreshes app files before using its offline cache', () => 
   assert.match(workerSource, /fetch\(request\)[\s\S]*?\.catch\(\(\) => caches\.match\(cacheKey\)/);
   assert.match(workerSource, /isNavigation \? caches\.match\('\/'\) : undefined/, 'unvisited game pages fall back to the hub shell');
   assert.doesNotMatch(workerSource, /caches\.match\(request\)\.then\(cached => cached \|\| fetch\(request\)/);
+});
+
+test('every browser module is precached, so a new one cannot be forgotten', () => {
+  // A module added to src/ but missed in APP_SHELL breaks offline play only
+  // for the feature that needs it, which is easy to ship without noticing.
+  const modules = readdirSync(new URL('../src', import.meta.url))
+    .filter(name => name.endsWith('.ts') && !name.endsWith('.test.ts') && !name.endsWith('.d.ts'))
+    .map(name => name.replace(/\.ts$/, '.js'))
+    // server.js only ever runs on the server, so it has no business in a cache.
+    .filter(name => name !== 'server.js');
+
+  const missing = modules.filter(name => !workerSource.includes(`/dist/${name}`));
+  assert.deepEqual(missing, [], `add these to APP_SHELL: ${missing.join(', ')}`);
 });
 
 test('the offline shell includes shared gameplay experience modules', () => {
