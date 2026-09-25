@@ -39,9 +39,11 @@ import { initGameExperience } from './game-experience.js';
 import { emitArcadeGameplayCue, initArcadeGameplayFeedback } from './feedback.js';
 import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
 import {
+  ARCADE_TOUCH_LAYOUT_CHANGE_EVENT,
   BOMBERMAN_TOUCH_LAYOUT_STORAGE_KEY,
   bindVirtualJoystick,
   clampJoystickOffset,
+  initTouchLayoutSwap,
   joystickDirection,
   normalizeBombermanTouchLayout,
   swapBombermanTouchLayout,
@@ -1274,6 +1276,25 @@ type ClientMessage =
   | { type: 'state'; state: OnlineClientState }
   | { type: 'error'; message: string };
 
+/** Games whose touch layout can mirror: a joystick plus an action control. */
+const TOUCH_SWAP_GAMES: readonly { label: string; button: string; action: string }[] = [
+  { label: 'Touch tank controls', button: 'tanksTouchSwap', action: 'fire button' },
+  { label: 'Touch survival controls', button: 'survivalTouchSwap', action: 'fire button' },
+  { label: 'Touch star-fighter controls', button: 'starTouchSwap', action: 'fire button' },
+  { label: 'Touch racing controls', button: 'racingTouchSwap', action: 'pedals' },
+];
+
+export function initArcadeTouchLayoutSwaps(): void {
+  if (typeof document === 'undefined') return;
+  for (const game of TOUCH_SWAP_GAMES) {
+    initTouchLayoutSwap({
+      container: document.querySelector<HTMLElement>(`[aria-label="${game.label}"]`),
+      button: document.getElementById(game.button),
+      actionLabel: game.action,
+    });
+  }
+}
+
 export function initGame(): void {
   if (typeof document === 'undefined') return;
 
@@ -1776,6 +1797,14 @@ export function initGame(): void {
     mobileTouchLayout = swapBombermanTouchLayout(mobileTouchLayout);
     saveMobileTouchLayout();
     applyMobileTouchLayout();
+    // The layout is arcade-wide, so tell the other games about the change.
+    window.dispatchEvent(new CustomEvent(ARCADE_TOUCH_LAYOUT_CHANGE_EVENT, { detail: { layout: mobileTouchLayout } }));
+  });
+  window.addEventListener(ARCADE_TOUCH_LAYOUT_CHANGE_EVENT, event => {
+    const next = normalizeBombermanTouchLayout((event as CustomEvent<{ layout: string }>).detail?.layout);
+    if (next === mobileTouchLayout) return;
+    mobileTouchLayout = next;
+    applyMobileTouchLayout();
   });
   applyMobileTouchLayout();
 
@@ -2060,6 +2089,7 @@ if (typeof window !== 'undefined') {
     initTwenty48();
     initSudoku();
     initGameExperience();
+    initArcadeTouchLayoutSwaps();
     window.dispatchEvent(new CustomEvent('arcade-ready'));
   });
 }

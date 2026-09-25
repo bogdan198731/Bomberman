@@ -5474,6 +5474,24 @@
       grid-row: 3;
     }
 
+    .touch-swap-button {
+      display: none;
+      min-height: 34px;
+      padding: 0 10px;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: 1px solid rgba(255, 255, 255, .16);
+      border-radius: 11px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, .05);
+      cursor: pointer;
+      font: inherit;
+      font-size: .62rem;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
     .bomberman-local-restart {
       grid-column: 1 / -1;
       min-height: 42px;
@@ -6785,6 +6803,37 @@
 
       .racing-touch-controls:has(.solo-hidden) .racing-pedal { min-height: 50px; }
 
+      /* One-handed swap: mirror the joystick and the action control. */
+      .tanks-touch-controls:has(.solo-hidden) > .touch-swap-button {
+        display: inline-flex;
+        margin: 6px auto 0;
+        grid-column: 1 / -1;
+      }
+
+      .tanks-touch-controls[data-touch-layout="joystick-left"]:has(.solo-hidden)
+      > .joystick-team:has(.tank-touch-button.fire):not(.solo-hidden) > .arcade-joystick {
+        grid-column: 1;
+        justify-self: start;
+      }
+
+      .tanks-touch-controls[data-touch-layout="joystick-left"]:has(.solo-hidden)
+      > .joystick-team:has(.tank-touch-button.fire):not(.solo-hidden) > .tank-touch-button.fire {
+        grid-column: 3;
+        justify-self: end;
+      }
+
+      .racing-touch-controls[data-touch-layout="joystick-left"]:has(.solo-hidden)
+      > .racing-team:not(.solo-hidden) > .arcade-joystick {
+        grid-column: 1;
+        justify-self: start;
+      }
+
+      .racing-touch-controls[data-touch-layout="joystick-left"]:has(.solo-hidden)
+      > .racing-team:not(.solo-hidden) > .racing-pedals {
+        grid-column: 3;
+        justify-self: end;
+      }
+
       #blocksView .paddle-statusbar .paddle-serve { display: none; }
 
       .blocks-mobile-start:not([hidden]) {
@@ -7393,7 +7442,7 @@
             <div class="profile-name-editor">
               <label class="sr-only" for="profileNameInput">Player name</label>
               <input id="profileNameInput" type="text" maxlength="24" autocomplete="nickname" aria-label="Player name">
-              <button id="profileSaveButton" type="button">Save</button>
+        <button id="profileSaveButton" type="button">Save</button>
             </div>
             <div class="profile-level-row">
               <strong id="profileLevel">Level 1</strong>
@@ -7840,7 +7889,7 @@
             </div>
             <div id="lobbyActions">
               <div class="lobby-mode-panel" data-bomberman-mode-panel="local">
-                <button id="playLocalButton" class="lobby-button" type="button">Start local match</button>
+          <button id="playLocalButton" class="lobby-button" type="button">Start local match</button>
               </div>
               <div class="lobby-mode-panel" data-bomberman-mode-panel="bot" hidden>
                 <div class="bot-heading">Choose bot difficulty</div>
@@ -7851,8 +7900,8 @@
                 </div>
               </div>
               <div class="lobby-mode-panel online" data-bomberman-mode-panel="online" hidden>
-                <button id="quickMatchButton" class="lobby-button quick-match-button" type="button">Quick Match</button>
-                <button id="createRoomButton" class="lobby-button" type="button">Create invite code</button>
+          <button id="quickMatchButton" class="lobby-button quick-match-button" type="button">Quick Match</button>
+          <button id="createRoomButton" class="lobby-button" type="button">Create invite code</button>
                 <div class="join-row">
                   <input
                     id="roomCodeInput"
@@ -7863,7 +7912,7 @@
                     aria-label="Room code"
                     placeholder="CODE"
                   >
-                  <button id="joinRoomButton" class="lobby-button secondary" type="button">Join</button>
+            <button id="joinRoomButton" class="lobby-button secondary" type="button">Join</button>
                 </div>
               </div>
             </div>
@@ -7871,8 +7920,8 @@
               <div class="lobby-divider">room code</div>
               <div id="roomCode" class="room-code">-----</div>
               <div class="room-invite-actions">
-                <button id="copyRoomButton" class="copy-button" type="button">Copy link</button>
-                <button id="shareRoomButton" class="copy-button" type="button">Share invite</button>
+          <button id="copyRoomButton" class="copy-button" type="button">Copy link</button>
+          <button id="shareRoomButton" class="copy-button" type="button">Share invite</button>
               </div>
             </div>
             <p id="connectionMessage" class="connection-message">Create a room or enter an invitation code.</p>
@@ -8241,7 +8290,7 @@
         <button id="tanksRestartButton" class="paddle-restart" type="button">Reset match</button>
         <div class="paddle-key-guide coral">Coral: <kbd>Arrows</kbd> + <kbd>Enter</kbd></div>
       </footer>
-      <div class="tanks-touch-controls" aria-label="Touch tank controls">
+      <div class="tanks-touch-controls" aria-label="Touch tank controls" data-touch-layout="joystick-right">
         <div id="tanksMintControls" class="tank-touch-team joystick-team">
           <strong>Mint</strong>
           <div class="arcade-joystick" data-tank-joystick="1" role="group" tabindex="0" aria-label="Mint movement joystick">
@@ -8264,6 +8313,7 @@
           </div>
           <button class="tank-touch-button fire" type="button" data-tank-player="2" data-tank-action="fire">Fire</button>
         </div>
+        <button id="tanksTouchSwap" class="touch-swap-button" type="button" data-joystick-side="right" aria-label="Joystick is on the right. Move joystick to the left and swap the action button."><span aria-hidden="true">⇄</span><span>Swap sides</span></button>
       </div>
     </section>
   </main>
@@ -8351,7 +8401,7 @@
         <button id="survivalRestartButton" class="paddle-restart" type="button">Reset run</button>
         <div class="paddle-key-guide coral">Coral: <kbd>Arrows</kbd> + <kbd>Enter</kbd></div>
       </footer>
-      <div class="tanks-touch-controls survival-touch-controls" aria-label="Touch survival controls">
+      <div class="tanks-touch-controls survival-touch-controls" aria-label="Touch survival controls" data-touch-layout="joystick-right">
         <div id="survivalMintControls" class="tank-touch-team joystick-team">
           <strong>Mint</strong>
           <div class="arcade-joystick" data-survival-joystick="1" role="group" tabindex="0" aria-label="Mint movement joystick">
@@ -8374,6 +8424,7 @@
           </div>
           <button class="tank-touch-button fire" type="button" data-survival-player="2" data-survival-action="fire">Fire</button>
         </div>
+        <button id="survivalTouchSwap" class="touch-swap-button" type="button" data-joystick-side="right" aria-label="Joystick is on the right. Move joystick to the left and swap the action button."><span aria-hidden="true">⇄</span><span>Swap sides</span></button>
       </div>
     </section>
   </main>
@@ -8414,7 +8465,7 @@
         <button id="starRestartButton" class="paddle-restart" type="button">Reset mission</button>
         <div class="paddle-key-guide coral">Coral: <kbd>Arrows</kbd> + <kbd>Enter</kbd></div>
       </footer>
-      <div class="tanks-touch-controls star-touch-controls" aria-label="Touch star-fighter controls">
+      <div class="tanks-touch-controls star-touch-controls" aria-label="Touch star-fighter controls" data-touch-layout="joystick-right">
         <div class="tank-touch-team joystick-team">
           <strong>Mint</strong>
           <div class="arcade-joystick" data-star-joystick="1" role="group" tabindex="0" aria-label="Mint movement joystick">
@@ -8437,6 +8488,7 @@
           </div>
           <button class="tank-touch-button fire" type="button" data-star-player="2" data-star-action="fire">Fire</button>
         </div>
+        <button id="starTouchSwap" class="touch-swap-button" type="button" data-joystick-side="right" aria-label="Joystick is on the right. Move joystick to the left and swap the action button."><span aria-hidden="true">⇄</span><span>Swap sides</span></button>
       </div>
     </section>
   </main>
@@ -8482,7 +8534,7 @@
         <button id="racingRestartButton" class="paddle-restart" type="button">Reset race</button>
         <div class="paddle-key-guide coral">Coral: <kbd>Arrows</kbd></div>
       </footer>
-      <div class="tanks-touch-controls racing-touch-controls" aria-label="Touch racing controls">
+      <div class="tanks-touch-controls racing-touch-controls" aria-label="Touch racing controls" data-touch-layout="joystick-right">
         <div id="racingMintControls" class="tank-touch-team joystick-team racing-team">
           <strong>Mint</strong>
           <div class="arcade-joystick" data-racing-joystick="1" role="group" tabindex="0" aria-label="Mint steering joystick">
@@ -8507,6 +8559,7 @@
             <button class="racing-pedal racing-accelerate" type="button" data-racing-player="2" data-racing-action="accelerate" aria-label="Hold to accelerate Coral">Go</button>
           </div>
         </div>
+        <button id="racingTouchSwap" class="touch-swap-button" type="button" data-joystick-side="right" aria-label="Joystick is on the right. Move joystick to the left and swap the action button."><span aria-hidden="true">⇄</span><span>Swap sides</span></button>
       </div>
     </section>
   </main>
