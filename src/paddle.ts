@@ -1,6 +1,6 @@
 import { GameRoomClient } from './game-room.js';
 import { ArcadeResultReporter } from './stats.js';
-import { bindDirectionalJoystick } from './touch-controls.js';
+import { capturePointer, bindDirectionalJoystick } from './touch-controls.js';
 import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
 
 export type PaddlePlayer = 1 | 2;
@@ -351,7 +351,7 @@ export function initPaddleClash(): void {
     };
     button.addEventListener('pointerdown', event => {
       event.preventDefault();
-      button.setPointerCapture?.(event.pointerId);
+      capturePointer(button, event.pointerId);
       button.classList.add('pressed');
       setPlayerInput(player, direction, true);
     });
@@ -375,7 +375,7 @@ export function initPaddleClash(): void {
   canvas.addEventListener('pointerdown', event => {
     if (!practiceBot || room?.session().online) return;
     directTouchId = event.pointerId;
-    canvas.setPointerCapture?.(event.pointerId);
+    capturePointer(canvas, event.pointerId);
     moveMintToPointer(event);
   });
   canvas.addEventListener('pointermove', event => { if (directTouchId === event.pointerId) moveMintToPointer(event); });

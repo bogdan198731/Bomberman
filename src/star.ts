@@ -1,6 +1,6 @@
 import { supportedLaunchMode } from './game-metadata.js';
 import { ArcadeResultReporter } from './stats.js';
-import { bindDirectionalJoystick } from './touch-controls.js';
+import { capturePointer, bindDirectionalJoystick } from './touch-controls.js';
 import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
 import { emitArcadeGameplayCue } from './feedback.js';
 
@@ -513,7 +513,7 @@ export function initStarDefender(): void {
     const release = (): void => game.setInput(action, false, player);
     button.addEventListener('pointerdown', event => {
       if (isArcadeSessionPaused('star')) return;
-      event.preventDefault(); button.setPointerCapture?.(event.pointerId); game.setInput(action, true, player);
+      event.preventDefault(); capturePointer(button, event.pointerId); game.setInput(action, true, player);
     });
     button.addEventListener('pointerup', release); button.addEventListener('pointercancel', release); button.addEventListener('lostpointercapture', release);
   });

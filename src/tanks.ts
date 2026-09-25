@@ -1,6 +1,6 @@
 import { GameRoomClient } from './game-room.js';
 import { ArcadeResultReporter } from './stats.js';
-import { bindDirectionalJoystick } from './touch-controls.js';
+import { capturePointer, bindDirectionalJoystick } from './touch-controls.js';
 import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
 import { emitArcadeGameplayCue } from './feedback.js';
 
@@ -393,7 +393,7 @@ export function initMiniTanks(): void {
     const player = Number(button.dataset.tankPlayer) as TankPlayer;
     const action = button.dataset.tankAction as keyof TankInput;
     const release = (): void => setPlayerInput(player, action, false);
-    button.addEventListener('pointerdown', event => { event.preventDefault(); button.setPointerCapture?.(event.pointerId); setPlayerInput(player, action, true); });
+    button.addEventListener('pointerdown', event => { event.preventDefault(); capturePointer(button, event.pointerId); setPlayerInput(player, action, true); });
     button.addEventListener('pointerup', release); button.addEventListener('pointercancel', release); button.addEventListener('lostpointercapture', release);
   });
   document.querySelectorAll<HTMLElement>('[data-tank-joystick]').forEach(track => {

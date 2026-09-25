@@ -43,6 +43,7 @@ import {
   ARCADE_TOUCH_LAYOUT_CHANGE_EVENT,
   BOMBERMAN_TOUCH_LAYOUT_STORAGE_KEY,
   bindVirtualJoystick,
+  capturePointer,
   clampJoystickOffset,
   initTouchLayoutSwap,
   joystickDirection,
@@ -1854,7 +1855,7 @@ export function initGame(): void {
       event.preventDefault();
       if (touchTimers.has(event.pointerId)) return;
       button.classList.add('pressed');
-      button.setPointerCapture?.(event.pointerId);
+      capturePointer(button, event.pointerId);
       dispatch();
       if (haptic && 'vibrate' in navigator) navigator.vibrate(24);
       const timer = repeat
@@ -1924,7 +1925,7 @@ export function initGame(): void {
       event.preventDefault();
       activePointerId = event.pointerId;
       track.classList.add('is-active');
-      track.setPointerCapture?.(event.pointerId);
+      capturePointer(track, event.pointerId);
       updateJoystick(event.clientX, event.clientY);
       if ('vibrate' in navigator) navigator.vibrate(12);
     });

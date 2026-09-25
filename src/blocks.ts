@@ -1,4 +1,5 @@
 import { GameRoomClient } from './game-room.js';
+import { capturePointer } from './touch-controls.js';
 import { ArcadeResultReporter } from './stats.js';
 import { currentArcadeLanguage } from './i18n.js';
 import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
@@ -658,7 +659,7 @@ export function initBlockDrop(): void {
     };
     button.addEventListener('pointerdown', event => {
       event.preventDefault();
-      button.setPointerCapture?.(event.pointerId);
+      capturePointer(button, event.pointerId);
       button.classList.add('pressed');
       performAction(player, action);
       if (action === 'left' || action === 'right' || action === 'down') {

@@ -120,6 +120,17 @@ export const DEFAULT_BOMBERMAN_TOUCH_LAYOUT = DEFAULT_ARCADE_TOUCH_LAYOUT;
 export const normalizeBombermanTouchLayout = normalizeArcadeTouchLayout;
 export const swapBombermanTouchLayout = swapArcadeTouchLayout;
 
+/**
+ * Pointer capture is a convenience, not a requirement. It throws when the
+ * pointer has already gone (a tap that ends before the handler runs, a
+ * synthetic event), and callers capture before they register the input - so
+ * an unguarded call silently swallows the press. Never let it do that.
+ */
+export function capturePointer(element: Element, pointerId: number): void {
+  try { element.setPointerCapture?.(pointerId); }
+  catch { /* The press still counts; only the capture was lost. */ }
+}
+
 export function joystickDirection(
   deltaX: number,
   deltaY: number,
@@ -228,7 +239,7 @@ export function bindVirtualJoystick(
     event.preventDefault();
     activePointerId = event.pointerId;
     track.classList.add('is-active');
-    track.setPointerCapture?.(event.pointerId);
+    capturePointer(track, event.pointerId);
     updatePointer(event.clientX, event.clientY);
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(10);
   };

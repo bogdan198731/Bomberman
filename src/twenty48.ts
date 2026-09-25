@@ -1,4 +1,5 @@
 import { ArcadeResultReporter } from './stats.js';
+import { capturePointer } from './touch-controls.js';
 import { translateArcadeText } from './i18n.js';
 import { clearArcadePause, isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
 
@@ -446,7 +447,7 @@ export function initTwenty48(): void {
   activeBoard.addEventListener('pointerdown', event => {
     if (!visible() || game.phase !== 'playing') return;
     swipeStart = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
-    activeBoard.setPointerCapture?.(event.pointerId);
+    capturePointer(activeBoard, event.pointerId);
   });
   activeBoard.addEventListener('pointerup', event => {
     if (!swipeStart || swipeStart.pointerId !== event.pointerId) return;

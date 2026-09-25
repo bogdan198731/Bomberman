@@ -1,6 +1,6 @@
 import { GameRoomClient } from './game-room.js';
 import { ArcadeResultReporter } from './stats.js';
-import { bindDirectionalJoystick } from './touch-controls.js';
+import { capturePointer, bindDirectionalJoystick } from './touch-controls.js';
 import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
 import { emitArcadeGameplayCue } from './feedback.js';
 
@@ -538,7 +538,7 @@ export function initMicroRacers(): void {
     const release = (): void => { button.classList.remove('pressed'); setPlayerInput(player, action, false); };
     button.addEventListener('pointerdown', event => {
       event.preventDefault();
-      button.setPointerCapture?.(event.pointerId);
+      capturePointer(button, event.pointerId);
       button.classList.add('pressed');
       setPlayerInput(player, action, true);
     });

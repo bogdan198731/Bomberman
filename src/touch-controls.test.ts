@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import test from 'node:test';
 import {
+  capturePointer,
   ARCADE_TOUCH_LAYOUT_STORAGE_KEY,
   BOMBERMAN_TOUCH_LAYOUT_STORAGE_KEY,
   DEFAULT_ARCADE_TOUCH_LAYOUT,
@@ -179,4 +180,32 @@ test('swapping in one game applies to the others without a reload', () => {
       else Reflect.deleteProperty(globalThis, key);
     }
   }
+});
+
+test('a failed pointer capture never swallows the press', () => {
+  // Callers capture before they register the input, so a throw here used to
+  // drop the tap entirely - the bug that made a bomb press do nothing.
+  const throwing = {
+    setPointerCapture() { throw new DOMException('No active pointer', 'NotFoundError'); },
+  } as unknown as Element;
+  assert.doesNotThrow(() => capturePointer(throwing, 7));
+
+  const captured: number[] = [];
+  const working = { setPointerCapture: (id: number) => captured.push(id) } as unknown as Element;
+  capturePointer(working, 11);
+  assert.deepEqual(captured, [11], 'a healthy pointer is still captured');
+
+  // Older engines may not implement it at all.
+  assert.doesNotThrow(() => capturePointer({} as Element, 3));
+});
+
+test('no touch handler calls setPointerCapture unguarded', () => {
+  const dir = new URL('../src', import.meta.url);
+  const offenders: string[] = [];
+  for (const name of readdirSync(dir)) {
+    if (!name.endsWith('.ts') || name.endsWith('.test.ts') || name === 'touch-controls.ts') continue;
+    const source = readFileSync(new URL(`../src/${name}`, import.meta.url), 'utf8');
+    if (source.includes('setPointerCapture')) offenders.push(name);
+  }
+  assert.deepEqual(offenders, [], `these must use capturePointer instead: ${offenders.join(', ')}`);
 });

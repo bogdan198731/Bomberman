@@ -1,6 +1,6 @@
 import { GameRoomClient } from './game-room.js';
 import { ArcadeResultReporter } from './stats.js';
-import { bindDirectionalJoystick } from './touch-controls.js';
+import { capturePointer, bindDirectionalJoystick } from './touch-controls.js';
 import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
 import { emitArcadeGameplayCue } from './feedback.js';
 
@@ -434,7 +434,7 @@ export function initSurvivalArena(): void {
     const action = button.dataset.survivalAction as keyof SurvivalInput;
     const release = (): void => setPlayerInput(player, action, false);
     button.addEventListener('pointerdown', event => {
-      event.preventDefault(); button.setPointerCapture?.(event.pointerId); setPlayerInput(player, action, true);
+      event.preventDefault(); capturePointer(button, event.pointerId); setPlayerInput(player, action, true);
     });
     button.addEventListener('pointerup', release); button.addEventListener('pointercancel', release); button.addEventListener('lostpointercapture', release);
   });
