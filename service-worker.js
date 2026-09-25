@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blast-arcade-seo-2026-09-24';
+const CACHE_NAME = 'blast-arcade-retro-2026-09-25';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -44,6 +44,7 @@ const APP_SHELL = [
   '/dist/tintar.js',
   '/dist/touch-controls.js',
   '/dist/seo.js',
+  '/dist/bomberman-skin.js',
 ];
 
 self.addEventListener('install', event => {

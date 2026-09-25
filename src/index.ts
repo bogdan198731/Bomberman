@@ -1,4 +1,18 @@
 import { createArcadeNavigation, type ArcadeView } from './navigation.js';
+import {
+  drawRetroBomb,
+  drawRetroBrick,
+  drawRetroExplosion,
+  drawRetroFloor,
+  drawRetroPlayer,
+  drawRetroPowerUp,
+  drawRetroSolidBlock,
+  loadBombermanSkin,
+  otherSkin,
+  saveBombermanSkin,
+  type BombermanSkin,
+  type RetroPowerUpKind,
+} from './bomberman-skin.js';
 import { initHubLayout } from './hub-layout.js';
 import { ActiveClock } from './session-state.js';
 import { supportedLaunchMode } from './game-metadata.js';
@@ -382,6 +396,7 @@ export interface RenderState {
   explosions?: Explosion[];
   powerUps?: PowerUp[];
   pressureLevel?: number;
+  skin?: BombermanSkin;
 }
 
 /** Draws a supplied plain game-state object without depending on live game internals. */
@@ -690,26 +705,35 @@ function drawPowerUp(
   ctx.restore();
 }
 
+/** Eased tile-to-tile position, shared by both skins so movement feels identical. */
+function interpolatedPlayerPosition(
+  player: Player,
+  now: number
+): { x: number; y: number; moving: boolean } {
+  if (
+    player.moveStartedAt === undefined ||
+    player.moveFromX === undefined ||
+    player.moveFromY === undefined
+  ) {
+    return { x: player.x, y: player.y, moving: false };
+  }
+  const moveDuration = player.moveDuration ?? PLAYER_MOVE_DURATION;
+  const progress = Math.min(1, Math.max(0, (now - player.moveStartedAt) / moveDuration));
+  const easedProgress = progress * progress * (3 - 2 * progress);
+  return {
+    x: player.moveFromX + (player.x - player.moveFromX) * easedProgress,
+    y: player.moveFromY + (player.y - player.moveFromY) * easedProgress,
+    moving: progress < 1,
+  };
+}
+
 function drawPlayer(
   ctx: CanvasRenderingContext2D,
   player: Player,
   size: number,
   now: number
 ): void {
-  let visualX = player.x;
-  let visualY = player.y;
-
-  if (
-    player.moveStartedAt !== undefined &&
-    player.moveFromX !== undefined &&
-    player.moveFromY !== undefined
-  ) {
-    const moveDuration = player.moveDuration ?? PLAYER_MOVE_DURATION;
-    const progress = Math.min(1, Math.max(0, (now - player.moveStartedAt) / moveDuration));
-    const easedProgress = progress * progress * (3 - 2 * progress);
-    visualX = player.moveFromX + (player.x - player.moveFromX) * easedProgress;
-    visualY = player.moveFromY + (player.y - player.moveFromY) * easedProgress;
-  }
+  const { x: visualX, y: visualY } = interpolatedPlayerPosition(player, now);
 
   const x = visualX * size;
   const y = visualY * size;
@@ -777,25 +801,35 @@ export function render(
   canvas: HTMLCanvasElement,
   state: RenderState
 ): void {
-  const { grid, players, bombs = [], explosions = [], powerUps = [], pressureLevel = 0 } = state;
+  const { grid, players, bombs = [], explosions = [], powerUps = [], pressureLevel = 0, skin = 'modern' } = state;
   const tileSize = canvas.width / grid.width;
   const now = performance.now();
+  const retro = skin === 'retro';
 
-  ctx.fillStyle = '#284b39';
+  // Pixel art must never be interpolated, or the hard edges turn to mush.
+  ctx.imageSmoothingEnabled = !retro;
+
+  ctx.fillStyle = retro ? '#1d6236' : '#284b39';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   for (let y = 0; y < grid.height; y++) {
     for (let x = 0; x < grid.width; x++) {
       const tile = grid.tiles[y][x];
-      ctx.fillStyle = (x + y) % 2 === 0 ? '#315d43' : '#2c563e';
-      ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
-      ctx.fillStyle = 'rgba(255,255,255,0.025)';
-      ctx.fillRect(x * tileSize + tileSize * 0.12, y * tileSize + tileSize * 0.12, tileSize * 0.76, tileSize * 0.035);
+      if (retro) {
+        drawRetroFloor(ctx, x * tileSize, y * tileSize, tileSize, x, y);
+      } else {
+        ctx.fillStyle = (x + y) % 2 === 0 ? '#315d43' : '#2c563e';
+        ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+        ctx.fillStyle = 'rgba(255,255,255,0.025)';
+        ctx.fillRect(x * tileSize + tileSize * 0.12, y * tileSize + tileSize * 0.12, tileSize * 0.76, tileSize * 0.035);
+      }
 
       if (tile === TileType.WALL_INDESTRUCTIBLE) {
-        drawStoneBlock(ctx, x * tileSize, y * tileSize, tileSize);
+        if (retro) drawRetroSolidBlock(ctx, x * tileSize, y * tileSize, tileSize);
+        else drawStoneBlock(ctx, x * tileSize, y * tileSize, tileSize);
       } else if (tile === TileType.WALL_DESTRUCTIBLE) {
-        drawCrate(ctx, x * tileSize, y * tileSize, tileSize);
+        if (retro) drawRetroBrick(ctx, x * tileSize, y * tileSize, tileSize);
+        else drawCrate(ctx, x * tileSize, y * tileSize, tileSize);
       }
     }
   }
@@ -815,22 +849,50 @@ export function render(
   }
 
   for (const powerUp of powerUps) {
-    drawPowerUp(ctx, powerUp, tileSize, now);
+    if (retro) {
+      drawRetroPowerUp(ctx, powerUp.x * tileSize, powerUp.y * tileSize, tileSize, retroPowerUpKind(powerUp.type), now);
+    } else {
+      drawPowerUp(ctx, powerUp, tileSize, now);
+    }
   }
 
   for (const bomb of bombs) {
-    drawBomb(ctx, bomb.x * tileSize, bomb.y * tileSize, tileSize, now, bomb.fuseProgress);
+    if (retro) drawRetroBomb(ctx, bomb.x * tileSize, bomb.y * tileSize, tileSize, now, bomb.fuseProgress);
+    else drawBomb(ctx, bomb.x * tileSize, bomb.y * tileSize, tileSize, now, bomb.fuseProgress);
   }
 
   for (const explosion of explosions) {
-    drawExplosion(ctx, explosion.x * tileSize, explosion.y * tileSize, tileSize, now);
+    if (retro) drawRetroExplosion(ctx, explosion.x * tileSize, explosion.y * tileSize, tileSize, now);
+    else drawExplosion(ctx, explosion.x * tileSize, explosion.y * tileSize, tileSize, now);
   }
 
   for (const player of players) {
-    if (player.alive) {
-      drawPlayer(ctx, player, tileSize, now);
-    }
+    if (!player.alive) continue;
+    if (retro) drawRetroPlayerSprite(ctx, player, tileSize, now);
+    else drawPlayer(ctx, player, tileSize, now);
   }
+
+  ctx.imageSmoothingEnabled = true;
+}
+
+function retroPowerUpKind(type: PowerUpType): RetroPowerUpKind {
+  return type === PowerUpType.BOMB_UP ? 'bomb' : type === PowerUpType.FIRE_UP ? 'fire' : 'speed';
+}
+
+/** Feeds the retro sprite the same interpolated position the modern renderer uses. */
+function drawRetroPlayerSprite(
+  ctx: CanvasRenderingContext2D,
+  player: Player,
+  size: number,
+  now: number,
+): void {
+  const { x, y, moving } = interpolatedPlayerPosition(player, now);
+  drawRetroPlayer(
+    ctx,
+    { playerId: player.id, x: x * size, y: y * size, facing: player.facing ?? 'down', walking: moving },
+    size,
+    now,
+  );
 }
 
 function movePlayerSmoothly(
@@ -1235,6 +1297,7 @@ export function initGame(): void {
     sudokuView: document.getElementById('sudokuView'),
     launchGameButtons: document.querySelectorAll<HTMLButtonElement>('[data-launch-game]'),
     backToHubButtons: document.querySelectorAll<HTMLButtonElement>('[data-back-to-hub]'),
+    skinButton: document.getElementById('bombermanSkinButton') as HTMLButtonElement | null,
     statusText: document.getElementById('gameStatusText'),
     roundLabel: document.getElementById('roundLabel'),
     playerOneScore: document.getElementById('playerOneScore'),
@@ -1287,6 +1350,7 @@ export function initGame(): void {
     overlayText: 'ONLINE',
     statusText: 'Choose a room',
   };
+  let activeSkin: BombermanSkin = loadBombermanSkin();
   let renderedPlayers: Player[] = createPlayers();
   let renderedRound = 0;
   let socket: WebSocket | undefined;
@@ -1715,6 +1779,21 @@ export function initGame(): void {
   });
   applyMobileTouchLayout();
 
+  function applySkinButton(): void {
+    const button = elements.skinButton;
+    if (!button) return;
+    // The label names the skin you would switch to, not the one you are on.
+    // Plain English text is fine: the i18n observer localizes it in place.
+    button.textContent = activeSkin === 'retro' ? 'Modern graphics' : 'Retro graphics';
+    button.setAttribute('aria-pressed', activeSkin === 'retro' ? 'true' : 'false');
+    canvas?.classList.toggle('retro-skin', activeSkin === 'retro');
+  }
+  elements.skinButton?.addEventListener('click', () => {
+    activeSkin = saveBombermanSkin(otherSkin(activeSkin));
+    applySkinButton();
+  });
+  applySkinButton();
+
   const touchTimers = new Map<number, number>();
   function bindTouchControl(
     button: HTMLButtonElement,
@@ -1943,7 +2022,7 @@ export function initGame(): void {
       onlineState = snapshot;
       syncUi();
     }
-    render(ctx as CanvasRenderingContext2D, canvas as HTMLCanvasElement, { ...onlineState, players: renderedPlayers });
+    render(ctx as CanvasRenderingContext2D, canvas as HTMLCanvasElement, { ...onlineState, players: renderedPlayers, skin: activeSkin });
     if (onlineState.phase === 'finished') {
       if (onlineState.gameStatus === 'draw') renderDrawScreen(ctx as CanvasRenderingContext2D, canvas as HTMLCanvasElement);
       else if (onlineState.gameStatus === 'player1-wins') renderWinScreen(ctx as CanvasRenderingContext2D, canvas as HTMLCanvasElement, 1);

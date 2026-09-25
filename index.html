@@ -191,6 +191,31 @@
       color: #cdeaf0;
     }
 
+    .skin-toggle-button {
+      min-height: 40px;
+      padding: 0 12px;
+      border: 1px solid rgba(255, 200, 87, 0.22);
+      border-radius: 12px;
+      color: var(--gold);
+      background: rgba(255, 200, 87, 0.06);
+      cursor: pointer;
+      font: inherit;
+      font-size: 0.67rem;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    #gameCanvas.retro-skin {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    .skin-toggle-button[aria-pressed="true"] {
+      border-color: rgba(84, 227, 142, 0.34);
+      color: var(--p1);
+      background: rgba(84, 227, 142, 0.1);
+    }
+
     .live-chip,
     .eyebrow,
     .game-tag,
@@ -4581,11 +4606,17 @@
       .game-nav-actions .back-to-hub,
       .game-nav-actions .game-help-button,
       .game-nav-actions .pause-game-button,
+      .game-nav-actions .skin-toggle-button,
       .game-nav-actions .settings-nav-button {
         width: 40px;
         min-height: 38px;
         padding: 0;
         font-size: 0;
+      }
+
+      .game-nav-actions .skin-toggle-button::before {
+        content: 'A6';
+        font-size: .95rem;
       }
 
       .game-nav-actions .back-to-hub::before {
@@ -7756,6 +7787,7 @@
       </div>
       <div class="game-nav-actions">
         <button id="backToHubButton" class="back-to-hub" type="button" data-back-to-hub aria-label="Back to games">← Arcade</button>
+        <button id="bombermanSkinButton" class="skin-toggle-button" type="button" aria-pressed="false" title="Switch between modern and retro graphics">Retro graphics</button>
         <div class="status-pill" aria-live="polite">
           <i class="status-dot" aria-hidden="true"></i>
           <span id="gameStatusText">Choose a room</span>
