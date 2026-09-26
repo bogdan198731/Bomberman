@@ -2066,6 +2066,48 @@
       box-shadow: 0 15px 32px rgba(0,0,0,.35), inset 0 2px rgba(255,255,255,.3);
     }
 
+    /* Shared by the newer games: one arena and canvas style instead of one per game. */
+    .arcade-arena {
+      padding: clamp(10px, 2.2vw, 22px);
+      background: #0c111a;
+    }
+
+    .arcade-canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 17px;
+      background: #101722;
+      box-shadow: 0 18px 42px rgba(0,0,0,.34);
+      touch-action: manipulation;
+    }
+
+    /* Games steered by swiping the board must not scroll the page instead. */
+    .arcade-canvas.swipe-canvas { touch-action: none; }
+
+    @media (max-width: 760px) {
+      .arcade-arena { padding: 6px; }
+    }
+
+    @media (min-width: 761px) and (max-height: 920px) {
+      .arcade-arena { padding: 10px; }
+      /* Fit the board to the height left over, whatever its shape. */
+      .arcade-canvas {
+        width: min(100%, max(320px, calc((100dvh - 390px) * var(--canvas-aspect, 1.5))));
+        margin-inline: auto;
+      }
+    }
+
+    .cycles-cover::before {
+      background:
+        linear-gradient(90deg, transparent 18%, rgba(84,227,142,.55) 18% 21%, transparent 21%),
+        linear-gradient(transparent 62%, rgba(255,107,120,.5) 62% 65%, transparent 65%),
+        linear-gradient(rgba(104,223,255,.08) 1px, transparent 1px) 0 0 / 14px 14px,
+        linear-gradient(90deg, rgba(104,223,255,.08) 1px, transparent 1px) 0 0 / 14px 14px,
+        #070b14;
+    }
+
     .sudoku-cover::before {
       background:
         linear-gradient(90deg, rgba(255,255,255,.09) 2px, transparent 2px),
@@ -7878,6 +7920,21 @@
             </div>
           </div>
         </article>
+        <article class="catalog-card featured" data-catalog-game="cycles" data-catalog-modes="solo local online">
+          <div class="game-cover cycles-cover">
+            <span class="cover-label">New</span>
+            <button class="favorite-button" type="button" data-favorite-game aria-label="Add Light Cycles to favorites" aria-pressed="false">☆</button>
+            <span class="game-glyph" aria-hidden="true">⟫</span>
+          </div>
+          <div class="catalog-card-body">
+            <h3>Light Cycles</h3>
+            <p>Ride a neon grid, leave a wall of light behind you, and box your rival in first.</p>
+            <div class="catalog-card-footer">
+              <span class="mode-label">Bot · Local · Online</span>
+              <button class="card-play-button" type="button" data-launch-game="cycles" aria-label="Play Light Cycles">Play now</button>
+            </div>
+          </div>
+        </article>
       </div>
       <div id="catalogEmptyState" class="catalog-empty-state" hidden>
         <strong>No games found</strong>
@@ -8831,6 +8888,78 @@
         <button class="new-puzzle" type="button" data-sudoku-new>New puzzle</button>
       </div>
       <p class="sudoku-help">Tap a cell and number, or use your keyboard. Tougher puzzles start with a higher score; time, mistakes, and hints reduce it.</p>
+    </section>
+  </main>
+
+  <main id="cyclesView" class="paddle-app view-hidden">
+    <header class="topbar">
+      <div class="brand">
+        <div class="snake-brand-mark" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div>
+          <h1>Light Cycles</h1>
+          <p>Ride the grid · Bot, local, or online</p>
+        </div>
+      </div>
+      <div class="game-nav-actions">
+        <button class="back-to-hub" type="button" data-back-to-hub aria-label="Back to games">← Arcade</button>
+      </div>
+    </header>
+
+    <div data-game-room="cycles"></div>
+
+    <section class="paddle-shell" aria-label="Light Cycles match">
+      <div class="paddle-scorebar">
+        <div class="paddle-score-player">
+          <i class="paddle-score-swatch" aria-hidden="true"></i>
+          <div><span>Mint</span><b id="cyclesMintScore">0</b></div>
+        </div>
+        <div class="paddle-score-goal">First to 3</div>
+        <div class="paddle-score-player coral">
+          <i class="paddle-score-swatch" aria-hidden="true"></i>
+          <div><span>Coral</span><b id="cyclesCoralScore">0</b></div>
+        </div>
+      </div>
+
+      <div class="arcade-arena">
+        <canvas id="cyclesCanvas" class="arcade-canvas swipe-canvas" width="720" height="480" aria-label="Light Cycles grid arena"></canvas>
+      </div>
+
+      <div class="paddle-statusbar" aria-live="polite">
+        <span id="cyclesStatus">Outlast the Coral bot. First to 3 rounds.</span>
+        <label class="gameplay-option">Bot
+          <select id="cyclesBotLevel" aria-label="Light Cycles bot level"><option value="easy">Easy</option><option value="normal" selected>Normal</option><option value="hard">Hard</option></select>
+        </label>
+        <button id="cyclesStartButton" class="paddle-serve" type="button">Start round</button>
+      </div>
+
+      <footer class="paddle-footer">
+        <div class="paddle-key-guide">Mint uses <kbd>WASD</kbd></div>
+        <button id="cyclesRestartButton" class="paddle-restart" type="button">Reset match</button>
+        <div class="paddle-key-guide coral">Coral uses <kbd>Arrows</kbd></div>
+      </footer>
+
+      <div class="snake-touch-controls" aria-label="Touch light cycle controls" data-touch-layout="joystick-right">
+        <div id="cyclesMintControls" class="snake-dpad">
+          <strong>Mint</strong>
+          <div class="arcade-joystick" data-cycles-joystick="1" role="group" tabindex="0" aria-label="Mint steering joystick">
+            <span class="arcade-joystick-arrow up" aria-hidden="true">▲</span>
+            <span class="arcade-joystick-arrow right" aria-hidden="true">▶</span>
+            <span class="arcade-joystick-arrow down" aria-hidden="true">▼</span>
+            <span class="arcade-joystick-arrow left" aria-hidden="true">◀</span>
+            <span class="arcade-joystick-knob" data-joystick-knob aria-hidden="true"></span>
+          </div>
+        </div>
+        <div id="cyclesCoralControls" class="snake-dpad coral solo-hidden">
+          <strong>Coral</strong>
+          <div class="arcade-joystick" data-cycles-joystick="2" role="group" tabindex="0" aria-label="Coral steering joystick">
+            <span class="arcade-joystick-arrow up" aria-hidden="true">▲</span>
+            <span class="arcade-joystick-arrow right" aria-hidden="true">▶</span>
+            <span class="arcade-joystick-arrow down" aria-hidden="true">▼</span>
+            <span class="arcade-joystick-arrow left" aria-hidden="true">◀</span>
+            <span class="arcade-joystick-knob" data-joystick-knob aria-hidden="true"></span>
+          </div>
+        </div>
+      </div>
     </section>
   </main>
 

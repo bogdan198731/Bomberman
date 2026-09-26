@@ -47,6 +47,7 @@ const APP_SHELL = [
   '/dist/bomberman-skin.js',
   '/dist/mobile-fullscreen.js',
   '/dist/levels.js',
+  '/dist/cycles.js',
 ];
 
 self.addEventListener('install', event => {

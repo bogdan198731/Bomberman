@@ -46,6 +46,8 @@ export function gamePreview(game: ArcadeGameId): string {
     case 'star':
       for(let y=0;y<3;y++) for(let x=0;x<5;x++) board+=rect(32+x*22,15+y*15,12,7,y===0?coral:blue);
       board+='<path d="M80 68l-10 19h20z" fill="#54e38e"/>'+rect(79,56,2,7,gold)+rect(79,40,2,7,gold); break;
+    case 'cycles':
+      board = '<g fill="none" stroke-width="5" stroke-linejoin="round"><path d="M20 72h46V34h40" stroke="#54e38e"/><path d="M140 28h-34v44H84" stroke="#ff6b78"/></g>' + rect(102,30,8,8,mint) + rect(80,68,8,8,coral); break;
   }
   return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100"><rect width="160" height="100" rx="10" fill="#101d2b"/>${board}</svg>`)}`;
 }

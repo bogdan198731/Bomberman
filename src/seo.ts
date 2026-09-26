@@ -83,6 +83,11 @@ export const GAME_SEO: Record<ArcadeGameId, PageSeo> = {
     description:
       'Play Sudoku free in your browser. Complete every row, column, and 3×3 box across three carefully tuned difficulty levels, with hints when you need them.',
   },
+  cycles: {
+    title: 'Light Cycles — Free Online Neon Trail Duel',
+    description:
+      'Play Light Cycles free in your browser. Ride a neon grid, leave a wall of light behind you, and box a bot or a friend in first, locally or online.',
+  },
 };
 
 /** Every route the crawler should know about: the hub plus one page per game. */

@@ -90,11 +90,13 @@ test('short landscape Bomberman keeps the arena visible between overlay controls
 });
 
 test('real-time mobile games use shared virtual joysticks', () => {
-  for (const game of ['paddle', 'snake', 'tank', 'survival', 'star', 'racing']) {
+  for (const game of ['paddle', 'snake', 'tank', 'survival', 'star', 'racing', 'cycles']) {
     assert.equal((html.match(new RegExp(`data-${game}-joystick=`, 'g')) ?? []).length, 2, `${game} joysticks`);
   }
-  assert.equal((html.match(/class="arcade-joystick"/g) ?? []).length, 14);
-  assert.equal((html.match(/data-joystick-knob/g) ?? []).length, 14);
+  // Every joystick needs its knob; a fixed total would break on each new game.
+  const joysticks = (html.match(/class="arcade-joystick"/g) ?? []).length;
+  assert.ok(joysticks >= 14);
+  assert.equal((html.match(/data-joystick-knob/g) ?? []).length, joysticks);
   assert.match(html, /\.arcade-joystick\s*\{[^}]*aspect-ratio:\s*1;[^}]*touch-action:\s*none;/s);
   assert.match(html, /\.tank-touch-team\.joystick-team\s*\{[^}]*grid-template-columns:/s);
   assert.equal((html.match(/data-paddle-direction=/g) ?? []).length, 0);

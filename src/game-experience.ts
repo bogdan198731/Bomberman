@@ -87,6 +87,12 @@ export const GAME_GUIDES: Record<ArcadeGameId, GuideCopy> = {
     rules: [copy('Only visible row, column, or box conflicts count as mistakes.', 'Doar conflictele vizibile din rând, coloană sau careu sunt greșeli.'), copy('Relaxed view hides time and score pressure; hints remain limited by difficulty.', 'Modul relaxat ascunde presiunea timpului și scorului; indiciile rămân limitate de dificultate.')],
     tip: copy('Start with rows, columns, or boxes that have the fewest empty cells.', 'Începe cu rândurile, coloanele sau careurile cu cele mai puține celule goale.'),
   },
+  cycles: {
+    objective: copy('Leave a trail of light behind you and make your rival crash into a wall or a trail first. First to 3 rounds wins.', 'Lasă o dâră de lumină în urma ta și fă-ți rivalul să se izbească primul de un perete sau de o dâră. Primul la 3 runde câștigă.'),
+    controls: copy('Steer with WASD, the arrow keys, the joystick, or by swiping the grid. Tap the grid or press Space to start.', 'Condu cu WASD, săgețile, joystickul sau glisând pe grilă. Apasă pe grilă sau pe Spațiu pentru a porni.'),
+    rules: [copy('Trails never fade, so every move shrinks the arena.', 'Dârele nu dispar niciodată, așa că fiecare mișcare micșorează arena.'), copy('You cannot turn straight back into your own trail.', 'Nu poți întoarce direct în propria dâră.'), copy('If both riders crash on the same tick, nobody scores.', 'Dacă ambii se izbesc în același moment, nimeni nu primește punct.')],
+    tip: copy('Cut across your rival’s path early to steal the open space.', 'Taie devreme drumul rivalului pentru a-i fura spațiul liber.'),
+  },
 };
 
 const REPLAY_SELECTORS: Record<ArcadeGameId, string> = {
@@ -94,12 +100,14 @@ const REPLAY_SELECTORS: Record<ArcadeGameId, string> = {
   snake: '#snakeStartButton', tanks: '#tanksLaunchButton', septica: '#septicaRestartButton',
   survival: '#survivalStartButton', star: '#starStartButton', racing: '#racingStartButton',
   blocks: '#blocksStartButton', twenty48: '[data-twenty48-reset]', sudoku: '[data-sudoku-new]',
+  cycles: '#cyclesStartButton',
 };
 
 const RESULT_STATUS_SELECTORS: Record<ArcadeGameId, string> = {
   bomberman: '#statusText', tintar: '#tintarStatus', paddle: '#paddleStatus', snake: '#snakeStatus',
   tanks: '#tanksStatus', septica: '#septicaStatus', survival: '#survivalStatus', star: '#starStatus',
   racing: '#racingStatus', blocks: '#blocksStatus', twenty48: '#twenty48Status', sudoku: '#sudokuStatus',
+  cycles: '#cyclesStatus',
 };
 
 
@@ -112,6 +120,7 @@ const KEYBOARD_CONTROLS: Partial<Record<ArcadeGameId, [string, string]>> = {
   tanks: copy('Mint: WASD to move/aim, F to fire. Coral: arrow keys to move/aim, Enter to fire.', 'Mint: WASD pentru mișcare/țintire, F pentru foc. Coral: săgeți pentru mișcare/țintire, Enter pentru foc.'),
   survival: copy('Mint: WASD to move, F to fire. Coral: arrow keys to move, Enter to fire. Auto-fire is optional.', 'Mint: WASD pentru mișcare, F pentru foc. Coral: săgeți pentru mișcare, Enter pentru foc. Focul automat este opțional.'),
   star: copy('Mint: WASD to move, F to fire. Coral in co-op: arrow keys and Enter. In solo, either movement key set controls Mint.', 'Mint: WASD pentru mișcare, F pentru foc. Coral în cooperare: săgeți și Enter. Solo: ambele seturi de direcție controlează Mint.'),
+  cycles: copy('Mint: WASD. Coral: arrow keys. Against the bot, either set steers Mint. Space starts a round.', 'Mint: WASD. Coral: săgețile. Contra botului, ambele seturi îl conduc pe Mint. Spațiu pornește runda.'),
 };
 
 function localized(pair: [string, string]): string { return pair[currentArcadeLanguage() === 'ro' ? 1 : 0]; }
@@ -200,6 +209,7 @@ export function initGameExperience(): void {
       snake: '#snakeRestartButton', tanks: '#tanksRestartButton', septica: '#septicaRestartButton',
       survival: '#survivalRestartButton', star: '#starRestartButton', racing: '#racingRestartButton',
       blocks: '#blocksRestartButton', twenty48: '[data-twenty48-reset]', sudoku: '[data-sudoku-new]',
+      cycles: '#cyclesRestartButton',
     };
     if (!reset[gameId]) return;
     // These reset handlers confirm progress loss and clear pause only after acceptance.

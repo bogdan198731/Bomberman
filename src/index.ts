@@ -29,6 +29,7 @@ import { initStarDefender } from './star.js';
 import { initMicroRacers } from './racing.js';
 import { initBlockDrop } from './blocks.js';
 import { initTwenty48 } from './twenty48.js';
+import { initLightCycles } from './cycles.js';
 import { initSudoku } from './sudoku.js';
 import { ArcadeResultReporter, initArcadeProfile } from './stats.js';
 import { initGameCatalog } from './catalog.js';
@@ -2069,6 +2070,7 @@ if (typeof window !== 'undefined') {
     initBlockDrop();
     initTwenty48();
     initSudoku();
+    initLightCycles();
     initGameExperience();
     initArcadeTouchLayout();
     initMobileImmersiveMode();
