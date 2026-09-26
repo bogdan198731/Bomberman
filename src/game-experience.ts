@@ -93,6 +93,12 @@ export const GAME_GUIDES: Record<ArcadeGameId, GuideCopy> = {
     rules: [copy('Trails never fade, so every move shrinks the arena.', 'Dârele nu dispar niciodată, așa că fiecare mișcare micșorează arena.'), copy('You cannot turn straight back into your own trail.', 'Nu poți întoarce direct în propria dâră.'), copy('If both riders crash on the same tick, nobody scores.', 'Dacă ambii se izbesc în același moment, nimeni nu primește punct.')],
     tip: copy('Cut across your rival’s path early to steal the open space.', 'Taie devreme drumul rivalului pentru a-i fura spațiul liber.'),
   },
+  fourrow: {
+    objective: copy('Line up four discs - across, down, or diagonally - before your opponent does.', 'Aliniază patru discuri - orizontal, vertical sau pe diagonală - înaintea adversarului.'),
+    controls: copy('Tap or click a column to drop a disc. On a keyboard press 1-7, or aim with the arrows and press Enter.', 'Apasă pe o coloană pentru a lăsa un disc. Pe tastatură apasă 1-7 sau țintește cu săgețile și apasă Enter.'),
+    rules: [copy('Discs fall to the lowest open space in a column.', 'Discurile cad în cel mai de jos loc liber din coloană.'), copy('A full board with no four in a row is a draw.', 'O tablă plină fără patru în linie este remiză.'), copy('Players take turns opening each new game.', 'Jucătorii deschid pe rând fiecare joc nou.')],
+    tip: copy('Claim the centre column early - it is part of the most possible lines.', 'Ocupă devreme coloana din mijloc - face parte din cele mai multe linii posibile.'),
+  },
 };
 
 const REPLAY_SELECTORS: Record<ArcadeGameId, string> = {
@@ -101,6 +107,7 @@ const REPLAY_SELECTORS: Record<ArcadeGameId, string> = {
   survival: '#survivalStartButton', star: '#starStartButton', racing: '#racingStartButton',
   blocks: '#blocksStartButton', twenty48: '[data-twenty48-reset]', sudoku: '[data-sudoku-new]',
   cycles: '#cyclesStartButton',
+  fourrow: '#fourrowNextButton',
 };
 
 const RESULT_STATUS_SELECTORS: Record<ArcadeGameId, string> = {
@@ -108,6 +115,7 @@ const RESULT_STATUS_SELECTORS: Record<ArcadeGameId, string> = {
   tanks: '#tanksStatus', septica: '#septicaStatus', survival: '#survivalStatus', star: '#starStatus',
   racing: '#racingStatus', blocks: '#blocksStatus', twenty48: '#twenty48Status', sudoku: '#sudokuStatus',
   cycles: '#cyclesStatus',
+  fourrow: '#fourrowStatus',
 };
 
 
@@ -121,6 +129,7 @@ const KEYBOARD_CONTROLS: Partial<Record<ArcadeGameId, [string, string]>> = {
   survival: copy('Mint: WASD to move, F to fire. Coral: arrow keys to move, Enter to fire. Auto-fire is optional.', 'Mint: WASD pentru mișcare, F pentru foc. Coral: săgeți pentru mișcare, Enter pentru foc. Focul automat este opțional.'),
   star: copy('Mint: WASD to move, F to fire. Coral in co-op: arrow keys and Enter. In solo, either movement key set controls Mint.', 'Mint: WASD pentru mișcare, F pentru foc. Coral în cooperare: săgeți și Enter. Solo: ambele seturi de direcție controlează Mint.'),
   cycles: copy('Mint: WASD. Coral: arrow keys. Against the bot, either set steers Mint. Space starts a round.', 'Mint: WASD. Coral: săgețile. Contra botului, ambele seturi îl conduc pe Mint. Spațiu pornește runda.'),
+  fourrow: copy('Press 1-7 to drop in a column, or use Left/Right and Enter.', 'Apasă 1-7 pentru a lăsa un disc într-o coloană sau folosește Stânga/Dreapta și Enter.'),
 };
 
 function localized(pair: [string, string]): string { return pair[currentArcadeLanguage() === 'ro' ? 1 : 0]; }
@@ -210,6 +219,7 @@ export function initGameExperience(): void {
       survival: '#survivalRestartButton', star: '#starRestartButton', racing: '#racingRestartButton',
       blocks: '#blocksRestartButton', twenty48: '[data-twenty48-reset]', sudoku: '[data-sudoku-new]',
       cycles: '#cyclesRestartButton',
+      fourrow: '#fourrowRestartButton',
     };
     if (!reset[gameId]) return;
     // These reset handlers confirm progress loss and clear pause only after acceptance.

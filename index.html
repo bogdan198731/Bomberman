@@ -2108,6 +2108,15 @@
         #070b14;
     }
 
+    .fourrow-cover::before {
+      background:
+        radial-gradient(circle at 34% 74%, rgba(84,227,142,.8) 0 8%, transparent 9%),
+        radial-gradient(circle at 50% 74%, rgba(255,107,120,.8) 0 8%, transparent 9%),
+        radial-gradient(circle at 50% 50%, rgba(84,227,142,.8) 0 8%, transparent 9%),
+        radial-gradient(circle at 66% 74%, rgba(84,227,142,.8) 0 8%, transparent 9%),
+        linear-gradient(#1b3a78, #10254f);
+    }
+
     .sudoku-cover::before {
       background:
         linear-gradient(90deg, rgba(255,255,255,.09) 2px, transparent 2px),
@@ -7935,6 +7944,21 @@
             </div>
           </div>
         </article>
+        <article class="catalog-card featured" data-catalog-game="fourrow" data-catalog-modes="solo local online">
+          <div class="game-cover fourrow-cover">
+            <span class="cover-label">New</span>
+            <button class="favorite-button" type="button" data-favorite-game aria-label="Add Four in a Row to favorites" aria-pressed="false">☆</button>
+            <span class="game-glyph" aria-hidden="true">◉</span>
+          </div>
+          <div class="catalog-card-body">
+            <h3>Four in a Row</h3>
+            <p>Drop discs, block your rival, and line up four in a row against a bot or a friend.</p>
+            <div class="catalog-card-footer">
+              <span class="mode-label">Bot · Local · Online</span>
+              <button class="card-play-button" type="button" data-launch-game="fourrow" aria-label="Play Four in a Row">Play now</button>
+            </div>
+          </div>
+        </article>
       </div>
       <div id="catalogEmptyState" class="catalog-empty-state" hidden>
         <strong>No games found</strong>
@@ -8960,6 +8984,55 @@
           </div>
         </div>
       </div>
+    </section>
+  </main>
+
+  <main id="fourrowView" class="paddle-app view-hidden">
+    <header class="topbar">
+      <div class="brand">
+        <div class="snake-brand-mark" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div>
+          <h1>Four in a Row</h1>
+          <p>Drop four · Bot, local, or online</p>
+        </div>
+      </div>
+      <div class="game-nav-actions">
+        <button class="back-to-hub" type="button" data-back-to-hub aria-label="Back to games">← Arcade</button>
+      </div>
+    </header>
+
+    <div data-game-room="fourrow"></div>
+
+    <section class="paddle-shell" aria-label="Four in a Row match">
+      <div class="paddle-scorebar">
+        <div class="paddle-score-player">
+          <i class="paddle-score-swatch" aria-hidden="true"></i>
+          <div><span>Mint</span><b id="fourrowMintScore">0</b></div>
+        </div>
+        <div class="paddle-score-goal">Series</div>
+        <div class="paddle-score-player coral">
+          <i class="paddle-score-swatch" aria-hidden="true"></i>
+          <div><span>Coral</span><b id="fourrowCoralScore">0</b></div>
+        </div>
+      </div>
+
+      <div class="arcade-arena">
+        <canvas id="fourrowCanvas" class="arcade-canvas" style="--canvas-aspect: 1.1667" width="700" height="600" aria-label="Four in a Row board. Tap a column to drop a disc"></canvas>
+      </div>
+
+      <div class="paddle-statusbar" aria-live="polite">
+        <span id="fourrowStatus">Mint to drop a disc.</span>
+        <label class="gameplay-option">Bot
+          <select id="fourrowBotLevel" aria-label="Four in a Row bot level"><option value="easy">Easy</option><option value="normal" selected>Normal</option><option value="hard">Hard</option></select>
+        </label>
+        <button id="fourrowNextButton" class="paddle-serve" type="button" disabled>Next game</button>
+      </div>
+
+      <footer class="paddle-footer">
+        <div class="paddle-key-guide">Columns <kbd>1</kbd>–<kbd>7</kbd></div>
+        <button id="fourrowRestartButton" class="paddle-restart" type="button">Reset series</button>
+        <div class="paddle-key-guide coral">Aim <kbd>←</kbd><kbd>→</kbd> <kbd>Enter</kbd></div>
+      </footer>
     </section>
   </main>
 

@@ -48,6 +48,8 @@ export function gamePreview(game: ArcadeGameId): string {
       board+='<path d="M80 68l-10 19h20z" fill="#54e38e"/>'+rect(79,56,2,7,gold)+rect(79,40,2,7,gold); break;
     case 'cycles':
       board = '<g fill="none" stroke-width="5" stroke-linejoin="round"><path d="M20 72h46V34h40" stroke="#54e38e"/><path d="M140 28h-34v44H84" stroke="#ff6b78"/></g>' + rect(102,30,8,8,mint) + rect(80,68,8,8,coral); break;
+    case 'fourrow':
+      board = rect(34,6,92,86,'#1b3a78',8); for (let r=0;r<6;r++) for (let c=0;c<7;c++) board += circle(47+c*11,17+r*13,4.6, (c===3&&r>=3) ? mint : (r===5&&(c===2||c===4))||(r===4&&c===4) ? coral : '#0b1426'); break;
   }
   return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100"><rect width="160" height="100" rx="10" fill="#101d2b"/>${board}</svg>`)}`;
 }

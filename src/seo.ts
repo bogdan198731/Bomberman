@@ -88,6 +88,11 @@ export const GAME_SEO: Record<ArcadeGameId, PageSeo> = {
     description:
       'Play Light Cycles free in your browser. Ride a neon grid, leave a wall of light behind you, and box a bot or a friend in first, locally or online.',
   },
+  fourrow: {
+    title: 'Four in a Row — Free Online Board Game vs Bot or Friend',
+    description:
+      'Play Four in a Row free in your browser. Drop discs and line up four before your rival, against a three-level bot, a friend beside you, or an online opponent.',
+  },
 };
 
 /** Every route the crawler should know about: the hub plus one page per game. */

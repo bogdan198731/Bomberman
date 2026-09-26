@@ -48,6 +48,7 @@ const APP_SHELL = [
   '/dist/mobile-fullscreen.js',
   '/dist/levels.js',
   '/dist/cycles.js',
+  '/dist/fourrow.js',
 ];
 
 self.addEventListener('install', event => {
