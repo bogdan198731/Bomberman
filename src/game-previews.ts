@@ -52,6 +52,8 @@ export function gamePreview(game: ArcadeGameId): string {
       board = rect(34,6,92,86,'#1b3a78',8); for (let r=0;r<6;r++) for (let c=0;c<7;c++) board += circle(47+c*11,17+r*13,4.6, (c===3&&r>=3) ? mint : (r===5&&(c===2||c===4))||(r===4&&c===4) ? coral : '#0b1426'); break;
     case 'bricks':
       for (let y=0;y<4;y++) for (let x=0;x<8;x++) board += rect(22+x*15,12+y*9,13,7,[coral,gold,blue,blue][y],1); board += rect(64,84,32,4,mint) + circle(84,62,3,'#ffffff'); break;
+    case 'mines':
+      for (let y=0;y<6;y++) for (let x=0;x<8;x++) board += rect(36+x*11,14+y*12,10,11,(x+y*3)%5===0?'#2a3a55':'#131d2e',2); board += text(58,31,'1',blue,9)+text(69,31,'2',mint,9)+text(80,43,'3',coral,9)+'<path d="M104 26l8 4-8 4z" fill="#ffc857"/>'+rect(103,25,1.6,12,gold); break;
   }
   return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100"><rect width="160" height="100" rx="10" fill="#101d2b"/>${board}</svg>`)}`;
 }

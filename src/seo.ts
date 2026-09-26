@@ -98,6 +98,11 @@ export const GAME_SEO: Record<ArcadeGameId, PageSeo> = {
     description:
       'Play Brick Breaker free in your browser. Steer the paddle, keep the ball alive, and smash through five hand-built walls of tough and steel bricks. No download.',
   },
+  mines: {
+    title: 'Minesweeper — Free Online Puzzle With a Safe First Click',
+    description:
+      'Play Minesweeper free in your browser. Clear the field on three phone-sized boards, flag mines with a long press, and beat your best time. No download.',
+  },
 };
 
 /** Every route the crawler should know about: the hub plus one page per game. */

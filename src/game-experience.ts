@@ -105,6 +105,12 @@ export const GAME_GUIDES: Record<ArcadeGameId, GuideCopy> = {
     rules: [copy('Where the ball meets the paddle sets its angle - the edges send it wide.', 'Locul în care mingea atinge paleta îi stabilește unghiul - marginile o trimit lateral.'), copy('Coloured bricks take one to three hits; grey steel never breaks.', 'Cărămizile colorate cedează după una până la trei lovituri; oțelul gri nu se sparge niciodată.'), copy('Miss the ball three times and the run ends.', 'Scapă mingea de trei ori și runda se încheie.')],
     tip: copy('Aim for a gap at the side of a wall - a ball trapped above the bricks clears them for you.', 'Țintește o breșă de pe marginea zidului - o minge prinsă deasupra cărămizilor le sparge în locul tău.'),
   },
+  mines: {
+    objective: copy('Uncover every square that has no mine. Each number tells you how many mines touch that square.', 'Descoperă fiecare pătrat fără mină. Fiecare număr arată câte mine ating acel pătrat.'),
+    controls: copy('Tap to uncover; long-press or right-click to flag. Flag mode makes every tap place a flag. Keyboard: arrows, Space, and F.', 'Apasă pentru a descoperi; ține apăsat sau clic dreapta pentru steag. Modul steag pune un steag la fiecare atingere. Tastatură: săgeți, Spațiu și F.'),
+    rules: [copy('The first square you open is always safe and clears an area.', 'Primul pătrat deschis este mereu sigur și curăță o zonă.'), copy('Tap a number whose mines are all flagged to open the rest of its neighbours.', 'Apasă un număr cu toate minele marcate pentru a-i deschide restul vecinilor.'), copy('A wrong flag can still send you onto a mine.', 'Un steag greșit te poate trimite totuși pe o mină.')],
+    tip: copy('Work from the edge of opened areas - that is where the numbers give the most away.', 'Lucrează de la marginea zonelor deschise - acolo numerele dezvăluie cel mai mult.'),
+  },
 };
 
 const REPLAY_SELECTORS: Record<ArcadeGameId, string> = {
@@ -115,6 +121,7 @@ const REPLAY_SELECTORS: Record<ArcadeGameId, string> = {
   cycles: '#cyclesStartButton',
   fourrow: '#fourrowNextButton',
   bricks: '#bricksLaunchButton',
+  mines: '#minesNewButton',
 };
 
 const RESULT_STATUS_SELECTORS: Record<ArcadeGameId, string> = {
@@ -124,6 +131,7 @@ const RESULT_STATUS_SELECTORS: Record<ArcadeGameId, string> = {
   cycles: '#cyclesStatus',
   fourrow: '#fourrowStatus',
   bricks: '#bricksStatus',
+  mines: '#minesStatus',
 };
 
 
@@ -139,6 +147,7 @@ const KEYBOARD_CONTROLS: Partial<Record<ArcadeGameId, [string, string]>> = {
   cycles: copy('Mint: WASD. Coral: arrow keys. Against the bot, either set steers Mint. Space starts a round.', 'Mint: WASD. Coral: săgețile. Contra botului, ambele seturi îl conduc pe Mint. Spațiu pornește runda.'),
   fourrow: copy('Press 1-7 to drop in a column, or use Left/Right and Enter.', 'Apasă 1-7 pentru a lăsa un disc într-o coloană sau folosește Stânga/Dreapta și Enter.'),
   bricks: copy('Left/Right or A/D steer, Space launches.', 'Stânga/Dreapta sau A/D conduc, Spațiu lansează.'),
+  mines: copy('Arrows move the cursor, Space or Enter uncovers, F places a flag.', 'Săgețile mută cursorul, Spațiu sau Enter descoperă, F pune un steag.'),
 };
 
 function localized(pair: [string, string]): string { return pair[currentArcadeLanguage() === 'ro' ? 1 : 0]; }
@@ -230,6 +239,7 @@ export function initGameExperience(): void {
       cycles: '#cyclesRestartButton',
       fourrow: '#fourrowRestartButton',
       bricks: '#bricksRestartButton',
+      mines: '#minesNewButton',
     };
     if (!reset[gameId]) return;
     // These reset handlers confirm progress loss and clear pause only after acceptance.

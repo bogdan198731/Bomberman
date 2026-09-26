@@ -1,6 +1,26 @@
 export type ArcadeLanguage = 'en' | 'ro';
 
 const ROMANIAN_TRANSLATIONS: Record<string, string> = {
+  'Clear the field · Solo puzzle': 'Curăță terenul · Puzzle solo',
+  'Tap any square - the first one is always safe.': 'Apasă orice pătrat - primul este mereu sigur.',
+  'Boom - that was a mine. Try again.': 'Bum - a fost o mină. Încearcă din nou.',
+  'Read the numbers, flag the mines, and clear the field on three phone-sized boards.': 'Citește numerele, marchează minele și curăță terenul pe trei table potrivite pentru telefon.',
+  'Play Minesweeper': 'Joacă Minesweeper',
+  'Add Minesweeper to favorites': 'Adaugă Minesweeper la favorite',
+  'Minesweeper field. Tap to uncover, long-press to flag': 'Terenul Minesweeper. Apasă pentru a descoperi, ține apăsat pentru steag',
+  'Minesweeper board size': 'Mărimea tablei Minesweeper',
+  'Minesweeper board': 'Tabla Minesweeper',
+  'Mines': 'Mine',
+  'Minefield': 'Câmp minat',
+  'Board': 'Tablă',
+  'Easy · 9×9': 'Ușor · 9×9',
+  'Medium · 12×12': 'Mediu · 12×12',
+  'Hard · 16×16': 'Greu · 16×16',
+  '⚑ Flag mode': '⚑ Mod steag',
+  'Flag': 'Steag',
+  'or long-press': 'sau ține apăsat',
+  'New board': 'Tablă nouă',
+  'Move': 'Mută',
   'Break the wall · Solo, five levels': 'Sparge zidul · Solo, cinci niveluri',
   'Keep the ball alive and smash through five walls of tough and steel bricks.': 'Ține mingea în joc și sparge cinci ziduri de cărămizi rezistente și de oțel.',
   'Play Brick Breaker': 'Joacă Brick Breaker',
@@ -514,6 +534,11 @@ const attributeRecords = new WeakMap<Element, Map<string, { source: string; rend
 const translatedAttributes = ['aria-label', 'placeholder', 'title', 'alt'] as const;
 
 function translateRomanianPattern(value: string): string | null {
+  // Minesweeper
+  const mines = value.match(/^(\d+) mines left to find\.$/);
+  if (mines) return `${mines[1]} mine rămase de găsit.`;
+  const cleared = value.match(/^Field cleared in (\d+)s - (\d+) points!$/);
+  if (cleared) return `Teren curățat în ${cleared[1]}s - ${cleared[2]} puncte!`;
   // Brick Breaker: level names come from the same table as the level picker.
   const brickName = (name: string): string => ROMANIAN_TRANSLATIONS[name] ?? name;
   let brick = value.match(/^Level (\d+) · (.+)\. Launch when ready\.$/);
