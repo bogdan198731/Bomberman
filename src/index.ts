@@ -17,7 +17,8 @@ import {
 } from './bomberman-skin.js';
 import { initHubLayout } from './hub-layout.js';
 import { ActiveClock } from './session-state.js';
-import { supportedLaunchMode } from './game-metadata.js';
+import { ARCADE_GAME_IDS, isArcadeGameId, supportedLaunchMode } from './game-metadata.js';
+import { viewElementId } from './seo.js';
 import { initTintar } from './tintar.js';
 import { initPaddleClash } from './paddle.js';
 import { initNeonSnake } from './snake.js';
@@ -1305,19 +1306,7 @@ export function initGame(): void {
   if (!canvas || !ctx) return;
 
   const elements = {
-    hubView: document.getElementById('hubView'),
     gameView: document.getElementById('gameView'),
-    tintarView: document.getElementById('tintarView'),
-    paddleView: document.getElementById('paddleView'),
-    snakeView: document.getElementById('snakeView'),
-    tanksView: document.getElementById('tanksView'),
-    septicaView: document.getElementById('septicaView'),
-    survivalView: document.getElementById('survivalView'),
-    starView: document.getElementById('starView'),
-    racingView: document.getElementById('racingView'),
-    blocksView: document.getElementById('blocksView'),
-    twenty48View: document.getElementById('twenty48View'),
-    sudokuView: document.getElementById('sudokuView'),
     launchGameButtons: document.querySelectorAll<HTMLButtonElement>('[data-launch-game]'),
     backToHubButtons: document.querySelectorAll<HTMLButtonElement>('[data-back-to-hub]'),
     skinButton: document.getElementById('bombermanSkinButton') as HTMLButtonElement | null,
@@ -1433,19 +1422,10 @@ export function initGame(): void {
     if (navigation) navigation.open(view); else renderActiveView(view);
   }
   function renderActiveView(view: ArcadeView): void {
-    elements.hubView?.classList.toggle('view-hidden', view !== 'hub');
-    elements.gameView?.classList.toggle('view-hidden', view !== 'bomberman');
-    elements.tintarView?.classList.toggle('view-hidden', view !== 'tintar');
-    elements.paddleView?.classList.toggle('view-hidden', view !== 'paddle');
-    elements.snakeView?.classList.toggle('view-hidden', view !== 'snake');
-    elements.tanksView?.classList.toggle('view-hidden', view !== 'tanks');
-    elements.septicaView?.classList.toggle('view-hidden', view !== 'septica');
-    elements.survivalView?.classList.toggle('view-hidden', view !== 'survival');
-    elements.starView?.classList.toggle('view-hidden', view !== 'star');
-    elements.racingView?.classList.toggle('view-hidden', view !== 'racing');
-    elements.blocksView?.classList.toggle('view-hidden', view !== 'blocks');
-    elements.twenty48View?.classList.toggle('view-hidden', view !== 'twenty48');
-    elements.sudokuView?.classList.toggle('view-hidden', view !== 'sudoku');
+    // Every game's <main> follows the naming seo.ts already relies on.
+    (['hub', ...ARCADE_GAME_IDS] as const).forEach(id => {
+      document.getElementById(viewElementId(id))?.classList.toggle('view-hidden', id !== view);
+    });
     document.body.dataset.view = view;
     window.dispatchEvent(new CustomEvent('arcade-view-changed', { detail: { view } }));
     if (view !== 'hub') {
@@ -1706,7 +1686,7 @@ export function initGame(): void {
   elements.launchGameButtons.forEach(button => {
     button.addEventListener('click', () => {
       const game = button.dataset.launchGame;
-      if (game === 'bomberman' || game === 'tintar' || game === 'paddle' || game === 'snake' || game === 'tanks' || game === 'septica' || game === 'survival' || game === 'star' || game === 'racing' || game === 'blocks' || game === 'twenty48' || game === 'sudoku') {
+      if (isArcadeGameId(game)) {
         setActiveView(game);
         const requestedMode = supportedLaunchMode(game, button.dataset.launchMode);
         if (requestedMode === 'solo' || requestedMode === 'local' || requestedMode === 'online') {
@@ -1719,9 +1699,7 @@ export function initGame(): void {
   window.addEventListener('arcade-request-launch', event => {
     const detail = (event as CustomEvent<{ gameId?: string; mode?: string }>).detail;
     const game = detail?.gameId;
-    if (game !== 'bomberman' && game !== 'tintar' && game !== 'paddle' && game !== 'snake' && game !== 'tanks'
-      && game !== 'septica' && game !== 'survival' && game !== 'star' && game !== 'racing' && game !== 'blocks'
-      && game !== 'twenty48' && game !== 'sudoku') return;
+    if (!isArcadeGameId(game)) return;
     setActiveView(game);
     window.dispatchEvent(new CustomEvent('arcade-launch-mode', { detail: { gameId: game, mode: supportedLaunchMode(game, detail.mode) } }));
     if (game === 'bomberman' && (detail.mode === 'solo' || detail.mode === 'local' || detail.mode === 'online')) {
