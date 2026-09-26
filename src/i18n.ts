@@ -21,6 +21,7 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'CORAL GOAL': 'GOL CORAL',
   'Clear the field · Solo puzzle': 'Curăță terenul · Puzzle solo',
   'Tap any square - the first one is always safe.': 'Apasă orice pătrat - primul este mereu sigur.',
+  'Saved board restored - keep sweeping.': 'Tablă salvată restaurată - continuă căutarea.',
   'Boom - that was a mine. Try again.': 'Bum - a fost o mină. Încearcă din nou.',
   'Read the numbers, flag the mines, and clear the field on three phone-sized boards.': 'Citește numerele, marchează minele și curăță terenul pe trei table potrivite pentru telefon.',
   'Play Minesweeper': 'Joacă Minesweeper',
