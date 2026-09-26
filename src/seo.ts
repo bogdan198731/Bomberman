@@ -123,6 +123,11 @@ export const GAME_SEO: Record<ArcadeGameId, PageSeo> = {
     description:
       'Play Reversi free in your browser. Outflank and flip your rival\'s discs, grab the corners, and finish ahead against a three-level bot, a friend, or online.',
   },
+  solitaire: {
+    title: 'Solitaire — Free Online Klondike Solitaire, No Download',
+    description:
+      'Play Klondike Solitaire free in your browser. Draw one or three, undo any move, and pick up where you left off - built for phones and desktops alike.',
+  },
 };
 
 /** Every route the crawler should know about: the hub plus one page per game. */

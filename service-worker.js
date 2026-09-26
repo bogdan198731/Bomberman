@@ -53,6 +53,7 @@ const APP_SHELL = [
   '/dist/mines.js',
   '/dist/hockey.js',
   '/dist/reversi.js',
+  '/dist/solitaire.js',
 ];
 
 self.addEventListener('install', event => {
