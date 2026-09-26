@@ -5887,6 +5887,19 @@
     }
 
     .twenty48-undo:disabled { cursor: not-allowed; opacity: .45; }
+    .twenty48-base { display: flex; align-items: center; gap: 6px; color: #c5cfdd; font-size: .78rem; font-weight: 800; }
+    .twenty48-base select {
+      min-height: 40px;
+      padding: 0 8px;
+      border: 1px solid rgba(255,200,87,.35);
+      border-radius: 11px;
+      color: #fff8ef;
+      background: rgba(255,200,87,.1);
+      font: inherit;
+      font-size: .9rem;
+      cursor: pointer;
+    }
+    .twenty48-base select option { color: #1b1f2a; background: #fff8ef; }
 
     .twenty48-scorebar {
       display: grid;
@@ -5974,6 +5987,10 @@
     .twenty48-tile.tile-1024 { color: #fff8ef; background: #edc53f; font-size: clamp(.88rem, 4.6vw, 2rem); }
     .twenty48-tile.tile-2048 { color: #fff; background: #edc22e; font-size: clamp(.88rem, 4.6vw, 2rem); box-shadow: 0 0 28px rgba(255,200,87,.48), inset 0 2px rgba(255,255,255,.35); }
     .twenty48-tile.tile-4096 { color: #fff; background: #9c63e6; font-size: clamp(.88rem, 4.6vw, 2rem); }
+    /* Powers of 3, 5 and 7 reach long numbers sooner, so text size follows the digits shown. */
+    .twenty48-tile[data-digits="3"] { font-size: clamp(1rem, 5.3vw, 2.3rem); }
+    .twenty48-tile[data-digits="4"] { font-size: clamp(.88rem, 4.6vw, 2rem); }
+    .twenty48-tile[data-digits="5"] { font-size: clamp(.76rem, 3.9vw, 1.7rem); }
 
     .twenty48-board.moved .twenty48-tile:not(.empty) span {
       animation: twenty48-pop 150ms ease-out;
@@ -6074,6 +6091,8 @@
       .twenty48-new-game { width: 100%; min-height: 44px; }
       .twenty48-intro-actions { display: grid; grid-template-columns: auto auto; }
       .twenty48-undo { min-height: 44px; }
+      .twenty48-base { grid-column: 1 / -1; justify-content: space-between; }
+      .twenty48-base select { flex: 1; min-height: 44px; }
       .twenty48-score-card { padding: 9px 11px; }
       .twenty48-controls { width: 168px; grid-template-columns: repeat(3, 50px); }
     }
@@ -8920,7 +8939,7 @@
     <header class="topbar">
       <div class="brand">
         <div class="twenty48-brand-mark" aria-hidden="true">2048</div>
-        <div><h1>2048</h1><p>Slide, merge, and reach 2048</p></div>
+        <div><h1>2048</h1><p id="twenty48Tagline">Slide, merge, and reach 2048</p></div>
       </div>
       <div class="game-nav-actions"><button class="back-to-hub" type="button" data-back-to-hub aria-label="Back to games">← Arcade</button></div>
     </header>
@@ -8929,10 +8948,18 @@
       <div class="twenty48-intro">
         <div>
           <span class="twenty48-kicker">Classic number puzzle</span>
-          <h2>Join equal numbers. Build 2048.</h2>
+          <h2 id="twenty48Headline">Join equal numbers. Build 2048.</h2>
           <p>Every move slides the whole board. Matching tiles merge once, and a new tile appears after each successful move.</p>
         </div>
         <div class="twenty48-intro-actions">
+          <label class="twenty48-base"><span>Tiles</span>
+            <select id="twenty48Base" aria-label="Tile numbers">
+              <option value="2">2, 4, 8…</option>
+              <option value="3">3, 9, 27…</option>
+              <option value="5">5, 25, 125…</option>
+              <option value="7">7, 49, 343…</option>
+            </select>
+          </label>
           <button id="twenty48UndoButton" class="twenty48-undo" type="button" disabled>Undo</button>
           <button class="twenty48-new-game" type="button" data-twenty48-reset>New game</button>
         </div>

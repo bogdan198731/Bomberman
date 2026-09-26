@@ -78,7 +78,7 @@ export const GAME_GUIDES: Record<ArcadeGameId, GuideCopy> = {
   twenty48: {
     objective: copy('Merge equal tiles until you create 2048.', 'Unește piesele egale până creezi 2048.'),
     controls: copy('Swipe anywhere on the board, use arrow keys, or use the direction buttons.', 'Glisează pe tablă, folosește săgețile sau butoanele de direcție.'),
-    rules: [copy('Each tile merges only once per move.', 'Fiecare piesă se unește o singură dată la o mutare.'), copy('Casual mode keeps one undo; using it restores the exact previous board.', 'Modul relaxat păstrează o anulare; aceasta restaurează exact tabla anterioară.')],
+    rules: [copy('Each tile merges only once per move.', 'Fiecare piesă se unește o singură dată la o mutare.'), copy('Casual mode keeps one undo; using it restores the exact previous board.', 'Modul relaxat păstrează o anulare; aceasta restaurează exact tabla anterioară.'), copy('Pick Tiles to play in powers of 3, 5 or 7 instead - equal tiles still merge in pairs.', 'Alege Piese pentru a juca cu puteri ale lui 3, 5 sau 7 - piesele egale se unesc tot câte două.')],
     tip: copy('Build your largest tile in one corner and avoid moving it away.', 'Construiește cea mai mare piesă într-un colț și evită să o muți de acolo.'),
   },
   sudoku: {
