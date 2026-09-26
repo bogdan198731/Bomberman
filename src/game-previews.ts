@@ -54,6 +54,8 @@ export function gamePreview(game: ArcadeGameId): string {
       for (let y=0;y<4;y++) for (let x=0;x<8;x++) board += rect(22+x*15,12+y*9,13,7,[coral,gold,blue,blue][y],1); board += rect(64,84,32,4,mint) + circle(84,62,3,'#ffffff'); break;
     case 'mines':
       for (let y=0;y<6;y++) for (let x=0;x<8;x++) board += rect(36+x*11,14+y*12,10,11,(x+y*3)%5===0?'#2a3a55':'#131d2e',2); board += text(58,31,'1',blue,9)+text(69,31,'2',mint,9)+text(80,43,'3',coral,9)+'<path d="M104 26l8 4-8 4z" fill="#ffc857"/>'+rect(103,25,1.6,12,gold); break;
+    case 'hockey':
+      board = rect(18,10,124,80,'#0d1a2b',8) + '<path d="M80 10v80" stroke="#68dfff" stroke-opacity=".5"/><circle cx="80" cy="50" r="13" fill="none" stroke="#68dfff" stroke-opacity=".5"/>' + rect(18,38,3,24,mint) + rect(139,38,3,24,coral) + circle(46,52,8,mint) + circle(116,44,8,coral) + circle(94,58,4,'#f4f6f8'); break;
   }
   return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100"><rect width="160" height="100" rx="10" fill="#101d2b"/>${board}</svg>`)}`;
 }

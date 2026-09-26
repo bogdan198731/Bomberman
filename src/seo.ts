@@ -103,6 +103,11 @@ export const GAME_SEO: Record<ArcadeGameId, PageSeo> = {
     description:
       'Play Minesweeper free in your browser. Clear the field on three phone-sized boards, flag mines with a long press, and beat your best time. No download.',
   },
+  hockey: {
+    title: 'Air Hockey — Free Online Air Hockey vs Bot or Friend',
+    description:
+      'Play Air Hockey free in your browser. Guard your goal, bank shots off the walls, and race to seven against a bot, a friend on the same screen, or online.',
+  },
 };
 
 /** Every route the crawler should know about: the hub plus one page per game. */

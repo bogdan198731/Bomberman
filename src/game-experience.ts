@@ -111,6 +111,12 @@ export const GAME_GUIDES: Record<ArcadeGameId, GuideCopy> = {
     rules: [copy('The first square you open is always safe and clears an area.', 'Primul pătrat deschis este mereu sigur și curăță o zonă.'), copy('Tap a number whose mines are all flagged to open the rest of its neighbours.', 'Apasă un număr cu toate minele marcate pentru a-i deschide restul vecinilor.'), copy('A wrong flag can still send you onto a mine.', 'Un steag greșit te poate trimite totuși pe o mină.')],
     tip: copy('Work from the edge of opened areas - that is where the numbers give the most away.', 'Lucrează de la marginea zonelor deschise - acolo numerele dezvăluie cel mai mult.'),
   },
+  hockey: {
+    objective: copy('Knock the puck into your rival\'s goal. First to 7 goals wins.', 'Trimite pucul în poarta rivalului. Primul la 7 goluri câștigă.'),
+    controls: copy('Drag on the table to move your mallet - on a shared screen, each player drags on their own half. Keyboard: WASD and the arrow keys.', 'Trage pe masă pentru a-ți muta crosa - pe un ecran comun, fiecare jucător trage pe jumătatea lui. Tastatură: WASD și săgețile.'),
+    rules: [copy('Your mallet stays on your half of the table.', 'Crosa ta rămâne pe jumătatea ta de masă.'), copy('The puck bounces off the side walls, so bank shots count.', 'Pucul ricoșează din pereții laterali, deci loviturile din ricoșeu contează.'), copy('After a goal, the player who conceded gets the puck.', 'După un gol, jucătorul care a primit golul primește pucul.')],
+    tip: copy('Hit through the puck, not at it - a moving mallet makes a much faster shot.', 'Lovește prin puc, nu doar în el - o crosă în mișcare dă o lovitură mult mai rapidă.'),
+  },
 };
 
 const REPLAY_SELECTORS: Record<ArcadeGameId, string> = {
@@ -122,6 +128,7 @@ const REPLAY_SELECTORS: Record<ArcadeGameId, string> = {
   fourrow: '#fourrowNextButton',
   bricks: '#bricksLaunchButton',
   mines: '#minesNewButton',
+  hockey: '#hockeyStartButton',
 };
 
 const RESULT_STATUS_SELECTORS: Record<ArcadeGameId, string> = {
@@ -132,6 +139,7 @@ const RESULT_STATUS_SELECTORS: Record<ArcadeGameId, string> = {
   fourrow: '#fourrowStatus',
   bricks: '#bricksStatus',
   mines: '#minesStatus',
+  hockey: '#hockeyStatus',
 };
 
 
@@ -148,6 +156,7 @@ const KEYBOARD_CONTROLS: Partial<Record<ArcadeGameId, [string, string]>> = {
   fourrow: copy('Press 1-7 to drop in a column, or use Left/Right and Enter.', 'Apasă 1-7 pentru a lăsa un disc într-o coloană sau folosește Stânga/Dreapta și Enter.'),
   bricks: copy('Left/Right or A/D steer, Space launches.', 'Stânga/Dreapta sau A/D conduc, Spațiu lansează.'),
   mines: copy('Arrows move the cursor, Space or Enter uncovers, F places a flag.', 'Săgețile mută cursorul, Spațiu sau Enter descoperă, F pune un steag.'),
+  hockey: copy('Mint: WASD. Coral: arrow keys. Against the bot, either set moves Mint. Space faces off.', 'Mint: WASD. Coral: săgețile. Contra botului, ambele seturi îl mută pe Mint. Spațiu pune pucul în joc.'),
 };
 
 function localized(pair: [string, string]): string { return pair[currentArcadeLanguage() === 'ro' ? 1 : 0]; }
@@ -240,6 +249,7 @@ export function initGameExperience(): void {
       fourrow: '#fourrowRestartButton',
       bricks: '#bricksRestartButton',
       mines: '#minesNewButton',
+      hockey: '#hockeyRestartButton',
     };
     if (!reset[gameId]) return;
     // These reset handlers confirm progress loss and clear pause only after acceptance.

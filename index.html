@@ -2139,6 +2139,16 @@
       background: linear-gradient(135deg, #ffd978, #ffc857);
     }
 
+    .hockey-cover::before {
+      background:
+        linear-gradient(90deg, transparent 49.4%, rgba(104,223,255,.45) 49.4% 50.6%, transparent 50.6%),
+        radial-gradient(circle at 50% 50%, transparent 0 16%, rgba(104,223,255,.4) 16% 17.5%, transparent 17.5%),
+        radial-gradient(circle at 28% 58%, rgba(84,227,142,.8) 0 9%, transparent 10%),
+        radial-gradient(circle at 74% 42%, rgba(255,107,120,.8) 0 9%, transparent 10%),
+        radial-gradient(circle at 60% 62%, rgba(244,246,248,.9) 0 4%, transparent 5%),
+        #0d1a2b;
+    }
+
     .sudoku-cover::before {
       background:
         linear-gradient(90deg, rgba(255,255,255,.09) 2px, transparent 2px),
@@ -8011,6 +8021,21 @@
             </div>
           </div>
         </article>
+        <article class="catalog-card featured" data-catalog-game="hockey" data-catalog-modes="solo local online">
+          <div class="game-cover hockey-cover">
+            <span class="cover-label">New</span>
+            <button class="favorite-button" type="button" data-favorite-game aria-label="Add Air Hockey to favorites" aria-pressed="false">☆</button>
+            <span class="game-glyph" aria-hidden="true">⊙</span>
+          </div>
+          <div class="catalog-card-body">
+            <h3>Air Hockey</h3>
+            <p>Guard your goal, bank shots off the walls, and race to seven against a bot or a friend.</p>
+            <div class="catalog-card-footer">
+              <span class="mode-label">Bot · Local · Online</span>
+              <button class="card-play-button" type="button" data-launch-game="hockey" aria-label="Play Air Hockey">Play now</button>
+            </div>
+          </div>
+        </article>
       </div>
       <div id="catalogEmptyState" class="catalog-empty-state" hidden>
         <strong>No games found</strong>
@@ -9178,6 +9203,55 @@
         <div class="paddle-key-guide">Flag <kbd>F</kbd> or long-press</div>
         <button id="minesNewButton" class="paddle-restart" type="button">New board</button>
         <div class="paddle-key-guide coral">Move <kbd>←</kbd><kbd>→</kbd> <kbd>Space</kbd></div>
+      </footer>
+    </section>
+  </main>
+
+  <main id="hockeyView" class="paddle-app view-hidden">
+    <header class="topbar">
+      <div class="brand">
+        <div class="snake-brand-mark" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div>
+          <h1>Air Hockey</h1>
+          <p>Race to seven · Bot, local, or online</p>
+        </div>
+      </div>
+      <div class="game-nav-actions">
+        <button class="back-to-hub" type="button" data-back-to-hub aria-label="Back to games">← Arcade</button>
+      </div>
+    </header>
+
+    <div data-game-room="hockey"></div>
+
+    <section class="paddle-shell" aria-label="Air Hockey match">
+      <div class="paddle-scorebar">
+        <div class="paddle-score-player">
+          <i class="paddle-score-swatch" aria-hidden="true"></i>
+          <div><span>Mint</span><b id="hockeyMintScore">0</b></div>
+        </div>
+        <div class="paddle-score-goal">First to 7</div>
+        <div class="paddle-score-player coral">
+          <i class="paddle-score-swatch" aria-hidden="true"></i>
+          <div><span>Coral</span><b id="hockeyCoralScore">0</b></div>
+        </div>
+      </div>
+
+      <div class="arcade-arena">
+        <canvas id="hockeyCanvas" class="arcade-canvas swipe-canvas" style="--canvas-aspect: 1.6667" width="900" height="540" aria-label="Air Hockey table. Drag to move your mallet"></canvas>
+      </div>
+
+      <div class="paddle-statusbar" aria-live="polite">
+        <span id="hockeyStatus">Beat the Coral bot to 7. Start when ready.</span>
+        <label class="gameplay-option">Bot
+          <select id="hockeyBotLevel" aria-label="Air Hockey bot level"><option value="easy">Easy</option><option value="normal" selected>Normal</option><option value="hard">Hard</option></select>
+        </label>
+        <button id="hockeyStartButton" class="paddle-serve" type="button">Face off</button>
+      </div>
+
+      <footer class="paddle-footer">
+        <div class="paddle-key-guide">Mint uses <kbd>WASD</kbd></div>
+        <button id="hockeyRestartButton" class="paddle-restart" type="button">Reset match</button>
+        <div class="paddle-key-guide coral">Coral uses <kbd>Arrows</kbd></div>
       </footer>
     </section>
   </main>

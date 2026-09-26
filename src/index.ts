@@ -29,6 +29,7 @@ import { initStarDefender } from './star.js';
 import { initMicroRacers } from './racing.js';
 import { initBlockDrop } from './blocks.js';
 import { initTwenty48 } from './twenty48.js';
+import { initAirHockey } from './hockey.js';
 import { initMinesweeper } from './mines.js';
 import { initBrickBreaker } from './bricks.js';
 import { initFourInARow } from './fourrow.js';
@@ -2073,6 +2074,7 @@ if (typeof window !== 'undefined') {
     initBlockDrop();
     initTwenty48();
     initSudoku();
+    initAirHockey();
     initMinesweeper();
     initBrickBreaker();
     initFourInARow();

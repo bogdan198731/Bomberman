@@ -51,6 +51,7 @@ const APP_SHELL = [
   '/dist/fourrow.js',
   '/dist/bricks.js',
   '/dist/mines.js',
+  '/dist/hockey.js',
 ];
 
 self.addEventListener('install', event => {
