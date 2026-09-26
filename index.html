@@ -2117,6 +2117,15 @@
         linear-gradient(#1b3a78, #10254f);
     }
 
+    .bricks-cover::before {
+      background:
+        linear-gradient(90deg, transparent 38%, rgba(84,227,142,.85) 38% 62%, transparent 62%) 0 88% / 100% 5% no-repeat,
+        repeating-linear-gradient(90deg, rgba(255,107,120,.75) 0 16%, transparent 16% 18%) 0 14% / 100% 9% no-repeat,
+        repeating-linear-gradient(90deg, rgba(255,200,87,.75) 0 16%, transparent 16% 18%) 0 27% / 100% 9% no-repeat,
+        repeating-linear-gradient(90deg, rgba(104,223,255,.75) 0 16%, transparent 16% 18%) 0 40% / 100% 9% no-repeat,
+        #0a1120;
+    }
+
     .sudoku-cover::before {
       background:
         linear-gradient(90deg, rgba(255,255,255,.09) 2px, transparent 2px),
@@ -7959,6 +7968,21 @@
             </div>
           </div>
         </article>
+        <article class="catalog-card featured" data-catalog-game="bricks" data-catalog-modes="solo">
+          <div class="game-cover bricks-cover">
+            <span class="cover-label">New</span>
+            <button class="favorite-button" type="button" data-favorite-game aria-label="Add Brick Breaker to favorites" aria-pressed="false">☆</button>
+            <span class="game-glyph" aria-hidden="true">▤</span>
+          </div>
+          <div class="catalog-card-body">
+            <h3>Brick Breaker</h3>
+            <p>Keep the ball alive and smash through five walls of tough and steel bricks.</p>
+            <div class="catalog-card-footer">
+              <span class="mode-label">Solo · 5 levels</span>
+              <button class="card-play-button" type="button" data-launch-game="bricks" aria-label="Play Brick Breaker">Play now</button>
+            </div>
+          </div>
+        </article>
       </div>
       <div id="catalogEmptyState" class="catalog-empty-state" hidden>
         <strong>No games found</strong>
@@ -9032,6 +9056,53 @@
         <div class="paddle-key-guide">Columns <kbd>1</kbd>–<kbd>7</kbd></div>
         <button id="fourrowRestartButton" class="paddle-restart" type="button">Reset series</button>
         <div class="paddle-key-guide coral">Aim <kbd>←</kbd><kbd>→</kbd> <kbd>Enter</kbd></div>
+      </footer>
+    </section>
+  </main>
+
+  <main id="bricksView" class="paddle-app view-hidden">
+    <header class="topbar">
+      <div class="brand">
+        <div class="snake-brand-mark" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div>
+          <h1>Brick Breaker</h1>
+          <p>Break the wall · Solo, five levels</p>
+        </div>
+      </div>
+      <div class="game-nav-actions">
+        <button class="back-to-hub" type="button" data-back-to-hub aria-label="Back to games">← Arcade</button>
+      </div>
+    </header>
+
+    <section class="paddle-shell" aria-label="Brick Breaker run">
+      <div class="paddle-scorebar">
+        <div class="paddle-score-player">
+          <i class="paddle-score-swatch" aria-hidden="true"></i>
+          <div><span>Score</span><b id="bricksScore">0</b></div>
+        </div>
+        <div id="bricksLevelName" class="paddle-score-goal">Level 1 · First Wall</div>
+        <div class="paddle-score-player coral">
+          <i class="paddle-score-swatch" aria-hidden="true"></i>
+          <div><span>Balls</span><b id="bricksLives">3</b></div>
+        </div>
+      </div>
+
+      <div class="arcade-arena">
+        <canvas id="bricksCanvas" class="arcade-canvas swipe-canvas" style="--canvas-aspect: 1.3333" width="800" height="600" aria-label="Brick Breaker wall. Drag to steer the paddle, tap to launch"></canvas>
+      </div>
+
+      <div class="paddle-statusbar" aria-live="polite">
+        <span id="bricksStatus">Level 1 · First Wall. Launch when ready.</span>
+        <label class="gameplay-option">Start at
+          <select id="bricksLevel" aria-label="Brick Breaker starting level"><option value="1">1 · First Wall</option></select>
+        </label>
+        <button id="bricksLaunchButton" class="paddle-serve" type="button">Launch</button>
+      </div>
+
+      <footer class="paddle-footer">
+        <div class="paddle-key-guide">Steer <kbd>←</kbd><kbd>→</kbd></div>
+        <button id="bricksRestartButton" class="paddle-restart" type="button">Restart level</button>
+        <div class="paddle-key-guide coral">Launch <kbd>Space</kbd></div>
       </footer>
     </section>
   </main>

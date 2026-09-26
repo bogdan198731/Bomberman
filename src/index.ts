@@ -29,6 +29,7 @@ import { initStarDefender } from './star.js';
 import { initMicroRacers } from './racing.js';
 import { initBlockDrop } from './blocks.js';
 import { initTwenty48 } from './twenty48.js';
+import { initBrickBreaker } from './bricks.js';
 import { initFourInARow } from './fourrow.js';
 import { initLightCycles } from './cycles.js';
 import { initSudoku } from './sudoku.js';
@@ -2071,6 +2072,7 @@ if (typeof window !== 'undefined') {
     initBlockDrop();
     initTwenty48();
     initSudoku();
+    initBrickBreaker();
     initFourInARow();
     initLightCycles();
     initGameExperience();

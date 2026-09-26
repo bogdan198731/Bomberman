@@ -93,6 +93,11 @@ export const GAME_SEO: Record<ArcadeGameId, PageSeo> = {
     description:
       'Play Four in a Row free in your browser. Drop discs and line up four before your rival, against a three-level bot, a friend beside you, or an online opponent.',
   },
+  bricks: {
+    title: 'Brick Breaker — Free Online Brick-Breaking Arcade Game',
+    description:
+      'Play Brick Breaker free in your browser. Steer the paddle, keep the ball alive, and smash through five hand-built walls of tough and steel bricks. No download.',
+  },
 };
 
 /** Every route the crawler should know about: the hub plus one page per game. */

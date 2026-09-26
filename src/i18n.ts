@@ -1,6 +1,30 @@
 export type ArcadeLanguage = 'en' | 'ro';
 
 const ROMANIAN_TRANSLATIONS: Record<string, string> = {
+  'Break the wall · Solo, five levels': 'Sparge zidul · Solo, cinci niveluri',
+  'Keep the ball alive and smash through five walls of tough and steel bricks.': 'Ține mingea în joc și sparge cinci ziduri de cărămizi rezistente și de oțel.',
+  'Play Brick Breaker': 'Joacă Brick Breaker',
+  'Add Brick Breaker to favorites': 'Adaugă Brick Breaker la favorite',
+  'Brick Breaker wall. Drag to steer the paddle, tap to launch': 'Zidul Brick Breaker. Trage pentru a conduce paleta, apasă pentru lansare',
+  'Brick Breaker starting level': 'Nivelul de start Brick Breaker',
+  'Brick Breaker run': 'Rundă Brick Breaker',
+  'Solo · 5 levels': 'Solo · 5 niveluri',
+  'Balls': 'Mingi',
+  'Start at': 'Începe la',
+  'Steer': 'Conduce',
+  'Launch': 'Lansează',
+  'In play': 'În joc',
+  'Next wall': 'Zidul următor',
+  'Restart level': 'Reia nivelul',
+  'First Wall': 'Primul zid',
+  'Checkerboard': 'Tablă de șah',
+  'Pyramid': 'Piramidă',
+  'Fortress': 'Fortăreață',
+  'Vault': 'Seif',
+  '1 · First Wall': '1 · Primul zid',
+  '2 · Checkerboard': '2 · Tablă de șah',
+  '3 · Pyramid': '3 · Piramidă',
+  '5 · Vault': '5 · Seif',
   'Drop four · Bot, local, or online': 'Patru în linie · Bot, local sau online',
   'Mint to drop a disc.': 'Mint lasă un disc.',
   'Coral to drop a disc.': 'Coral lasă un disc.',
@@ -490,6 +514,20 @@ const attributeRecords = new WeakMap<Element, Map<string, { source: string; rend
 const translatedAttributes = ['aria-label', 'placeholder', 'title', 'alt'] as const;
 
 function translateRomanianPattern(value: string): string | null {
+  // Brick Breaker: level names come from the same table as the level picker.
+  const brickName = (name: string): string => ROMANIAN_TRANSLATIONS[name] ?? name;
+  let brick = value.match(/^Level (\d+) · (.+)\. Launch when ready\.$/);
+  if (brick) return `Nivelul ${brick[1]} · ${brickName(brick[2])}. Lansează când ești gata.`;
+  brick = value.match(/^Level (\d+) · (\d+) bricks to go\.$/);
+  if (brick) return `Nivelul ${brick[1]} · încă ${brick[2]} cărămizi.`;
+  brick = value.match(/^Level (\d+) · (.+)$/);
+  if (brick) return `Nivelul ${brick[1]} · ${brickName(brick[2])}`;
+  brick = value.match(/^(.+) cleared! Launch for level (\d+)\.$/);
+  if (brick) return `${brickName(brick[1])} terminat! Lansează pentru nivelul ${brick[2]}.`;
+  brick = value.match(/^Every wall broken - final score (\d+)!$/);
+  if (brick) return `Toate zidurile sparte - scor final ${brick[1]}!`;
+  brick = value.match(/^Out of balls on level (\d+) - final score (\d+)\.$/);
+  if (brick) return `Fără mingi la nivelul ${brick[1]} - scor final ${brick[2]}.`;
   let match = value.match(/^Round (\d+) · First to 3$/);
   if (match) return `Runda ${match[1]} · Primul la 3`;
   match = value.match(/^ROUND (\d+)$/);

@@ -49,6 +49,7 @@ const APP_SHELL = [
   '/dist/levels.js',
   '/dist/cycles.js',
   '/dist/fourrow.js',
+  '/dist/bricks.js',
 ];
 
 self.addEventListener('install', event => {

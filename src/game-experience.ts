@@ -99,6 +99,12 @@ export const GAME_GUIDES: Record<ArcadeGameId, GuideCopy> = {
     rules: [copy('Discs fall to the lowest open space in a column.', 'Discurile cad în cel mai de jos loc liber din coloană.'), copy('A full board with no four in a row is a draw.', 'O tablă plină fără patru în linie este remiză.'), copy('Players take turns opening each new game.', 'Jucătorii deschid pe rând fiecare joc nou.')],
     tip: copy('Claim the centre column early - it is part of the most possible lines.', 'Ocupă devreme coloana din mijloc - face parte din cele mai multe linii posibile.'),
   },
+  bricks: {
+    objective: copy('Break every brick on the wall to move on. Clear all five walls to win.', 'Sparge fiecare cărămidă din zid pentru a avansa. Termină toate cele cinci ziduri pentru a câștiga.'),
+    controls: copy('Drag on the board or move the mouse to steer the paddle; tap or press Space to launch. Arrow keys and A/D also steer.', 'Trage pe tablă sau mișcă mouse-ul pentru a conduce paleta; apasă sau folosește Spațiu pentru lansare. Săgețile și A/D conduc și ele.'),
+    rules: [copy('Where the ball meets the paddle sets its angle - the edges send it wide.', 'Locul în care mingea atinge paleta îi stabilește unghiul - marginile o trimit lateral.'), copy('Coloured bricks take one to three hits; grey steel never breaks.', 'Cărămizile colorate cedează după una până la trei lovituri; oțelul gri nu se sparge niciodată.'), copy('Miss the ball three times and the run ends.', 'Scapă mingea de trei ori și runda se încheie.')],
+    tip: copy('Aim for a gap at the side of a wall - a ball trapped above the bricks clears them for you.', 'Țintește o breșă de pe marginea zidului - o minge prinsă deasupra cărămizilor le sparge în locul tău.'),
+  },
 };
 
 const REPLAY_SELECTORS: Record<ArcadeGameId, string> = {
@@ -108,6 +114,7 @@ const REPLAY_SELECTORS: Record<ArcadeGameId, string> = {
   blocks: '#blocksStartButton', twenty48: '[data-twenty48-reset]', sudoku: '[data-sudoku-new]',
   cycles: '#cyclesStartButton',
   fourrow: '#fourrowNextButton',
+  bricks: '#bricksLaunchButton',
 };
 
 const RESULT_STATUS_SELECTORS: Record<ArcadeGameId, string> = {
@@ -116,6 +123,7 @@ const RESULT_STATUS_SELECTORS: Record<ArcadeGameId, string> = {
   racing: '#racingStatus', blocks: '#blocksStatus', twenty48: '#twenty48Status', sudoku: '#sudokuStatus',
   cycles: '#cyclesStatus',
   fourrow: '#fourrowStatus',
+  bricks: '#bricksStatus',
 };
 
 
@@ -130,6 +138,7 @@ const KEYBOARD_CONTROLS: Partial<Record<ArcadeGameId, [string, string]>> = {
   star: copy('Mint: WASD to move, F to fire. Coral in co-op: arrow keys and Enter. In solo, either movement key set controls Mint.', 'Mint: WASD pentru mișcare, F pentru foc. Coral în cooperare: săgeți și Enter. Solo: ambele seturi de direcție controlează Mint.'),
   cycles: copy('Mint: WASD. Coral: arrow keys. Against the bot, either set steers Mint. Space starts a round.', 'Mint: WASD. Coral: săgețile. Contra botului, ambele seturi îl conduc pe Mint. Spațiu pornește runda.'),
   fourrow: copy('Press 1-7 to drop in a column, or use Left/Right and Enter.', 'Apasă 1-7 pentru a lăsa un disc într-o coloană sau folosește Stânga/Dreapta și Enter.'),
+  bricks: copy('Left/Right or A/D steer, Space launches.', 'Stânga/Dreapta sau A/D conduc, Spațiu lansează.'),
 };
 
 function localized(pair: [string, string]): string { return pair[currentArcadeLanguage() === 'ro' ? 1 : 0]; }
@@ -220,6 +229,7 @@ export function initGameExperience(): void {
       blocks: '#blocksRestartButton', twenty48: '[data-twenty48-reset]', sudoku: '[data-sudoku-new]',
       cycles: '#cyclesRestartButton',
       fourrow: '#fourrowRestartButton',
+      bricks: '#bricksRestartButton',
     };
     if (!reset[gameId]) return;
     // These reset handlers confirm progress loss and clear pause only after acceptance.

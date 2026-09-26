@@ -3,7 +3,7 @@
  * level data (maps, walls, cover); this module owns picking and remembering.
  */
 
-export type LevelGameId = 'bomberman' | 'snake' | 'tanks';
+export type LevelGameId = 'bomberman' | 'snake' | 'tanks' | 'bricks';
 
 export interface LevelInfo {
   name: string;
