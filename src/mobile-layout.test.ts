@@ -284,3 +284,18 @@ test('interface polish includes consistent focus, touch, and hub metadata', () =
   // The exact count is checked against the game list in game-count.test.ts.
   assert.match(html, /content="Play [a-z]+ free browser games instantly/);
 });
+
+test('newer games keep their board in the wide column on short landscape phones', () => {
+  // Every shared-canvas board sits in the shared wrapper...
+  const canvases = html.match(/<canvas[^>]*class="arcade-canvas[^"]*"[^>]*>/g) ?? [];
+  assert.ok(canvases.length >= 5);
+  for (const canvas of canvases) {
+    const id = canvas.match(/id="([^"]+)"/)?.[1];
+    assert.match(html, new RegExp(`<div class="arcade-arena">\\s*<canvas id="${id}"`), `${id} must sit in .arcade-arena`);
+  }
+  // ...and both phone layouts place that wrapper like the older boards. Without
+  // it, a landscape phone dropped the board into the 170px control column.
+  const lists = uxStyles.match(/\.paddle-app :is\([^)]*\.blocks-arena[^)]*\)/g) ?? [];
+  assert.equal(lists.length, 2, 'portrait and landscape board lists');
+  lists.forEach(list => assert.match(list, /\.arcade-arena/, `missing from: ${list}`));
+});
