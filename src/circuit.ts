@@ -7,13 +7,18 @@ export const CIRCUIT_SCORE_CAP = 500;
 export type CircuitMode = 'solo' | 'friends';
 
 export const CIRCUIT_ELIGIBLE_GAMES: Record<CircuitMode, readonly ArcadeGameId[]> = {
-  solo: ['bomberman', 'tintar', 'paddle', 'snake', 'tanks', 'septica', 'survival', 'star', 'racing', 'blocks', 'twenty48', 'sudoku'],
-  friends: ['bomberman', 'tintar', 'paddle', 'snake', 'tanks', 'septica', 'survival', 'star', 'racing', 'blocks'],
+  solo: ['bomberman', 'tintar', 'paddle', 'snake', 'tanks', 'septica', 'survival', 'star', 'racing', 'blocks', 'twenty48', 'sudoku', 'cycles', 'fourrow', 'bricks', 'mines', 'hockey'],
+  friends: ['bomberman', 'tintar', 'paddle', 'snake', 'tanks', 'septica', 'survival', 'star', 'racing', 'blocks', 'cycles', 'fourrow', 'hockey'],
 };
 
 const SCORE_TARGETS: Record<ArcadeGameId, number> = {
   bomberman: 3, tintar: 9, paddle: 7, snake: 30, tanks: 5, septica: 4,
   survival: 3_000, star: 4_000, racing: 3, blocks: 6_000, twenty48: 2_048, sudoku: 10_000,
+  cycles: 3,
+  fourrow: 20,
+  bricks: 3000,
+  mines: 1500,
+  hockey: 7,
 };
 const OUTCOME_BONUS: Record<ArcadeOutcome, number> = { win: 500, complete: 500, draw: 250, loss: 100 };
 

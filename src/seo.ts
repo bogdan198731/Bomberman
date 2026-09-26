@@ -16,10 +16,19 @@ export interface PageSeo {
   description: string;
 }
 
+const COUNT_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven',
+  'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
+
+/** "seventeen", or the digits once the arcade outgrows the words. */
+export function gameCountWord(count: number = ARCADE_GAME_IDS.length): string {
+  return COUNT_WORDS[count] ?? String(count);
+}
+
+// Counted from the game list, so adding a game can never leave the copy stale.
 export const HUB_SEO: PageSeo = {
-  title: 'Blast Arcade — 12 Free Browser Games, No Download',
+  title: `Blast Arcade — ${ARCADE_GAME_IDS.length} Free Browser Games, No Download`,
   description:
-    'Play twelve free browser games instantly — Bomberman, Snake, 2048, Sudoku, Pong and more. Solo against bots, local co-op on one device, or online with friends.',
+    `Play ${gameCountWord()} free browser games instantly — Bomberman, Snake, Minesweeper, Air Hockey and more. Solo vs bots, same-device play, or online with friends.`,
 };
 
 export const GAME_SEO: Record<ArcadeGameId, PageSeo> = {
@@ -82,6 +91,31 @@ export const GAME_SEO: Record<ArcadeGameId, PageSeo> = {
     title: 'Sudoku — Free Online Sudoku Puzzles',
     description:
       'Play Sudoku free in your browser. Complete every row, column, and 3×3 box across three carefully tuned difficulty levels, with hints when you need them.',
+  },
+  cycles: {
+    title: 'Light Cycles — Free Online Neon Trail Duel',
+    description:
+      'Play Light Cycles free in your browser. Ride a neon grid, leave a wall of light behind you, and box a bot or a friend in first, locally or online.',
+  },
+  fourrow: {
+    title: 'Four in a Row — Free Online Board Game vs Bot or Friend',
+    description:
+      'Play Four in a Row free in your browser. Drop discs and line up four before your rival, against a three-level bot, a friend beside you, or an online opponent.',
+  },
+  bricks: {
+    title: 'Brick Breaker — Free Online Brick-Breaking Arcade Game',
+    description:
+      'Play Brick Breaker free in your browser. Steer the paddle, keep the ball alive, and smash through five hand-built walls of tough and steel bricks. No download.',
+  },
+  mines: {
+    title: 'Minesweeper — Free Online Puzzle With a Safe First Click',
+    description:
+      'Play Minesweeper free in your browser. Clear the field on three phone-sized boards, flag mines with a long press, and beat your best time. No download.',
+  },
+  hockey: {
+    title: 'Air Hockey — Free Online Air Hockey vs Bot or Friend',
+    description:
+      'Play Air Hockey free in your browser. Guard your goal, bank shots off the walls, and race to seven against a bot, a friend on the same screen, or online.',
   },
 };
 
@@ -206,12 +240,12 @@ export function renderSeoTags(view: SeoView, origin: string = SITE_ORIGIN): stri
     `<meta property="og:image" content="${image}">`,
     `<meta property="og:image:width" content="${OG_IMAGE_WIDTH}">`,
     `<meta property="og:image:height" content="${OG_IMAGE_HEIGHT}">`,
-    `<meta property="og:image:alt" content="${SITE_NAME} — twelve browser games in one hub">`,
+    `<meta property="og:image:alt" content="${SITE_NAME} — ${gameCountWord()} browser games in one hub">`,
     `<meta name="twitter:card" content="summary_large_image">`,
     `<meta name="twitter:title" content="${escapeHtml(title)}">`,
     `<meta name="twitter:description" content="${escapeHtml(description)}">`,
     `<meta name="twitter:image" content="${image}">`,
-    `<meta name="twitter:image:alt" content="${SITE_NAME} — twelve browser games in one hub">`,
+    `<meta name="twitter:image:alt" content="${SITE_NAME} — ${gameCountWord()} browser games in one hub">`,
     `<script type="application/ld+json">${json}</script>`,
   ].join('\n  ');
 }

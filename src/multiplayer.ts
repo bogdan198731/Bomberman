@@ -7,12 +7,14 @@ import {
   type Player,
   type PowerUp,
   type RenderState,
+  BOMBERMAN_LEVELS,
   createMapGrid,
   createPlayers,
   getGameStatus,
   killPlayer,
   movePlayer,
 } from './index.js';
+import { normalizeLevel } from './levels.js';
 
 export type PlayerId = 1 | 2;
 export type RoomPhase = 'waiting' | 'countdown' | 'playing' | 'finished';
@@ -76,8 +78,12 @@ export class OnlineRoom {
   private lastBotActionAt = 0;
   private botDecisionCount = 0;
 
-  constructor(code: string) {
+  /** Which Blast Buddies map this room plays on; fixed for the room's life. */
+  readonly level: number;
+
+  constructor(code: string, level: number = 1) {
     this.code = code;
+    this.level = normalizeLevel(level, BOMBERMAN_LEVELS.length);
   }
 
   connectPlayer(playerId: PlayerId, now: number = Date.now()): void {
@@ -256,7 +262,7 @@ export class OnlineRoom {
 
   private startRound(incrementRound: boolean, now: number): void {
     if (incrementRound) this.round += 1;
-    const map = createMapGrid();
+    const map = createMapGrid(13, 13, this.level);
     this.gameState = new GameState(map);
     this.players = createPlayers();
     this.gameStatus = 'playing';

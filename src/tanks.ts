@@ -3,6 +3,7 @@ import { ArcadeResultReporter } from './stats.js';
 import { capturePointer, bindDirectionalJoystick } from './touch-controls.js';
 import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
 import { emitArcadeGameplayCue } from './feedback.js';
+import { bindLevelSelect, normalizeLevel, type LevelInfo } from './levels.js';
 
 export type TankPlayer = 1 | 2;
 export type TankMode = 'bot' | 'duel';
@@ -55,15 +56,61 @@ const VECTORS: Record<TankDirection, readonly [number, number]> = {
   up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0],
 };
 
-function defaultObstacles(): TankObstacle[] {
-  return [
-    { x: 220, y: 120, width: 42, height: 150, destructible: false },
-    { x: 638, y: 330, width: 42, height: 150, destructible: false },
-    { x: 405, y: 78, width: 90, height: 42, destructible: true },
-    { x: 405, y: 480, width: 90, height: 42, destructible: true },
-    { x: 366, y: 270, width: 62, height: 62, destructible: true },
-    { x: 472, y: 270, width: 62, height: 62, destructible: true },
-  ];
+const steel = (x: number, y: number, width: number, height: number): TankObstacle =>
+  ({ x, y, width, height, destructible: false });
+const crate = (x: number, y: number, width: number, height: number): TankObstacle =>
+  ({ x, y, width, height, destructible: true });
+
+export interface TankLevel extends LevelInfo {
+  obstacles: readonly TankObstacle[];
+}
+
+/**
+ * Tanks spawn at (80, 300) and (820, 300). Every arena keeps both spawns
+ * clear and leaves a drivable route between them without shooting anything.
+ */
+export const TANK_LEVELS: readonly TankLevel[] = [
+  {
+    name: 'Classic',
+    blurb: 'Two steel walls and a crate cluster in the middle.',
+    obstacles: [
+      steel(220, 120, 42, 150), steel(638, 330, 42, 150),
+      crate(405, 78, 90, 42), crate(405, 480, 90, 42),
+      crate(366, 270, 62, 62), crate(472, 270, 62, 62),
+    ],
+  },
+  {
+    name: 'Bunkers',
+    blurb: 'Steel bunkers in each corner, crates guarding the centre.',
+    obstacles: [
+      steel(180, 90, 120, 36), steel(600, 90, 120, 36),
+      steel(180, 474, 120, 36), steel(600, 474, 120, 36),
+      crate(420, 190, 60, 60), crate(420, 350, 60, 60),
+    ],
+  },
+  {
+    name: 'Crossfire',
+    blurb: 'A steel spine splits the field - go over, under, or bank a shot.',
+    obstacles: [
+      steel(429, 150, 42, 300),
+      crate(250, 255, 56, 90), crate(594, 255, 56, 90),
+    ],
+  },
+  {
+    name: 'Crate Field',
+    blurb: 'A grid of crates to blast through, anchored by two steel posts.',
+    obstacles: [
+      steel(290, 280, 40, 40), steel(570, 280, 40, 40),
+      crate(200, 110, 50, 50), crate(425, 110, 50, 50), crate(650, 110, 50, 50),
+      crate(200, 440, 50, 50), crate(425, 440, 50, 50), crate(650, 440, 50, 50),
+      crate(425, 275, 50, 50),
+    ],
+  },
+];
+
+/** A fresh copy per round, because crates are destroyed as they are shot. */
+export function tankLevelObstacles(level: number): TankObstacle[] {
+  return TANK_LEVELS[normalizeLevel(level, TANK_LEVELS.length) - 1].obstacles.map(obstacle => ({ ...obstacle }));
 }
 
 function emptyInput(): TankInput {
@@ -83,13 +130,16 @@ export class MiniTanksGame {
   };
   inputs: Record<TankPlayer, TankInput> = { 1: emptyInput(), 2: emptyInput() };
   bullets: TankBullet[] = [];
-  obstacles = defaultObstacles();
+  level = 1;
+  obstacles = tankLevelObstacles(1);
   mode: TankMode = 'bot';
   phase: TankPhase = 'ready';
   roundWinner: TankPlayer | null = null;
   matchWinner: TankPlayer | null = null;
   botPace: TankBotPace = 'rookie';
   private botDecisionTimer = 0;
+  private elapsed = 0;
+  private botDetour: { phase: 'sidestep' | 'push'; direction: TankDirection; resume: TankDirection; until: number } | null = null;
 
   restart(mode: TankMode = this.mode): void {
     this.mode = mode;
@@ -109,6 +159,12 @@ export class MiniTanksGame {
   setInput(player: TankPlayer, action: keyof TankInput, pressed: boolean): void {
     if (this.mode === 'bot' && player === 2) return;
     this.inputs[player][action] = pressed;
+  }
+
+  /** Switching arena resets the whole match: scores from another layout mean nothing. */
+  setLevel(level: number): void {
+    this.level = normalizeLevel(level, TANK_LEVELS.length);
+    this.restart(this.mode);
   }
 
   setBotPace(pace: TankBotPace): void {
@@ -136,6 +192,7 @@ export class MiniTanksGame {
   update(seconds: number): void {
     if (this.phase !== 'playing') return;
     const dt = Math.max(0, Math.min(.04, seconds));
+    this.elapsed += dt;
     this.tanks[1].cooldown = Math.max(0, this.tanks[1].cooldown - dt);
     this.tanks[2].cooldown = Math.max(0, this.tanks[2].cooldown - dt);
     this.botDecisionTimer -= dt;
@@ -167,7 +224,8 @@ export class MiniTanksGame {
     this.inputs = { 1: emptyInput(), 2: emptyInput() };
     this.bullets = [];
     this.botDecisionTimer = 0;
-    this.obstacles = defaultObstacles();
+    this.botDetour = null;
+    this.obstacles = tankLevelObstacles(this.level);
     this.phase = 'ready';
     this.roundWinner = null;
   }
@@ -191,14 +249,59 @@ export class MiniTanksGame {
     }
   }
 
+  private blocked(tank: MiniTank, direction: TankDirection): boolean {
+    const [dx, dy] = VECTORS[direction];
+    const probe = TANK_SIZE * .7;
+    const x = tank.x + dx * probe;
+    const y = tank.y + dy * probe;
+    const half = TANK_SIZE / 2;
+    if (x < half || x > TANK_ARENA_WIDTH - half || y < half || y > TANK_ARENA_HEIGHT - half) return true;
+    return this.obstacles.some(obstacle => overlapsRect(x, y, TANK_SIZE, obstacle));
+  }
+
   private updateBot(): void {
     const bot = this.tanks[2];
     const target = this.tanks[1];
     this.inputs[2] = emptyInput();
     const dx = target.x - bot.x;
     const dy = target.y - bot.y;
-    if (Math.abs(dy) > 24) this.inputs[2][dy < 0 ? 'up' : 'down'] = true;
-    else if (Math.abs(dx) > 24) this.inputs[2][dx < 0 ? 'left' : 'right'] = true;
+    let move: TankDirection | null = null;
+    if (Math.abs(dy) > 24) move = dy < 0 ? 'up' : 'down';
+    else if (Math.abs(dx) > 24) move = dx < 0 ? 'left' : 'right';
+
+    /*
+     * Steering straight at the player leaves the bot pinned against any wall
+     * in between. A detour has two legs: sidestep until the original way is
+     * clear, then commit to pushing through it. Without the second leg the
+     * bot's vertical-first steering drags it straight back behind the wall.
+     */
+    const detour = this.botDetour;
+    if (detour && detour.phase === 'sidestep') {
+      if (!this.blocked(bot, detour.resume)) {
+        this.botDetour = { ...detour, phase: 'push', direction: detour.resume, until: this.elapsed + .7 };
+        move = detour.resume;
+      } else if (this.elapsed < detour.until && !this.blocked(bot, detour.direction)) {
+        move = detour.direction;
+      } else {
+        this.botDetour = null;
+      }
+    } else if (detour && detour.phase === 'push') {
+      if (this.elapsed < detour.until && !this.blocked(bot, detour.direction)) move = detour.direction;
+      else this.botDetour = null;
+    }
+
+    if (!this.botDetour && move && this.blocked(bot, move)) {
+      const sideways: TankDirection[] = move === 'left' || move === 'right'
+        ? (dy < 0 ? ['up', 'down'] : ['down', 'up'])
+        : (dx < 0 ? ['left', 'right'] : ['right', 'left']);
+      const escape = sideways.find(direction => !this.blocked(bot, direction));
+      if (escape) {
+        this.botDetour = { phase: 'sidestep', direction: escape, resume: move, until: this.elapsed + 2.5 };
+        move = escape;
+      }
+    }
+    if (move) this.inputs[2][move] = true;
+
     const aligned = Math.abs(dx) < 28 || Math.abs(dy) < 28;
     if (aligned) {
       bot.direction = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down');
@@ -270,6 +373,7 @@ export function initMiniTanks(): void {
   const launchButton = document.getElementById('tanksLaunchButton') as HTMLButtonElement | null;
   const readiness = document.getElementById('tanksShotReadiness');
   const paceSelect = document.getElementById('tanksBotPace') as HTMLSelectElement | null;
+  const levelSelect = document.getElementById('tanksLevel') as HTMLSelectElement | null;
   const modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-tanks-mode]');
   const mintControls = document.getElementById('tanksMintControls');
   const coralControls = document.getElementById('tanksCoralControls');
@@ -277,8 +381,20 @@ export function initMiniTanks(): void {
   let room: GameRoomClient | null = null;
   const resultReporter = new ArcadeResultReporter('tanks');
 
+  game.setLevel(bindLevelSelect(levelSelect, 'tanks', TANK_LEVELS, level => {
+    // An online guest plays the host's arena; its own picker only mirrors it.
+    if (room?.isGuest()) {
+      if (levelSelect) levelSelect.value = String(game.level);
+      return;
+    }
+    game.setLevel(level);
+    room?.broadcastState(snapshot(), true);
+    syncUi(); render();
+  }));
+
   function snapshot(): Record<string, unknown> {
     return {
+      level: game.level,
       tanks: game.tanks, bullets: game.bullets, obstacles: game.obstacles,
       mode: game.mode, phase: game.phase, roundWinner: game.roundWinner, matchWinner: game.matchWinner,
       botPace: game.botPace,
@@ -290,6 +406,10 @@ export function initMiniTanks(): void {
     game.tanks = state.tanks as Record<TankPlayer, MiniTank>;
     game.bullets = state.bullets as TankBullet[];
     game.obstacles = state.obstacles as TankObstacle[];
+    if (state.level !== undefined) {
+      game.level = normalizeLevel(state.level, TANK_LEVELS.length);
+      if (levelSelect) levelSelect.value = String(game.level);
+    }
     game.mode = state.mode as TankMode;
     game.phase = state.phase as TankPhase;
     game.roundWinner = state.roundWinner as TankPlayer | null;

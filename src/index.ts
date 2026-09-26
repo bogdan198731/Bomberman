@@ -1,5 +1,6 @@
 import { createArcadeNavigation, type ArcadeView } from './navigation.js';
 import { initMobileImmersiveMode } from './mobile-fullscreen.js';
+import { bindLevelSelect, normalizeLevel, type LevelInfo } from './levels.js';
 import {
   drawRetroBomb,
   drawRetroBrick,
@@ -16,7 +17,8 @@ import {
 } from './bomberman-skin.js';
 import { initHubLayout } from './hub-layout.js';
 import { ActiveClock } from './session-state.js';
-import { supportedLaunchMode } from './game-metadata.js';
+import { ARCADE_GAME_IDS, isArcadeGameId, supportedLaunchMode } from './game-metadata.js';
+import { viewElementId } from './seo.js';
 import { initTintar } from './tintar.js';
 import { initPaddleClash } from './paddle.js';
 import { initNeonSnake } from './snake.js';
@@ -27,6 +29,11 @@ import { initStarDefender } from './star.js';
 import { initMicroRacers } from './racing.js';
 import { initBlockDrop } from './blocks.js';
 import { initTwenty48 } from './twenty48.js';
+import { initAirHockey } from './hockey.js';
+import { initMinesweeper } from './mines.js';
+import { initBrickBreaker } from './bricks.js';
+import { initFourInARow } from './fourrow.js';
+import { initLightCycles } from './cycles.js';
 import { initSudoku } from './sudoku.js';
 import { ArcadeResultReporter, initArcadeProfile } from './stats.js';
 import { initGameCatalog } from './catalog.js';
@@ -125,7 +132,26 @@ export interface PowerUp {
   type: PowerUpType;
 }
 
-export function createMapGrid(width: number = 13, height: number = 13): MapGrid {
+export interface BombermanLevel extends LevelInfo {
+  /** Out of 10: how many eligible tiles get a destructible crate. */
+  crateDensity: number;
+  /** Clears the pillars and crates along the centre row and column. */
+  openCross: boolean;
+}
+
+export const BOMBERMAN_LEVELS: readonly BombermanLevel[] = [
+  { name: 'Classic', blurb: 'The original pillar grid with a steady spread of crates.', crateDensity: 6, openCross: false },
+  { name: 'Open Field', blurb: 'Few crates - fast, exposed fights from the first second.', crateDensity: 3, openCross: false },
+  { name: 'Crate Maze', blurb: 'Packed with crates; blast your own path to the rival.', crateDensity: 8, openCross: false },
+  { name: 'Crossroads', blurb: 'Two open lanes cross the centre - control them or get caught in them.', crateDensity: 6, openCross: true },
+];
+
+export function createMapGrid(width: number = 13, height: number = 13, level: number = 1): MapGrid {
+  const layout = BOMBERMAN_LEVELS[normalizeLevel(level, BOMBERMAN_LEVELS.length) - 1];
+  const midRow = Math.floor(height / 2);
+  const midCol = Math.floor(width / 2);
+  const onOpenCross = (row: number, col: number): boolean =>
+    layout.openCross && (row === midRow || col === midCol);
   const tiles: TileType[][] = Array(height)
     .fill(null)
     .map(() => Array(width).fill(TileType.EMPTY));
@@ -133,7 +159,7 @@ export function createMapGrid(width: number = 13, height: number = 13): MapGrid 
   for (let row = 0; row < height; row++) {
     for (let col = 0; col < width; col++) {
       const isEdge = row === 0 || row === height - 1 || col === 0 || col === width - 1;
-      const isPillar = row % 2 === 0 && col % 2 === 0 && row > 0 && row < height - 1;
+      const isPillar = row % 2 === 0 && col % 2 === 0 && row > 0 && row < height - 1 && !onOpenCross(row, col);
 
       if (isEdge || isPillar) {
         tiles[row][col] = TileType.WALL_INDESTRUCTIBLE;
@@ -148,7 +174,7 @@ export function createMapGrid(width: number = 13, height: number = 13): MapGrid 
         const distanceFromPlayerTwo = height - 2 - row + (width - 2 - col);
         const isPlayerOneSpawnArea = distanceFromPlayerOne <= EXPLOSION_RADIUS + 1;
         const isPlayerTwoSpawnArea = distanceFromPlayerTwo <= EXPLOSION_RADIUS + 1;
-        const hasDestructibleWall = (row * 17 + col * 31) % 10 < 6;
+        const hasDestructibleWall = (row * 17 + col * 31) % 10 < layout.crateDensity && !onOpenCross(row, col);
 
         if (!isPlayerOneSpawnArea && !isPlayerTwoSpawnArea && hasDestructibleWall) {
           tiles[row][col] = TileType.WALL_DESTRUCTIBLE;
@@ -1285,19 +1311,7 @@ export function initGame(): void {
   if (!canvas || !ctx) return;
 
   const elements = {
-    hubView: document.getElementById('hubView'),
     gameView: document.getElementById('gameView'),
-    tintarView: document.getElementById('tintarView'),
-    paddleView: document.getElementById('paddleView'),
-    snakeView: document.getElementById('snakeView'),
-    tanksView: document.getElementById('tanksView'),
-    septicaView: document.getElementById('septicaView'),
-    survivalView: document.getElementById('survivalView'),
-    starView: document.getElementById('starView'),
-    racingView: document.getElementById('racingView'),
-    blocksView: document.getElementById('blocksView'),
-    twenty48View: document.getElementById('twenty48View'),
-    sudokuView: document.getElementById('sudokuView'),
     launchGameButtons: document.querySelectorAll<HTMLButtonElement>('[data-launch-game]'),
     backToHubButtons: document.querySelectorAll<HTMLButtonElement>('[data-back-to-hub]'),
     skinButton: document.getElementById('bombermanSkinButton') as HTMLButtonElement | null,
@@ -1359,6 +1373,13 @@ export function initGame(): void {
   let localRoom: OnlineRoom | undefined;
   let localMode = false;
   let selectedLobbyMode: 'local' | 'bot' | 'online' = 'local';
+  // Chosen in the lobby; applies to the next match started from here.
+  let selectedMapLevel = bindLevelSelect(
+    document.getElementById('bombermanLevel') as HTMLSelectElement | null,
+    'bomberman',
+    BOMBERMAN_LEVELS,
+    level => { selectedMapLevel = level; },
+  );
   let localPlayerId: 1 | 2 | undefined;
   let activeRoomCode = '';
   let activeBotDifficulty: 'easy' | 'normal' | 'hard' | undefined;
@@ -1406,19 +1427,10 @@ export function initGame(): void {
     if (navigation) navigation.open(view); else renderActiveView(view);
   }
   function renderActiveView(view: ArcadeView): void {
-    elements.hubView?.classList.toggle('view-hidden', view !== 'hub');
-    elements.gameView?.classList.toggle('view-hidden', view !== 'bomberman');
-    elements.tintarView?.classList.toggle('view-hidden', view !== 'tintar');
-    elements.paddleView?.classList.toggle('view-hidden', view !== 'paddle');
-    elements.snakeView?.classList.toggle('view-hidden', view !== 'snake');
-    elements.tanksView?.classList.toggle('view-hidden', view !== 'tanks');
-    elements.septicaView?.classList.toggle('view-hidden', view !== 'septica');
-    elements.survivalView?.classList.toggle('view-hidden', view !== 'survival');
-    elements.starView?.classList.toggle('view-hidden', view !== 'star');
-    elements.racingView?.classList.toggle('view-hidden', view !== 'racing');
-    elements.blocksView?.classList.toggle('view-hidden', view !== 'blocks');
-    elements.twenty48View?.classList.toggle('view-hidden', view !== 'twenty48');
-    elements.sudokuView?.classList.toggle('view-hidden', view !== 'sudoku');
+    // Every game's <main> follows the naming seo.ts already relies on.
+    (['hub', ...ARCADE_GAME_IDS] as const).forEach(id => {
+      document.getElementById(viewElementId(id))?.classList.toggle('view-hidden', id !== view);
+    });
     document.body.dataset.view = view;
     window.dispatchEvent(new CustomEvent('arcade-view-changed', { detail: { view } }));
     if (view !== 'hub') {
@@ -1535,7 +1547,7 @@ export function initGame(): void {
 
   function connectAndSend(
     message:
-      | { type: 'create' }
+      | { type: 'create'; level: number }
       | { type: 'quickMatch' }
       | { type: 'join'; roomCode: string }
       | { type: 'createBot'; difficulty: 'easy' | 'normal' | 'hard' }
@@ -1620,7 +1632,7 @@ export function initGame(): void {
     const { OnlineRoom: LocalRoom } = await import('./multiplayer.js');
     const now = Date.now();
     localClock = new ActiveClock(now);
-    localRoom = new LocalRoom('LOCAL');
+    localRoom = new LocalRoom('LOCAL', selectedMapLevel);
     localRoom.connectPlayer(1, now);
     localRoom.connectPlayer(2, now);
     localMode = true;
@@ -1641,7 +1653,7 @@ export function initGame(): void {
     const { OnlineRoom: LocalRoom } = await import('./multiplayer.js');
     const now = Date.now();
     localClock = new ActiveClock(now);
-    localRoom = new LocalRoom('BOT');
+    localRoom = new LocalRoom('BOT', selectedMapLevel);
     localRoom.connectPlayer(1, now);
     localRoom.connectBot(difficulty, now);
     localMode = false;
@@ -1655,7 +1667,7 @@ export function initGame(): void {
     syncUi();
   }
 
-  elements.createRoomButton?.addEventListener('click', () => connectAndSend({ type: 'create' }));
+  elements.createRoomButton?.addEventListener('click', () => connectAndSend({ type: 'create', level: selectedMapLevel }));
   elements.quickMatchButton?.addEventListener('click', () => connectAndSend({ type: 'quickMatch' }));
   elements.playLocalButton?.addEventListener('click', () => { void startLocalMatch(); });
   elements.lobbyModeButtons.forEach(button => {
@@ -1679,7 +1691,7 @@ export function initGame(): void {
   elements.launchGameButtons.forEach(button => {
     button.addEventListener('click', () => {
       const game = button.dataset.launchGame;
-      if (game === 'bomberman' || game === 'tintar' || game === 'paddle' || game === 'snake' || game === 'tanks' || game === 'septica' || game === 'survival' || game === 'star' || game === 'racing' || game === 'blocks' || game === 'twenty48' || game === 'sudoku') {
+      if (isArcadeGameId(game)) {
         setActiveView(game);
         const requestedMode = supportedLaunchMode(game, button.dataset.launchMode);
         if (requestedMode === 'solo' || requestedMode === 'local' || requestedMode === 'online') {
@@ -1692,9 +1704,7 @@ export function initGame(): void {
   window.addEventListener('arcade-request-launch', event => {
     const detail = (event as CustomEvent<{ gameId?: string; mode?: string }>).detail;
     const game = detail?.gameId;
-    if (game !== 'bomberman' && game !== 'tintar' && game !== 'paddle' && game !== 'snake' && game !== 'tanks'
-      && game !== 'septica' && game !== 'survival' && game !== 'star' && game !== 'racing' && game !== 'blocks'
-      && game !== 'twenty48' && game !== 'sudoku') return;
+    if (!isArcadeGameId(game)) return;
     setActiveView(game);
     window.dispatchEvent(new CustomEvent('arcade-launch-mode', { detail: { gameId: game, mode: supportedLaunchMode(game, detail.mode) } }));
     if (game === 'bomberman' && (detail.mode === 'solo' || detail.mode === 'local' || detail.mode === 'online')) {
@@ -2064,6 +2074,11 @@ if (typeof window !== 'undefined') {
     initBlockDrop();
     initTwenty48();
     initSudoku();
+    initAirHockey();
+    initMinesweeper();
+    initBrickBreaker();
+    initFourInARow();
+    initLightCycles();
     initGameExperience();
     initArcadeTouchLayout();
     initMobileImmersiveMode();

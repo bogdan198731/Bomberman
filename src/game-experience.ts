@@ -87,6 +87,36 @@ export const GAME_GUIDES: Record<ArcadeGameId, GuideCopy> = {
     rules: [copy('Only visible row, column, or box conflicts count as mistakes.', 'Doar conflictele vizibile din rând, coloană sau careu sunt greșeli.'), copy('Relaxed view hides time and score pressure; hints remain limited by difficulty.', 'Modul relaxat ascunde presiunea timpului și scorului; indiciile rămân limitate de dificultate.')],
     tip: copy('Start with rows, columns, or boxes that have the fewest empty cells.', 'Începe cu rândurile, coloanele sau careurile cu cele mai puține celule goale.'),
   },
+  cycles: {
+    objective: copy('Leave a trail of light behind you and make your rival crash into a wall or a trail first. First to 3 rounds wins.', 'Lasă o dâră de lumină în urma ta și fă-ți rivalul să se izbească primul de un perete sau de o dâră. Primul la 3 runde câștigă.'),
+    controls: copy('Steer with WASD, the arrow keys, the joystick, or by swiping the grid. Tap the grid or press Space to start.', 'Condu cu WASD, săgețile, joystickul sau glisând pe grilă. Apasă pe grilă sau pe Spațiu pentru a porni.'),
+    rules: [copy('Trails never fade, so every move shrinks the arena.', 'Dârele nu dispar niciodată, așa că fiecare mișcare micșorează arena.'), copy('You cannot turn straight back into your own trail.', 'Nu poți întoarce direct în propria dâră.'), copy('If both riders crash on the same tick, nobody scores.', 'Dacă ambii se izbesc în același moment, nimeni nu primește punct.')],
+    tip: copy('Cut across your rival’s path early to steal the open space.', 'Taie devreme drumul rivalului pentru a-i fura spațiul liber.'),
+  },
+  fourrow: {
+    objective: copy('Line up four discs - across, down, or diagonally - before your opponent does.', 'Aliniază patru discuri - orizontal, vertical sau pe diagonală - înaintea adversarului.'),
+    controls: copy('Tap or click a column to drop a disc. On a keyboard press 1-7, or aim with the arrows and press Enter.', 'Apasă pe o coloană pentru a lăsa un disc. Pe tastatură apasă 1-7 sau țintește cu săgețile și apasă Enter.'),
+    rules: [copy('Discs fall to the lowest open space in a column.', 'Discurile cad în cel mai de jos loc liber din coloană.'), copy('A full board with no four in a row is a draw.', 'O tablă plină fără patru în linie este remiză.'), copy('Players take turns opening each new game.', 'Jucătorii deschid pe rând fiecare joc nou.')],
+    tip: copy('Claim the centre column early - it is part of the most possible lines.', 'Ocupă devreme coloana din mijloc - face parte din cele mai multe linii posibile.'),
+  },
+  bricks: {
+    objective: copy('Break every brick on the wall to move on. Clear all five walls to win.', 'Sparge fiecare cărămidă din zid pentru a avansa. Termină toate cele cinci ziduri pentru a câștiga.'),
+    controls: copy('Drag on the board or move the mouse to steer the paddle; tap or press Space to launch. Arrow keys and A/D also steer.', 'Trage pe tablă sau mișcă mouse-ul pentru a conduce paleta; apasă sau folosește Spațiu pentru lansare. Săgețile și A/D conduc și ele.'),
+    rules: [copy('Where the ball meets the paddle sets its angle - the edges send it wide.', 'Locul în care mingea atinge paleta îi stabilește unghiul - marginile o trimit lateral.'), copy('Coloured bricks take one to three hits; grey steel never breaks.', 'Cărămizile colorate cedează după una până la trei lovituri; oțelul gri nu se sparge niciodată.'), copy('Miss the ball three times and the run ends.', 'Scapă mingea de trei ori și runda se încheie.')],
+    tip: copy('Aim for a gap at the side of a wall - a ball trapped above the bricks clears them for you.', 'Țintește o breșă de pe marginea zidului - o minge prinsă deasupra cărămizilor le sparge în locul tău.'),
+  },
+  mines: {
+    objective: copy('Uncover every square that has no mine. Each number tells you how many mines touch that square.', 'Descoperă fiecare pătrat fără mină. Fiecare număr arată câte mine ating acel pătrat.'),
+    controls: copy('Tap to uncover; long-press or right-click to flag. Flag mode makes every tap place a flag. Keyboard: arrows, Space, and F.', 'Apasă pentru a descoperi; ține apăsat sau clic dreapta pentru steag. Modul steag pune un steag la fiecare atingere. Tastatură: săgeți, Spațiu și F.'),
+    rules: [copy('The first square you open is always safe and clears an area.', 'Primul pătrat deschis este mereu sigur și curăță o zonă.'), copy('Tap a number whose mines are all flagged to open the rest of its neighbours.', 'Apasă un număr cu toate minele marcate pentru a-i deschide restul vecinilor.'), copy('A wrong flag can still send you onto a mine.', 'Un steag greșit te poate trimite totuși pe o mină.')],
+    tip: copy('Work from the edge of opened areas - that is where the numbers give the most away.', 'Lucrează de la marginea zonelor deschise - acolo numerele dezvăluie cel mai mult.'),
+  },
+  hockey: {
+    objective: copy('Knock the puck into your rival\'s goal. First to 7 goals wins.', 'Trimite pucul în poarta rivalului. Primul la 7 goluri câștigă.'),
+    controls: copy('Drag on the table to move your mallet - on a shared screen, each player drags on their own half. Keyboard: WASD and the arrow keys.', 'Trage pe masă pentru a-ți muta crosa - pe un ecran comun, fiecare jucător trage pe jumătatea lui. Tastatură: WASD și săgețile.'),
+    rules: [copy('Your mallet stays on your half of the table.', 'Crosa ta rămâne pe jumătatea ta de masă.'), copy('The puck bounces off the side walls, so bank shots count.', 'Pucul ricoșează din pereții laterali, deci loviturile din ricoșeu contează.'), copy('After a goal, the player who conceded gets the puck.', 'După un gol, jucătorul care a primit golul primește pucul.')],
+    tip: copy('Hit through the puck, not at it - a moving mallet makes a much faster shot.', 'Lovește prin puc, nu doar în el - o crosă în mișcare dă o lovitură mult mai rapidă.'),
+  },
 };
 
 const REPLAY_SELECTORS: Record<ArcadeGameId, string> = {
@@ -94,12 +124,22 @@ const REPLAY_SELECTORS: Record<ArcadeGameId, string> = {
   snake: '#snakeStartButton', tanks: '#tanksLaunchButton', septica: '#septicaRestartButton',
   survival: '#survivalStartButton', star: '#starStartButton', racing: '#racingStartButton',
   blocks: '#blocksStartButton', twenty48: '[data-twenty48-reset]', sudoku: '[data-sudoku-new]',
+  cycles: '#cyclesStartButton',
+  fourrow: '#fourrowNextButton',
+  bricks: '#bricksLaunchButton',
+  mines: '#minesNewButton',
+  hockey: '#hockeyStartButton',
 };
 
 const RESULT_STATUS_SELECTORS: Record<ArcadeGameId, string> = {
   bomberman: '#statusText', tintar: '#tintarStatus', paddle: '#paddleStatus', snake: '#snakeStatus',
   tanks: '#tanksStatus', septica: '#septicaStatus', survival: '#survivalStatus', star: '#starStatus',
   racing: '#racingStatus', blocks: '#blocksStatus', twenty48: '#twenty48Status', sudoku: '#sudokuStatus',
+  cycles: '#cyclesStatus',
+  fourrow: '#fourrowStatus',
+  bricks: '#bricksStatus',
+  mines: '#minesStatus',
+  hockey: '#hockeyStatus',
 };
 
 
@@ -112,6 +152,11 @@ const KEYBOARD_CONTROLS: Partial<Record<ArcadeGameId, [string, string]>> = {
   tanks: copy('Mint: WASD to move/aim, F to fire. Coral: arrow keys to move/aim, Enter to fire.', 'Mint: WASD pentru mișcare/țintire, F pentru foc. Coral: săgeți pentru mișcare/țintire, Enter pentru foc.'),
   survival: copy('Mint: WASD to move, F to fire. Coral: arrow keys to move, Enter to fire. Auto-fire is optional.', 'Mint: WASD pentru mișcare, F pentru foc. Coral: săgeți pentru mișcare, Enter pentru foc. Focul automat este opțional.'),
   star: copy('Mint: WASD to move, F to fire. Coral in co-op: arrow keys and Enter. In solo, either movement key set controls Mint.', 'Mint: WASD pentru mișcare, F pentru foc. Coral în cooperare: săgeți și Enter. Solo: ambele seturi de direcție controlează Mint.'),
+  cycles: copy('Mint: WASD. Coral: arrow keys. Against the bot, either set steers Mint. Space starts a round.', 'Mint: WASD. Coral: săgețile. Contra botului, ambele seturi îl conduc pe Mint. Spațiu pornește runda.'),
+  fourrow: copy('Press 1-7 to drop in a column, or use Left/Right and Enter.', 'Apasă 1-7 pentru a lăsa un disc într-o coloană sau folosește Stânga/Dreapta și Enter.'),
+  bricks: copy('Left/Right or A/D steer, Space launches.', 'Stânga/Dreapta sau A/D conduc, Spațiu lansează.'),
+  mines: copy('Arrows move the cursor, Space or Enter uncovers, F places a flag.', 'Săgețile mută cursorul, Spațiu sau Enter descoperă, F pune un steag.'),
+  hockey: copy('Mint: WASD. Coral: arrow keys. Against the bot, either set moves Mint. Space faces off.', 'Mint: WASD. Coral: săgețile. Contra botului, ambele seturi îl mută pe Mint. Spațiu pune pucul în joc.'),
 };
 
 function localized(pair: [string, string]): string { return pair[currentArcadeLanguage() === 'ro' ? 1 : 0]; }
@@ -200,6 +245,11 @@ export function initGameExperience(): void {
       snake: '#snakeRestartButton', tanks: '#tanksRestartButton', septica: '#septicaRestartButton',
       survival: '#survivalRestartButton', star: '#starRestartButton', racing: '#racingRestartButton',
       blocks: '#blocksRestartButton', twenty48: '[data-twenty48-reset]', sudoku: '[data-sudoku-new]',
+      cycles: '#cyclesRestartButton',
+      fourrow: '#fourrowRestartButton',
+      bricks: '#bricksRestartButton',
+      mines: '#minesNewButton',
+      hockey: '#hockeyRestartButton',
     };
     if (!reset[gameId]) return;
     // These reset handlers confirm progress loss and clear pause only after acceptance.

@@ -16,7 +16,9 @@ test('Quick Play exposes the expected games for each mode', () => {
   assert.equal(gamesForQuickPlay('all').length, QUICK_PLAY_GAMES.length);
   assert.equal(gamesForQuickPlay('online').some(game => game.id === 'star'), false);
   assert.equal(gamesForQuickPlay('solo').some(game => game.id === 'tintar'), true);
-  assert.equal(gamesForQuickPlay('local').length, QUICK_PLAY_GAMES.length - 2);
+  // Every game that supports same-device play, however many solo-only games exist.
+  assert.equal(gamesForQuickPlay('local').length, QUICK_PLAY_GAMES.filter(game => game.modes.includes('local')).length);
+  assert.ok(gamesForQuickPlay('local').length < QUICK_PLAY_GAMES.length, 'solo-only games are filtered out');
   assert.equal(gamesForQuickPlay('solo').some(game => game.id === 'paddle'), true);
   assert.equal(gamesForQuickPlay('solo').some(game => game.id === 'twenty48'), true);
   assert.equal(gamesForQuickPlay('local').some(game => game.id === 'twenty48'), false);

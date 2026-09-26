@@ -216,7 +216,8 @@ webSocketServer.on('connection', socket => {
     if (data.type === 'create') {
       if (clients.has(socket)) return;
       const code = createRoomCode();
-      rooms.set(code, new OnlineRoom(code));
+      // The creator picks the map; OnlineRoom rejects anything out of range.
+      rooms.set(code, new OnlineRoom(code, Number(data.level)));
       joinRoom(socket, code, true);
       return;
     }
@@ -243,7 +244,7 @@ webSocketServer.on('connection', socket => {
       if (clients.has(socket)) return;
       const difficulty = data.difficulty as BotDifficulty;
       const code = createRoomCode();
-      const room = new OnlineRoom(code);
+      const room = new OnlineRoom(code, Number(data.level));
       rooms.set(code, room);
       clients.set(socket, { kind: 'bomberman', roomCode: code, playerId: 1 });
       room.connectPlayer(1);

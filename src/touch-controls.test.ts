@@ -195,7 +195,10 @@ test('the side control lives in Settings, not on the game screens', () => {
   assert.doesNotMatch(html, /mobileControlLayoutButton/, 'including the one in Blast Buddies');
 
   // Every touch pad opts in, joystick-only and button-only games included.
-  assert.equal((html.match(/<div[^>]*data-touch-layout="joystick-right"/g) ?? []).length, 8);
+  // Every touch pad opts in - count them rather than fixing a number.
+  const pads = html.match(/<div[^>]*class="[^"]*touch-controls[^"]*"[^>]*>/g) ?? [];
+  assert.ok(pads.length >= 8);
+  pads.forEach(pad => assert.match(pad, /data-touch-layout="joystick-right"/, `pad without a side: ${pad}`));
   for (const label of ['Touch paddle controls', 'Touch snake controls', 'Touch Block Drop controls']) {
     assert.match(
       html,

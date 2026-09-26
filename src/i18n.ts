@@ -1,6 +1,107 @@
 export type ArcadeLanguage = 'en' | 'ro';
 
 const ROMANIAN_TRANSLATIONS: Record<string, string> = {
+  'Race to seven · Bot, local, or online': 'Până la șapte · Bot, local sau online',
+  'Beat the Coral bot to 7. Start when ready.': 'Învinge botul Coral până la 7. Pornește când ești gata.',
+  'First to 7 goals wins.': 'Primul la 7 goluri câștigă.',
+  'Guard your goal and strike through the puck.': 'Apără-ți poarta și lovește prin puc.',
+  'Mint scores!': 'Mint înscrie!',
+  'Coral scores!': 'Coral înscrie!',
+  'Mint wins the table!': 'Mint câștigă masa!',
+  'Coral wins the table!': 'Coral câștigă masa!',
+  'Face off': 'Pune pucul în joc',
+  'First to 7': 'Primul la 7',
+  'Guard your goal, bank shots off the walls, and race to seven against a bot or a friend.': 'Apără-ți poarta, ricoșează din pereți și ajungi primul la șapte contra unui bot sau a unui prieten.',
+  'Play Air Hockey': 'Joacă Air Hockey',
+  'Add Air Hockey to favorites': 'Adaugă Air Hockey la favorite',
+  'Air Hockey table. Drag to move your mallet': 'Masa Air Hockey. Trage pentru a-ți muta crosa',
+  'Air Hockey bot level': 'Nivelul botului Air Hockey',
+  'Air Hockey match': 'Meci Air Hockey',
+  'MINT GOAL': 'GOL MINT',
+  'CORAL GOAL': 'GOL CORAL',
+  'Clear the field · Solo puzzle': 'Curăță terenul · Puzzle solo',
+  'Tap any square - the first one is always safe.': 'Apasă orice pătrat - primul este mereu sigur.',
+  'Boom - that was a mine. Try again.': 'Bum - a fost o mină. Încearcă din nou.',
+  'Read the numbers, flag the mines, and clear the field on three phone-sized boards.': 'Citește numerele, marchează minele și curăță terenul pe trei table potrivite pentru telefon.',
+  'Play Minesweeper': 'Joacă Minesweeper',
+  'Add Minesweeper to favorites': 'Adaugă Minesweeper la favorite',
+  'Minesweeper field. Tap to uncover, long-press to flag': 'Terenul Minesweeper. Apasă pentru a descoperi, ține apăsat pentru steag',
+  'Minesweeper board size': 'Mărimea tablei Minesweeper',
+  'Minesweeper board': 'Tabla Minesweeper',
+  'Mines': 'Mine',
+  'Minefield': 'Câmp minat',
+  'Board': 'Tablă',
+  'Easy · 9×9': 'Ușor · 9×9',
+  'Medium · 12×12': 'Mediu · 12×12',
+  'Hard · 16×16': 'Greu · 16×16',
+  '⚑ Flag mode': '⚑ Mod steag',
+  'Flag': 'Steag',
+  'or long-press': 'sau ține apăsat',
+  'New board': 'Tablă nouă',
+  'Move': 'Mută',
+  'Break the wall · Solo, five levels': 'Sparge zidul · Solo, cinci niveluri',
+  'Keep the ball alive and smash through five walls of tough and steel bricks.': 'Ține mingea în joc și sparge cinci ziduri de cărămizi rezistente și de oțel.',
+  'Play Brick Breaker': 'Joacă Brick Breaker',
+  'Add Brick Breaker to favorites': 'Adaugă Brick Breaker la favorite',
+  'Brick Breaker wall. Drag to steer the paddle, tap to launch': 'Zidul Brick Breaker. Trage pentru a conduce paleta, apasă pentru lansare',
+  'Brick Breaker starting level': 'Nivelul de start Brick Breaker',
+  'Brick Breaker run': 'Rundă Brick Breaker',
+  'Solo · 5 levels': 'Solo · 5 niveluri',
+  'Balls': 'Mingi',
+  'Start at': 'Începe la',
+  'Steer': 'Conduce',
+  'Launch': 'Lansează',
+  'In play': 'În joc',
+  'Next wall': 'Zidul următor',
+  'Restart level': 'Reia nivelul',
+  'First Wall': 'Primul zid',
+  'Checkerboard': 'Tablă de șah',
+  'Pyramid': 'Piramidă',
+  'Fortress': 'Fortăreață',
+  'Vault': 'Seif',
+  '1 · First Wall': '1 · Primul zid',
+  '2 · Checkerboard': '2 · Tablă de șah',
+  '3 · Pyramid': '3 · Piramidă',
+  '5 · Vault': '5 · Seif',
+  'Drop four · Bot, local, or online': 'Patru în linie · Bot, local sau online',
+  'Mint to drop a disc.': 'Mint lasă un disc.',
+  'Coral to drop a disc.': 'Coral lasă un disc.',
+  'Coral bot is thinking…': 'Botul Coral se gândește…',
+  'Board full - a draw.': 'Tablă plină - remiză.',
+  'Mint connects four!': 'Mint aliniază patru!',
+  'Coral connects four!': 'Coral aliniază patru!',
+  'Next game': 'Jocul următor',
+  'Reset series': 'Resetează seria',
+  'Series': 'Serie',
+  'Columns': 'Coloane',
+  'Aim': 'Țintește',
+  'Drop discs, block your rival, and line up four in a row against a bot or a friend.': 'Lasă discuri, blochează-ți rivalul și aliniază patru în linie contra unui bot sau a unui prieten.',
+  'Play Four in a Row': 'Joacă Four in a Row',
+  'Add Four in a Row to favorites': 'Adaugă Four in a Row la favorite',
+  'Four in a Row board. Tap a column to drop a disc': 'Tabla Four in a Row. Apasă o coloană pentru a lăsa un disc',
+  'Four in a Row bot level': 'Nivelul botului Four in a Row',
+  'Four in a Row match': 'Meci Four in a Row',
+  'Ride the grid · Bot, local, or online': 'Călărește grila · Bot, local sau online',
+  'Outlast the Coral bot. First to 3 rounds.': 'Rezistă mai mult decât botul Coral. Primul la 3 runde.',
+  'Two riders, one grid. First to 3 rounds.': 'Doi piloți, o singură grilă. Primul la 3 runde.',
+  'Box your rival in - never cross a trail.': 'Închide-ți rivalul - nu trece niciodată peste o dâră.',
+  'Both crashed - no point this round.': 'Amândoi s-au izbit - niciun punct în această rundă.',
+  'Mint takes the round.': 'Mint câștigă runda.',
+  'Coral takes the round.': 'Coral câștigă runda.',
+  'Mint wins the grid!': 'Mint câștigă grila!',
+  'Coral wins the grid!': 'Coral câștigă grila!',
+  'Start round': 'Pornește runda',
+  'Next round': 'Runda următoare',
+  'Riding': 'În cursă',
+  'First to 3': 'Primul la 3',
+  'Ride a neon grid, leave a wall of light behind you, and box your rival in first.': 'Călărește o grilă de neon, lasă în urmă un zid de lumină și închide-ți primul rivalul.',
+  'Play Light Cycles': 'Joacă Light Cycles',
+  'Add Light Cycles to favorites': 'Adaugă Light Cycles la favorite',
+  'Light Cycles grid arena': 'Arena grilei Light Cycles',
+  'Light Cycles bot level': 'Nivelul botului Light Cycles',
+  'Touch light cycle controls': 'Controale tactile Light Cycles',
+  'Light Cycles match': 'Meci Light Cycles',
+  'New': 'Nou',
   '⚙ Settings': '⚙ Setări',
   'Open arcade settings': 'Deschide setările arcadei',
   'Close arcade settings': 'Închide setările arcadei',
@@ -98,8 +199,8 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Finish a match to claim the first spot.': 'Termină un meci pentru a ocupa primul loc.',
   'Game library': 'Bibliotecă de jocuri',
   'Choose your next round': 'Alege următoarea rundă',
-  'Twelve instant games, from explosive duels and Romanian classics to Sudoku and number puzzles, neon racing, co-op survival, and star-fighter missions.':
-    'Douăsprezece jocuri instant, de la dueluri explozive și clasice românești la Sudoku și puzzle-uri cu numere, curse neon, supraviețuire cooperativă și misiuni stelare.',
+  'Seventeen instant games, from explosive duels and Romanian classics to Sudoku, Minesweeper and number puzzles, neon racing, air hockey, co-op survival, and star-fighter missions.':
+    'Șaptesprezece jocuri instant, de la dueluri explozive și clasice românești la Sudoku, Minesweeper și puzzle-uri cu numere, curse neon, air hockey, supraviețuire cooperativă și misiuni stelare.',
   'Search games': 'Caută jocuri',
   'Clear game search': 'Șterge căutarea',
   'Filter games by play mode': 'Filtrează jocurile după modul de joc',
@@ -179,7 +280,7 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Try another search or show the complete arcade.': 'Încearcă altă căutare sau afișează întreaga arcadă.',
   'Show all games': 'Arată toate jocurile',
   'Blast Arcade · Play instantly in your browser': 'Blast Arcade · Joacă instant în browser',
-  'Twelve live games · Keyboard, touch, bots, and online rooms': 'Douăsprezece jocuri active · Tastatură, atingere, boți și camere online',
+  'Seventeen live games · Keyboard, touch, bots, and online rooms': 'Șaptesprezece jocuri active · Tastatură, atingere, boți și camere online',
   'Blast Arcade heroes surrounded by twelve game arenas': 'Eroii Blast Arcade înconjurați de douăsprezece arene de joc',
   'Bot · Local · Online PvP': 'Bot · Local · PvP online',
   'Bot · Local · Online': 'Bot · Local · Online',
@@ -273,6 +374,23 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Play locally, or create an invite code for a friend.': 'Joacă local sau creează un cod de invitație pentru un prieten.',
   'Play local': 'Joacă local',
   'Quick Match': 'Meci rapid',
+  'Map': 'Hartă',
+  'Arena': 'Arenă',
+  'Blast Buddies map': 'Harta Blast Buddies',
+  'Snake arena': 'Arena șarpelui',
+  'Tank arena': 'Arena tancurilor',
+  'Quick Match always plays Classic.': 'Meciul rapid se joacă mereu pe harta Clasic.',
+  '1 · Classic': '1 · Clasic',
+  '2 · Open Field': '2 · Câmp deschis',
+  '3 · Crate Maze': '3 · Labirint de lăzi',
+  '4 · Crossroads': '4 · Intersecție',
+  '1 · Open Arena': '1 · Arenă deschisă',
+  '2 · Pillars': '2 · Stâlpi',
+  '3 · Lanes': '3 · Culoare',
+  '4 · Fortress': '4 · Fortăreață',
+  '2 · Bunkers': '2 · Buncăre',
+  '3 · Crossfire': '3 · Foc încrucișat',
+  '4 · Crate Field': '4 · Câmp de lăzi',
   'Create code': 'Creează cod',
   'Room code': 'Codul camerei',
   'Join': 'Intră',
@@ -422,7 +540,6 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Locked': 'Blocat',
   'Victory': 'Victorie',
   'Run complete': 'Serie finalizată',
-  'Finish a match in all 12 games.': 'Termină un meci în toate cele 12 jocuri.',
 };
 
 let activeLanguage: ArcadeLanguage = 'en';
@@ -434,6 +551,27 @@ const attributeRecords = new WeakMap<Element, Map<string, { source: string; rend
 const translatedAttributes = ['aria-label', 'placeholder', 'title', 'alt'] as const;
 
 function translateRomanianPattern(value: string): string | null {
+  // Minesweeper
+  const mines = value.match(/^(\d+) mines left to find\.$/);
+  if (mines) return `${mines[1]} mine rămase de găsit.`;
+  const cleared = value.match(/^Field cleared in (\d+)s - (\d+) points!$/);
+  if (cleared) return `Teren curățat în ${cleared[1]}s - ${cleared[2]} puncte!`;
+  // Brick Breaker: level names come from the same table as the level picker.
+  const brickName = (name: string): string => ROMANIAN_TRANSLATIONS[name] ?? name;
+  const tour = value.match(/^Finish a match in all (\d+) games\.$/);
+  if (tour) return `Termină un meci în toate cele ${tour[1]} jocuri.`;
+  let brick = value.match(/^Level (\d+) · (.+)\. Launch when ready\.$/);
+  if (brick) return `Nivelul ${brick[1]} · ${brickName(brick[2])}. Lansează când ești gata.`;
+  brick = value.match(/^Level (\d+) · (\d+) bricks to go\.$/);
+  if (brick) return `Nivelul ${brick[1]} · încă ${brick[2]} cărămizi.`;
+  brick = value.match(/^Level (\d+) · (.+)$/);
+  if (brick) return `Nivelul ${brick[1]} · ${brickName(brick[2])}`;
+  brick = value.match(/^(.+) cleared! Launch for level (\d+)\.$/);
+  if (brick) return `${brickName(brick[1])} terminat! Lansează pentru nivelul ${brick[2]}.`;
+  brick = value.match(/^Every wall broken - final score (\d+)!$/);
+  if (brick) return `Toate zidurile sparte - scor final ${brick[1]}!`;
+  brick = value.match(/^Out of balls on level (\d+) - final score (\d+)\.$/);
+  if (brick) return `Fără mingi la nivelul ${brick[1]} - scor final ${brick[2]}.`;
   let match = value.match(/^Round (\d+) · First to 3$/);
   if (match) return `Runda ${match[1]} · Primul la 3`;
   match = value.match(/^ROUND (\d+)$/);

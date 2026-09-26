@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blast-arcade-mobile-2026-09-25';
+const CACHE_NAME = 'blast-arcade-levels-2026-09-26';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -46,6 +46,12 @@ const APP_SHELL = [
   '/dist/seo.js',
   '/dist/bomberman-skin.js',
   '/dist/mobile-fullscreen.js',
+  '/dist/levels.js',
+  '/dist/cycles.js',
+  '/dist/fourrow.js',
+  '/dist/bricks.js',
+  '/dist/mines.js',
+  '/dist/hockey.js',
 ];
 
 self.addEventListener('install', event => {
