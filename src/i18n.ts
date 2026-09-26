@@ -462,6 +462,8 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'That direction is blocked. Try another move.': 'Direcția este blocată. Încearcă altă mutare.',
   '2048 reached — keep building your high score!': 'Ai ajuns la 2048 — continuă să-ți mărești recordul!',
   '2048 touch controls': 'Comenzi tactile 2048',
+  'Tiles': 'Piese',
+  'Tile numbers': 'Numerele pieselor',
   'Slide tiles up': 'Glisează piesele în sus',
   'Slide tiles left': 'Glisează piesele la stânga',
   'Slide tiles down': 'Glisează piesele în jos',
@@ -676,6 +678,17 @@ function translateRomanianPattern(value: string): string | null {
   if (match) return `Scor final: ${match[1]} puncte.`;
   match = value.match(/^Brilliant run — ([\d.,]+) points\. Keep going or start fresh\.$/);
   if (match) return `Serie excelentă — ${match[1]} puncte. Continuă sau începe din nou.`;
+  // 2048 in powers of 3, 5 and 7
+  match = value.match(/^Join equal numbers\. Build ([\d.,]+)\.$/);
+  if (match) return `Unește numere egale. Construiește ${match[1]}.`;
+  match = value.match(/^Slide, merge, and reach ([\d.,]+)$/);
+  if (match) return `Glisează, combină și ajungi la ${match[1]}`;
+  match = value.match(/^You made ([\d.,]+)!$/);
+  if (match) return `Ai format ${match[1]}!`;
+  match = value.match(/^([\d.,]+) reached — keep building your high score!$/);
+  if (match) return `Ai ajuns la ${match[1]} — continuă să-ți mărești recordul!`;
+  match = value.match(/^Powers of (\d+) — merge your way to ([\d.,]+)\.$/);
+  if (match) return `Puteri ale lui ${match[1]} — combină până ajungi la ${match[2]}.`;
   match = value.match(/^Tile (\d+) at row (\d+), column (\d+)$/);
   if (match) return `Piesa ${match[1]} pe rândul ${match[2]}, coloana ${match[3]}`;
   match = value.match(/^Empty tile at row (\d+), column (\d+)$/);
