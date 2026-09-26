@@ -2,6 +2,7 @@ import { GameRoomClient } from './game-room.js';
 import { ArcadeResultReporter } from './stats.js';
 import { bindVirtualJoystick, digitalJoystickState, type JoystickInputDirection } from './touch-controls.js';
 import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
+import { bindLevelSelect, normalizeLevel, type LevelInfo } from './levels.js';
 
 export type SnakePlayer = 1 | 2;
 export type SnakeMode = 'solo' | 'duel';
@@ -22,6 +23,51 @@ export interface SnakeRider {
   queuedDirection: SnakeDirection;
   alive: boolean;
   score: number;
+}
+
+export interface SnakeLevel extends LevelInfo {
+  walls: readonly SnakeCell[];
+}
+
+function wallRect(x: number, y: number, width: number, height: number): SnakeCell[] {
+  const cells: SnakeCell[] = [];
+  for (let row = y; row < y + height; row += 1) {
+    for (let col = x; col < x + width; col += 1) cells.push({ x: col, y: row });
+  }
+  return cells;
+}
+
+/**
+ * Arenas are built around the fixed spawns on row 8 (Mint at x 3-5 heading
+ * right, Coral at x 18-20 heading left), so row 8 always stays open.
+ */
+export const SNAKE_LEVELS: readonly SnakeLevel[] = [
+  { name: 'Open Arena', blurb: 'No walls, just the edges.', walls: [] },
+  {
+    name: 'Pillars',
+    blurb: 'Four blocks to weave between.',
+    walls: [...wallRect(5, 3, 2, 2), ...wallRect(17, 3, 2, 2), ...wallRect(5, 11, 2, 2), ...wallRect(17, 11, 2, 2)],
+  },
+  {
+    name: 'Lanes',
+    blurb: 'Two long walls split the arena, with a gap in the middle.',
+    walls: [...wallRect(3, 4, 7, 1), ...wallRect(14, 4, 7, 1), ...wallRect(3, 11, 7, 1), ...wallRect(14, 11, 7, 1)],
+  },
+  {
+    name: 'Fortress',
+    blurb: 'An inner ring with a gate on every side.',
+    walls: [
+      ...wallRect(4, 2, 7, 1), ...wallRect(13, 2, 7, 1),
+      ...wallRect(4, 13, 7, 1), ...wallRect(13, 13, 7, 1),
+      ...wallRect(2, 4, 1, 3), ...wallRect(2, 9, 1, 3),
+      ...wallRect(21, 4, 1, 3), ...wallRect(21, 9, 1, 3),
+    ],
+  },
+];
+
+export function snakeWallKeys(level: number): Set<string> {
+  const walls = SNAKE_LEVELS[normalizeLevel(level, SNAKE_LEVELS.length) - 1].walls;
+  return new Set(walls.map(cell => `${cell.x},${cell.y}`));
 }
 
 const VECTORS: Record<SnakeDirection, SnakeCell> = {
@@ -60,12 +106,26 @@ export class NeonSnakeGame {
   winner: SnakePlayer | 0 | null = null;
   ticks = 0;
   collisionCause = '';
+  level = 1;
+  private walls = snakeWallKeys(1);
   private random: () => number;
 
-  constructor(random: () => number = Math.random) {
+  constructor(random: () => number = Math.random, level = 1) {
     this.random = random;
+    this.setLevel(level, false);
     this.riders[2].alive = false;
     this.spawnFood();
+  }
+
+  /** Switches arena; restarting is optional so an online guest can just mirror it. */
+  setLevel(level: number, restart = true): void {
+    this.level = normalizeLevel(level, SNAKE_LEVELS.length);
+    this.walls = snakeWallKeys(this.level);
+    if (restart) this.restart(this.mode);
+  }
+
+  isWall(cell: SnakeCell): boolean {
+    return this.walls.has(`${cell.x},${cell.y}`);
   }
 
   restart(mode: SnakeMode = this.mode): void {
@@ -118,10 +178,11 @@ export class NeonSnakeGame {
     activePlayers.forEach(player => {
       const head = nextHeads.get(player)!;
       const outOfBounds = head.x < 0 || head.x >= SNAKE_COLUMNS || head.y < 0 || head.y >= SNAKE_ROWS;
+      const wallCollision = this.isWall(head);
       const bodyCollision = occupied.has(`${head.x},${head.y}`);
-      if (outOfBounds || bodyCollision || headOnCollision) {
+      if (outOfBounds || wallCollision || bodyCollision || headOnCollision) {
         this.riders[player].alive = false;
-        this.collisionCause = outOfBounds ? 'wall' : headOnCollision ? 'head-on collision' : 'snake trail';
+        this.collisionCause = outOfBounds || wallCollision ? 'wall' : headOnCollision ? 'head-on collision' : 'snake trail';
       }
     });
 
@@ -169,7 +230,7 @@ export class NeonSnakeGame {
     const open: SnakeCell[] = [];
     for (let y = 0; y < SNAKE_ROWS; y += 1) {
       for (let x = 0; x < SNAKE_COLUMNS; x += 1) {
-        if (!occupied.has(`${x},${y}`)) open.push({ x, y });
+        if (!occupied.has(`${x},${y}`) && !this.walls.has(`${x},${y}`)) open.push({ x, y });
       }
     }
     this.food = open[Math.floor(this.random() * open.length)] || { x: 12, y: 8 };
@@ -197,6 +258,7 @@ export function initNeonSnake(): void {
   const secondaryLabel = document.getElementById('snakeSecondaryLabel');
   const startButton = document.getElementById('snakeStartButton') as HTMLButtonElement | null;
   const speedSelect = document.getElementById('snakeSpeed') as HTMLSelectElement | null;
+  const levelSelect = document.getElementById('snakeLevel') as HTMLSelectElement | null;
   const modeButtons = document.querySelectorAll<HTMLButtonElement>('[data-snake-mode]');
   const mintControls = document.getElementById('snakeMintControls');
   const coralControls = document.getElementById('snakeCoralControls');
@@ -216,9 +278,20 @@ export function initNeonSnake(): void {
     // Keep the approachable default when storage is unavailable.
   }
 
+  game.setLevel(bindLevelSelect(levelSelect, 'snake', SNAKE_LEVELS, level => {
+    // A guest follows the host's arena, so only the host may switch it.
+    if (room?.isGuest()) {
+      if (levelSelect) levelSelect.value = String(game.level);
+      return;
+    }
+    game.setLevel(level);
+    room?.broadcastState(snapshot(), true);
+    syncUi(); render();
+  }), true);
+
   function snapshot(): Record<string, unknown> {
     return {
-      riders: game.riders, food: game.food, mode: game.mode,
+      riders: game.riders, food: game.food, mode: game.mode, level: game.level,
       phase: game.phase, winner: game.winner, ticks: game.ticks, collisionCause: game.collisionCause, tickInterval,
     };
   }
@@ -228,6 +301,10 @@ export function initNeonSnake(): void {
     game.riders = state.riders as Record<SnakePlayer, SnakeRider>;
     game.food = state.food as SnakeCell;
     game.mode = state.mode as SnakeMode;
+    if (state.level !== undefined && Number(state.level) !== game.level) {
+      game.setLevel(Number(state.level), false);
+      if (levelSelect) levelSelect.value = String(game.level);
+    }
     game.phase = state.phase as SnakePhase;
     game.winner = state.winner as SnakePlayer | 0 | null;
     game.ticks = Number(state.ticks) || 0;
@@ -300,6 +377,22 @@ export function initNeonSnake(): void {
     }
     for (let y = 0; y <= canvas.height; y += cellSize) {
       context.beginPath(); context.moveTo(0, y); context.lineTo(canvas.width, y); context.stroke();
+    }
+
+    const wallCells = SNAKE_LEVELS[game.level - 1].walls;
+    if (wallCells.length) {
+      context.shadowBlur = 10;
+      context.shadowColor = '#7c8cff';
+      context.fillStyle = '#39406e';
+      wallCells.forEach(cell => {
+        context.beginPath();
+        context.roundRect(cell.x * cellSize + 2, cell.y * cellSize + 2, cellSize - 4, cellSize - 4, 5);
+        context.fill();
+      });
+      context.shadowBlur = 0;
+      context.strokeStyle = 'rgba(160,172,255,.55)';
+      context.lineWidth = 1.5;
+      wallCells.forEach(cell => context.strokeRect(cell.x * cellSize + 3.5, cell.y * cellSize + 3.5, cellSize - 7, cellSize - 7));
     }
 
     context.shadowBlur = 20;

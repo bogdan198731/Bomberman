@@ -230,6 +230,40 @@
       color: #cdeaf0;
     }
 
+    .lobby-level-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin: 4px 0 2px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .lobby-level-select {
+      min-height: 40px;
+      padding: 0 12px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 11px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.06);
+      font: inherit;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .lobby-level-note {
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-size: 0.64rem;
+      text-align: center;
+    }
+
     .skin-toggle-button {
       min-height: 40px;
       padding: 0 12px;
@@ -7927,6 +7961,11 @@
               <button class="game-room-mode-tab online" type="button" role="tab" aria-selected="false" data-bomberman-lobby-mode="online">Online</button>
             </div>
             <div id="lobbyActions">
+              <label class="lobby-level-row">
+                <span>Map</span>
+                <select id="bombermanLevel" class="lobby-level-select" aria-label="Blast Buddies map"><option value="1">1 · Classic</option></select>
+              </label>
+              <p class="lobby-level-note">Quick Match always plays Classic.</p>
               <div class="lobby-mode-panel" data-bomberman-mode-panel="local">
           <button id="playLocalButton" class="lobby-button" type="button">Start local match</button>
               </div>
@@ -8249,6 +8288,9 @@
 
       <div class="paddle-statusbar" aria-live="polite">
         <span id="snakeStatus">Start a solo high-score run.</span>
+        <label class="gameplay-option">Arena
+          <select id="snakeLevel" aria-label="Snake arena"><option value="1">1 · Open Arena</option></select>
+        </label>
         <label class="gameplay-option">Speed
           <select id="snakeSpeed" aria-label="Snake speed">
             <option value="155">Chill</option><option value="115" selected>Arcade</option><option value="88">Turbo</option>
@@ -8316,6 +8358,9 @@
       <div class="paddle-statusbar" aria-live="polite">
         <span id="tanksStatus">Start a duel against the Coral bot.</span>
         <span id="tanksShotReadiness" class="shot-readiness ready">● Shot ready</span>
+        <label class="gameplay-option">Arena
+          <select id="tanksLevel" aria-label="Tank arena"><option value="1">1 · Classic</option></select>
+        </label>
         <label class="gameplay-option">Bot
           <select id="tanksBotPace" aria-label="Tank bot pace"><option value="rookie">Rookie</option><option value="normal">Normal</option><option value="ace">Ace</option></select>
         </label>

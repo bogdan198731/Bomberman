@@ -1,5 +1,6 @@
 import { createArcadeNavigation, type ArcadeView } from './navigation.js';
 import { initMobileImmersiveMode } from './mobile-fullscreen.js';
+import { bindLevelSelect, normalizeLevel, type LevelInfo } from './levels.js';
 import {
   drawRetroBomb,
   drawRetroBrick,
@@ -125,7 +126,26 @@ export interface PowerUp {
   type: PowerUpType;
 }
 
-export function createMapGrid(width: number = 13, height: number = 13): MapGrid {
+export interface BombermanLevel extends LevelInfo {
+  /** Out of 10: how many eligible tiles get a destructible crate. */
+  crateDensity: number;
+  /** Clears the pillars and crates along the centre row and column. */
+  openCross: boolean;
+}
+
+export const BOMBERMAN_LEVELS: readonly BombermanLevel[] = [
+  { name: 'Classic', blurb: 'The original pillar grid with a steady spread of crates.', crateDensity: 6, openCross: false },
+  { name: 'Open Field', blurb: 'Few crates - fast, exposed fights from the first second.', crateDensity: 3, openCross: false },
+  { name: 'Crate Maze', blurb: 'Packed with crates; blast your own path to the rival.', crateDensity: 8, openCross: false },
+  { name: 'Crossroads', blurb: 'Two open lanes cross the centre - control them or get caught in them.', crateDensity: 6, openCross: true },
+];
+
+export function createMapGrid(width: number = 13, height: number = 13, level: number = 1): MapGrid {
+  const layout = BOMBERMAN_LEVELS[normalizeLevel(level, BOMBERMAN_LEVELS.length) - 1];
+  const midRow = Math.floor(height / 2);
+  const midCol = Math.floor(width / 2);
+  const onOpenCross = (row: number, col: number): boolean =>
+    layout.openCross && (row === midRow || col === midCol);
   const tiles: TileType[][] = Array(height)
     .fill(null)
     .map(() => Array(width).fill(TileType.EMPTY));
@@ -133,7 +153,7 @@ export function createMapGrid(width: number = 13, height: number = 13): MapGrid 
   for (let row = 0; row < height; row++) {
     for (let col = 0; col < width; col++) {
       const isEdge = row === 0 || row === height - 1 || col === 0 || col === width - 1;
-      const isPillar = row % 2 === 0 && col % 2 === 0 && row > 0 && row < height - 1;
+      const isPillar = row % 2 === 0 && col % 2 === 0 && row > 0 && row < height - 1 && !onOpenCross(row, col);
 
       if (isEdge || isPillar) {
         tiles[row][col] = TileType.WALL_INDESTRUCTIBLE;
@@ -148,7 +168,7 @@ export function createMapGrid(width: number = 13, height: number = 13): MapGrid 
         const distanceFromPlayerTwo = height - 2 - row + (width - 2 - col);
         const isPlayerOneSpawnArea = distanceFromPlayerOne <= EXPLOSION_RADIUS + 1;
         const isPlayerTwoSpawnArea = distanceFromPlayerTwo <= EXPLOSION_RADIUS + 1;
-        const hasDestructibleWall = (row * 17 + col * 31) % 10 < 6;
+        const hasDestructibleWall = (row * 17 + col * 31) % 10 < layout.crateDensity && !onOpenCross(row, col);
 
         if (!isPlayerOneSpawnArea && !isPlayerTwoSpawnArea && hasDestructibleWall) {
           tiles[row][col] = TileType.WALL_DESTRUCTIBLE;
@@ -1359,6 +1379,13 @@ export function initGame(): void {
   let localRoom: OnlineRoom | undefined;
   let localMode = false;
   let selectedLobbyMode: 'local' | 'bot' | 'online' = 'local';
+  // Chosen in the lobby; applies to the next match started from here.
+  let selectedMapLevel = bindLevelSelect(
+    document.getElementById('bombermanLevel') as HTMLSelectElement | null,
+    'bomberman',
+    BOMBERMAN_LEVELS,
+    level => { selectedMapLevel = level; },
+  );
   let localPlayerId: 1 | 2 | undefined;
   let activeRoomCode = '';
   let activeBotDifficulty: 'easy' | 'normal' | 'hard' | undefined;
@@ -1535,7 +1562,7 @@ export function initGame(): void {
 
   function connectAndSend(
     message:
-      | { type: 'create' }
+      | { type: 'create'; level: number }
       | { type: 'quickMatch' }
       | { type: 'join'; roomCode: string }
       | { type: 'createBot'; difficulty: 'easy' | 'normal' | 'hard' }
@@ -1620,7 +1647,7 @@ export function initGame(): void {
     const { OnlineRoom: LocalRoom } = await import('./multiplayer.js');
     const now = Date.now();
     localClock = new ActiveClock(now);
-    localRoom = new LocalRoom('LOCAL');
+    localRoom = new LocalRoom('LOCAL', selectedMapLevel);
     localRoom.connectPlayer(1, now);
     localRoom.connectPlayer(2, now);
     localMode = true;
@@ -1641,7 +1668,7 @@ export function initGame(): void {
     const { OnlineRoom: LocalRoom } = await import('./multiplayer.js');
     const now = Date.now();
     localClock = new ActiveClock(now);
-    localRoom = new LocalRoom('BOT');
+    localRoom = new LocalRoom('BOT', selectedMapLevel);
     localRoom.connectPlayer(1, now);
     localRoom.connectBot(difficulty, now);
     localMode = false;
@@ -1655,7 +1682,7 @@ export function initGame(): void {
     syncUi();
   }
 
-  elements.createRoomButton?.addEventListener('click', () => connectAndSend({ type: 'create' }));
+  elements.createRoomButton?.addEventListener('click', () => connectAndSend({ type: 'create', level: selectedMapLevel }));
   elements.quickMatchButton?.addEventListener('click', () => connectAndSend({ type: 'quickMatch' }));
   elements.playLocalButton?.addEventListener('click', () => { void startLocalMatch(); });
   elements.lobbyModeButtons.forEach(button => {
