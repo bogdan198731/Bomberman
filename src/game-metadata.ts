@@ -1,4 +1,4 @@
-export const ARCADE_GAME_IDS = ['bomberman', 'tintar', 'paddle', 'snake', 'tanks', 'septica', 'survival', 'star', 'racing', 'blocks', 'twenty48', 'sudoku', 'cycles', 'fourrow', 'bricks', 'mines', 'hockey'] as const;
+export const ARCADE_GAME_IDS = ['bomberman', 'tintar', 'paddle', 'snake', 'tanks', 'septica', 'survival', 'star', 'racing', 'blocks', 'twenty48', 'sudoku', 'cycles', 'fourrow', 'bricks', 'mines', 'hockey', 'reversi'] as const;
 export type ArcadeGameId = typeof ARCADE_GAME_IDS[number];
 export type GameMode = 'solo' | 'local' | 'online';
 export interface GameDefinition { id: ArcadeGameId; name: string; icon: string; modes: readonly GameMode[] }
@@ -21,6 +21,7 @@ export const GAME_META: Record<ArcadeGameId, GameDefinition> = {
   bricks: { id: 'bricks', name: 'Brick Breaker', icon: '▤', modes: ['solo'] },
   mines: { id: 'mines', name: 'Minesweeper', icon: '⚑', modes: ['solo'] },
   hockey: { id: 'hockey', name: 'Air Hockey', icon: '⊙', modes: ['solo', 'local', 'online'] },
+  reversi: { id: 'reversi', name: 'Reversi', icon: '◐', modes: ['solo', 'local', 'online'] },
 };
 export const MODE_LABELS: Record<GameMode, string> = { solo: 'Solo', local: 'Same device', online: 'Online' };
 export function isArcadeGameId(value: unknown): value is ArcadeGameId {

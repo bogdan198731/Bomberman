@@ -52,6 +52,7 @@ const APP_SHELL = [
   '/dist/bricks.js',
   '/dist/mines.js',
   '/dist/hockey.js',
+  '/dist/reversi.js',
 ];
 
 self.addEventListener('install', event => {

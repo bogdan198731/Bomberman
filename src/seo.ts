@@ -118,6 +118,11 @@ export const GAME_SEO: Record<ArcadeGameId, PageSeo> = {
     description:
       'Play Air Hockey free in your browser. Guard your goal, bank shots off the walls, and race to seven against a bot, a friend on the same screen, or online.',
   },
+  reversi: {
+    title: 'Reversi — Free Online Reversi vs Bot or Friend',
+    description:
+      'Play Reversi free in your browser. Outflank and flip your rival\'s discs, grab the corners, and finish ahead against a three-level bot, a friend, or online.',
+  },
 };
 
 /** Every route the crawler should know about: the hub plus one page per game. */

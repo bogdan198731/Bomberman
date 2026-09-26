@@ -117,6 +117,12 @@ export const GAME_GUIDES: Record<ArcadeGameId, GuideCopy> = {
     rules: [copy('Your mallet stays on your half of the table.', 'Crosa ta rămâne pe jumătatea ta de masă.'), copy('The puck bounces off the side walls, so bank shots count.', 'Pucul ricoșează din pereții laterali, deci loviturile din ricoșeu contează.'), copy('After a goal, the player who conceded gets the puck.', 'După un gol, jucătorul care a primit golul primește pucul.')],
     tip: copy('Hit through the puck, not at it - a moving mallet makes a much faster shot.', 'Lovește prin puc, nu doar în el - o crosă în mișcare dă o lovitură mult mai rapidă.'),
   },
+  reversi: {
+    objective: copy('Finish with more discs than your rival. Trap their discs between yours to flip them to your colour.', 'Termină cu mai multe discuri decât rivalul. Prinde-i discurile între ale tale pentru a le întoarce în culoarea ta.'),
+    controls: copy('Tap a highlighted square to place a disc. Keyboard: arrow keys to move, Enter to place.', 'Apasă un pătrat evidențiat pentru a pune un disc. Tastatură: săgețile pentru mutare, Enter pentru plasare.'),
+    rules: [copy('A move must flip at least one rival disc, along a straight or diagonal line.', 'O mutare trebuie să întoarcă cel puțin un disc advers, pe o linie dreaptă sau diagonală.'), copy('If you have no legal move, your turn is skipped.', 'Dacă nu ai nicio mutare validă, tura ta este sărită.'), copy('The game ends when neither player can move.', 'Jocul se termină când niciun jucător nu mai poate muta.')],
+    tip: copy('Corners can never be flipped - avoid playing next to an empty corner and handing it over.', 'Colțurile nu pot fi întoarse niciodată - evită să joci lângă un colț liber și să-l cedezi.'),
+  },
 };
 
 const REPLAY_SELECTORS: Record<ArcadeGameId, string> = {
@@ -129,6 +135,7 @@ const REPLAY_SELECTORS: Record<ArcadeGameId, string> = {
   bricks: '#bricksLaunchButton',
   mines: '#minesNewButton',
   hockey: '#hockeyStartButton',
+  reversi: '#reversiNextButton',
 };
 
 const RESULT_STATUS_SELECTORS: Record<ArcadeGameId, string> = {
@@ -140,6 +147,7 @@ const RESULT_STATUS_SELECTORS: Record<ArcadeGameId, string> = {
   bricks: '#bricksStatus',
   mines: '#minesStatus',
   hockey: '#hockeyStatus',
+  reversi: '#reversiStatus',
 };
 
 
@@ -157,6 +165,7 @@ const KEYBOARD_CONTROLS: Partial<Record<ArcadeGameId, [string, string]>> = {
   bricks: copy('Left/Right or A/D steer, Space launches.', 'Stânga/Dreapta sau A/D conduc, Spațiu lansează.'),
   mines: copy('Arrows move the cursor, Space or Enter uncovers, F places a flag.', 'Săgețile mută cursorul, Spațiu sau Enter descoperă, F pune un steag.'),
   hockey: copy('Mint: WASD. Coral: arrow keys. Against the bot, either set moves Mint. Space faces off.', 'Mint: WASD. Coral: săgețile. Contra botului, ambele seturi îl mută pe Mint. Spațiu pune pucul în joc.'),
+  reversi: copy('Arrow keys move, Enter places a disc.', 'Săgețile mută, Enter pune un disc.'),
 };
 
 function localized(pair: [string, string]): string { return pair[currentArcadeLanguage() === 'ro' ? 1 : 0]; }
@@ -250,6 +259,7 @@ export function initGameExperience(): void {
       bricks: '#bricksRestartButton',
       mines: '#minesNewButton',
       hockey: '#hockeyRestartButton',
+      reversi: '#reversiRestartButton',
     };
     if (!reset[gameId]) return;
     // These reset handlers confirm progress loss and clear pause only after acceptance.

@@ -1,6 +1,18 @@
 export type ArcadeLanguage = 'en' | 'ro';
 
 const ROMANIAN_TRANSLATIONS: Record<string, string> = {
+  'Outflank and flip · Bot, local, or online': 'Încercuiește și întoarce · Bot, local sau online',
+  'Mint to play.': 'Mint mută.',
+  'Coral to play.': 'Coral mută.',
+  'Mint has no move - Coral plays again.': 'Mint nu are mutare - Coral mută din nou.',
+  'Coral has no move - Mint plays again.': 'Coral nu are mutare - Mint mută din nou.',
+  'Trap your rival\'s discs between yours, grab the corners, and finish with the most.': 'Prinde discurile rivalului între ale tale, ocupă colțurile și termină cu cele mai multe.',
+  'Play Reversi': 'Joacă Reversi',
+  'Add Reversi to favorites': 'Adaugă Reversi la favorite',
+  'Reversi board. Tap a highlighted square to place a disc': 'Tabla Reversi. Apasă un pătrat evidențiat pentru a pune un disc',
+  'Reversi bot level': 'Nivelul botului Reversi',
+  'Reversi match': 'Meci Reversi',
+  'Place': 'Plasează',
   'Race to seven · Bot, local, or online': 'Până la șapte · Bot, local sau online',
   'Beat the Coral bot to 7. Start when ready.': 'Învinge botul Coral până la 7. Pornește când ești gata.',
   'First to 7 goals wins.': 'Primul la 7 goluri câștigă.',
@@ -200,8 +212,8 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Finish a match to claim the first spot.': 'Termină un meci pentru a ocupa primul loc.',
   'Game library': 'Bibliotecă de jocuri',
   'Choose your next round': 'Alege următoarea rundă',
-  'Seventeen instant games, from explosive duels and Romanian classics to Sudoku, Minesweeper and number puzzles, neon racing, air hockey, co-op survival, and star-fighter missions.':
-    'Șaptesprezece jocuri instant, de la dueluri explozive și clasice românești la Sudoku, Minesweeper și puzzle-uri cu numere, curse neon, air hockey, supraviețuire cooperativă și misiuni stelare.',
+  'Eighteen instant games, from explosive duels and Romanian classics to Sudoku, Minesweeper and number puzzles, neon racing, air hockey, co-op survival, and star-fighter missions.':
+    'Optsprezece jocuri instant, de la dueluri explozive și clasice românești la Sudoku, Minesweeper și puzzle-uri cu numere, curse neon, air hockey, supraviețuire cooperativă și misiuni stelare.',
   'Search games': 'Caută jocuri',
   'Clear game search': 'Șterge căutarea',
   'Filter games by play mode': 'Filtrează jocurile după modul de joc',
@@ -281,7 +293,7 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Try another search or show the complete arcade.': 'Încearcă altă căutare sau afișează întreaga arcadă.',
   'Show all games': 'Arată toate jocurile',
   'Blast Arcade · Play instantly in your browser': 'Blast Arcade · Joacă instant în browser',
-  'Seventeen live games · Keyboard, touch, bots, and online rooms': 'Șaptesprezece jocuri active · Tastatură, atingere, boți și camere online',
+  'Eighteen live games · Keyboard, touch, bots, and online rooms': 'Optsprezece jocuri active · Tastatură, atingere, boți și camere online',
   'Blast Arcade heroes surrounded by twelve game arenas': 'Eroii Blast Arcade înconjurați de douăsprezece arene de joc',
   'Bot · Local · Online PvP': 'Bot · Local · PvP online',
   'Bot · Local · Online': 'Bot · Local · Online',
@@ -552,6 +564,13 @@ const attributeRecords = new WeakMap<Element, Map<string, { source: string; rend
 const translatedAttributes = ['aria-label', 'placeholder', 'title', 'alt'] as const;
 
 function translateRomanianPattern(value: string): string | null {
+  // Reversi
+  const reversiWin = value.match(/^(Mint|Coral) wins (\d+)-(\d+)!$/);
+  if (reversiWin) return `${reversiWin[1]} câștigă cu ${reversiWin[2]}-${reversiWin[3]}!`;
+  const reversiDraw = value.match(/^A draw at (\d+)-(\d+)\.$/);
+  if (reversiDraw) return `Remiză la ${reversiDraw[1]}-${reversiDraw[2]}.`;
+  const reversiSeries = value.match(/^Series (\d+)-(\d+)$/);
+  if (reversiSeries) return `Serie ${reversiSeries[1]}-${reversiSeries[2]}`;
   // Minesweeper
   const mines = value.match(/^(\d+) mines left to find\.$/);
   if (mines) return `${mines[1]} mine rămase de găsit.`;
