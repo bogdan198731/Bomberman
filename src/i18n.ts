@@ -199,8 +199,8 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Finish a match to claim the first spot.': 'Termină un meci pentru a ocupa primul loc.',
   'Game library': 'Bibliotecă de jocuri',
   'Choose your next round': 'Alege următoarea rundă',
-  'Twelve instant games, from explosive duels and Romanian classics to Sudoku and number puzzles, neon racing, co-op survival, and star-fighter missions.':
-    'Douăsprezece jocuri instant, de la dueluri explozive și clasice românești la Sudoku și puzzle-uri cu numere, curse neon, supraviețuire cooperativă și misiuni stelare.',
+  'Seventeen instant games, from explosive duels and Romanian classics to Sudoku, Minesweeper and number puzzles, neon racing, air hockey, co-op survival, and star-fighter missions.':
+    'Șaptesprezece jocuri instant, de la dueluri explozive și clasice românești la Sudoku, Minesweeper și puzzle-uri cu numere, curse neon, air hockey, supraviețuire cooperativă și misiuni stelare.',
   'Search games': 'Caută jocuri',
   'Clear game search': 'Șterge căutarea',
   'Filter games by play mode': 'Filtrează jocurile după modul de joc',
@@ -280,7 +280,7 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Try another search or show the complete arcade.': 'Încearcă altă căutare sau afișează întreaga arcadă.',
   'Show all games': 'Arată toate jocurile',
   'Blast Arcade · Play instantly in your browser': 'Blast Arcade · Joacă instant în browser',
-  'Twelve live games · Keyboard, touch, bots, and online rooms': 'Douăsprezece jocuri active · Tastatură, atingere, boți și camere online',
+  'Seventeen live games · Keyboard, touch, bots, and online rooms': 'Șaptesprezece jocuri active · Tastatură, atingere, boți și camere online',
   'Blast Arcade heroes surrounded by twelve game arenas': 'Eroii Blast Arcade înconjurați de douăsprezece arene de joc',
   'Bot · Local · Online PvP': 'Bot · Local · PvP online',
   'Bot · Local · Online': 'Bot · Local · Online',
@@ -540,7 +540,6 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Locked': 'Blocat',
   'Victory': 'Victorie',
   'Run complete': 'Serie finalizată',
-  'Finish a match in all 12 games.': 'Termină un meci în toate cele 12 jocuri.',
 };
 
 let activeLanguage: ArcadeLanguage = 'en';
@@ -559,6 +558,8 @@ function translateRomanianPattern(value: string): string | null {
   if (cleared) return `Teren curățat în ${cleared[1]}s - ${cleared[2]} puncte!`;
   // Brick Breaker: level names come from the same table as the level picker.
   const brickName = (name: string): string => ROMANIAN_TRANSLATIONS[name] ?? name;
+  const tour = value.match(/^Finish a match in all (\d+) games\.$/);
+  if (tour) return `Termină un meci în toate cele ${tour[1]} jocuri.`;
   let brick = value.match(/^Level (\d+) · (.+)\. Launch when ready\.$/);
   if (brick) return `Nivelul ${brick[1]} · ${brickName(brick[2])}. Lansează când ești gata.`;
   brick = value.match(/^Level (\d+) · (\d+) bricks to go\.$/);

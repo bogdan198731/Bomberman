@@ -105,7 +105,7 @@ export const ACHIEVEMENTS: ReadonlyArray<AchievementDefinition> = [
   { id: 'arcade-regular', name: 'Arcade Regular', description: 'Finish 10 matches across the hub.', icon: '10' },
   { id: 'champion', name: 'Champion', description: 'Collect 10 competitive wins.', icon: '🏆' },
   { id: 'score-chaser', name: 'Score Chaser', description: 'Earn 5,000 total score.', icon: '5K' },
-  { id: 'world-tour', name: 'World Tour', description: 'Finish a match in all 12 games.', icon: '◎' },
+  { id: 'world-tour', name: 'World Tour', description: `Finish a match in all ${ARCADE_GAME_IDS.length} games.`, icon: '◎' },
   { id: 'level-five', name: 'Level Five', description: 'Reach player level 5.', icon: 'V' },
 ];
 

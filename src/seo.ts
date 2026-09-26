@@ -16,10 +16,19 @@ export interface PageSeo {
   description: string;
 }
 
+const COUNT_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven',
+  'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
+
+/** "seventeen", or the digits once the arcade outgrows the words. */
+export function gameCountWord(count: number = ARCADE_GAME_IDS.length): string {
+  return COUNT_WORDS[count] ?? String(count);
+}
+
+// Counted from the game list, so adding a game can never leave the copy stale.
 export const HUB_SEO: PageSeo = {
-  title: 'Blast Arcade — 12 Free Browser Games, No Download',
+  title: `Blast Arcade — ${ARCADE_GAME_IDS.length} Free Browser Games, No Download`,
   description:
-    'Play twelve free browser games instantly — Bomberman, Snake, 2048, Sudoku, Pong and more. Solo against bots, local co-op on one device, or online with friends.',
+    `Play ${gameCountWord()} free browser games instantly — Bomberman, Snake, Minesweeper, Air Hockey and more. Solo vs bots, same-device play, or online with friends.`,
 };
 
 export const GAME_SEO: Record<ArcadeGameId, PageSeo> = {
@@ -231,12 +240,12 @@ export function renderSeoTags(view: SeoView, origin: string = SITE_ORIGIN): stri
     `<meta property="og:image" content="${image}">`,
     `<meta property="og:image:width" content="${OG_IMAGE_WIDTH}">`,
     `<meta property="og:image:height" content="${OG_IMAGE_HEIGHT}">`,
-    `<meta property="og:image:alt" content="${SITE_NAME} — twelve browser games in one hub">`,
+    `<meta property="og:image:alt" content="${SITE_NAME} — ${gameCountWord()} browser games in one hub">`,
     `<meta name="twitter:card" content="summary_large_image">`,
     `<meta name="twitter:title" content="${escapeHtml(title)}">`,
     `<meta name="twitter:description" content="${escapeHtml(description)}">`,
     `<meta name="twitter:image" content="${image}">`,
-    `<meta name="twitter:image:alt" content="${SITE_NAME} — twelve browser games in one hub">`,
+    `<meta name="twitter:image:alt" content="${SITE_NAME} — ${gameCountWord()} browser games in one hub">`,
     `<script type="application/ld+json">${json}</script>`,
   ].join('\n  ');
 }

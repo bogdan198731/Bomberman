@@ -277,9 +277,10 @@ test('game launches reset scroll immediately and mobile hub actions meet touch t
   assert.match(html, /\.leaderboard-tabs::\-webkit-scrollbar \{ display: none; \}/);
 });
 
-test('interface polish includes consistent focus, touch, and twelve-game metadata', () => {
+test('interface polish includes consistent focus, touch, and hub metadata', () => {
   assert.match(html, /:where\(button, a, input, select, \[tabindex\]\):focus-visible/);
   assert.match(html, /@media \(hover: none\)[\s\S]*?\.catalog-card:hover/);
   assert.match(html, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?animation-duration:\s*0\.001ms/);
-  assert.match(html, /content="Play twelve free browser games instantly/);
+  // The exact count is checked against the game list in game-count.test.ts.
+  assert.match(html, /content="Play [a-z]+ free browser games instantly/);
 });
