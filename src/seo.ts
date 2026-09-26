@@ -2,9 +2,10 @@ import { ARCADE_GAME_IDS, GAME_META, isArcadeGameId, type ArcadeGameId } from '.
 
 export const SITE_ORIGIN = 'https://bomberman-mixj.onrender.com';
 export const SITE_NAME = 'Blast Arcade';
-export const OG_IMAGE_PATH = '/public/og-v3.png';
-export const OG_IMAGE_WIDTH = 1730;
-export const OG_IMAGE_HEIGHT = 909;
+// Tagline carries no game count, so it cannot go stale as games are added.
+export const OG_IMAGE_PATH = '/public/og-v4.jpg';
+export const OG_IMAGE_WIDTH = 1200;
+export const OG_IMAGE_HEIGHT = 630;
 export const GAME_PATH_PREFIX = '/play/';
 
 /** Marks the block in index.html that the server rewrites per route. */

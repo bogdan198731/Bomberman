@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blast-arcade-levels-2026-09-26';
+const CACHE_NAME = 'blast-arcade-fixes-2026-09-26';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -6,7 +6,7 @@ const APP_SHELL = [
   '/public/app-icon-192.png',
   '/public/app-icon-512.png',
   '/public/apple-touch-icon.png',
-  '/public/og-v3.png',
+  '/public/og-v4.jpg',
   '/dist/index.js',
   '/public/arcade-ux.css',
   '/dist/dialogs.js',
