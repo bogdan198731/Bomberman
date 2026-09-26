@@ -26,6 +26,61 @@ export interface MineCell {
   flagged: boolean;
 }
 
+export const MINES_SESSION_STORAGE_KEY = 'blast-arcade-mines-session-v1';
+
+/**
+ * An unfinished board, saved so a phone that reclaims the tab does not cost
+ * the game. Each cell is one digit: 1 = mine, 2 = revealed, 4 = flagged.
+ */
+export interface MineSession {
+  difficulty: MineDifficulty;
+  cells: string;
+  elapsedMs: number;
+}
+
+interface MineStorage {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+}
+
+function browserStorage(): MineStorage | undefined {
+  try { return typeof localStorage === 'undefined' ? undefined : localStorage; }
+  catch { return undefined; }
+}
+
+export function normalizeMineSession(value: unknown): MineSession | null {
+  if (!value || typeof value !== 'object') return null;
+  const candidate = value as Partial<MineSession>;
+  const difficulty = candidate.difficulty;
+  if (difficulty !== 'easy' && difficulty !== 'medium' && difficulty !== 'hard') return null;
+  const setup = MINE_SETUPS[difficulty];
+  const cells = candidate.cells;
+  if (typeof cells !== 'string' || cells.length !== setup.columns * setup.rows || !/^[0-7]+$/.test(cells)) return null;
+  // A tampered or half-written save must not produce an impossible board.
+  if ([...cells].filter(code => Number(code) & 1).length !== setup.mines) return null;
+  if ([...cells].some(code => (Number(code) & 1) && (Number(code) & 2))) return null;
+  const elapsedMs = Number(candidate.elapsedMs);
+  return { difficulty, cells, elapsedMs: Number.isFinite(elapsedMs) && elapsedMs >= 0 ? Math.round(elapsedMs) : 0 };
+}
+
+export function loadMineSession(storage: MineStorage | undefined = browserStorage()): MineSession | null {
+  try {
+    const raw = storage?.getItem(MINES_SESSION_STORAGE_KEY);
+    return raw ? normalizeMineSession(JSON.parse(raw)) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Saves an unfinished board, or clears the save when there is nothing to resume. */
+export function saveMineSession(session: MineSession | null, storage: MineStorage | undefined = browserStorage()): void {
+  try {
+    if (session) storage?.setItem(MINES_SESSION_STORAGE_KEY, JSON.stringify(session));
+    else storage?.removeItem(MINES_SESSION_STORAGE_KEY);
+  } catch { /* The game still plays; it just cannot be resumed. */ }
+}
+
 export class MinesweeperGame {
   difficulty: MineDifficulty = 'easy';
   columns = 9;
@@ -140,6 +195,30 @@ export class MinesweeperGame {
     return opened;
   }
 
+  /** Only an unfinished board is worth saving; anything else clears the save. */
+  session(now: number = Date.now()): MineSession | null {
+    if (this.phase !== 'playing') return null;
+    const cells = this.cells.map(cell => (cell.mine ? 1 : 0) | (cell.revealed ? 2 : 0) | (cell.flagged ? 4 : 0)).join('');
+    return { difficulty: this.difficulty, cells, elapsedMs: now - this.startedAt };
+  }
+
+  restore(value: unknown, now: number = Date.now()): boolean {
+    const session = normalizeMineSession(value);
+    if (!session) return false;
+    this.newGame(session.difficulty);
+    [...session.cells].forEach((code, index) => {
+      const bits = Number(code);
+      this.cells[index] = { mine: Boolean(bits & 1), revealed: Boolean(bits & 2), flagged: Boolean(bits & 4), adjacent: 0 };
+    });
+    this.cells.forEach((cell, index) => {
+      cell.adjacent = this.neighbours(index).filter(n => this.cells[n].mine).length;
+    });
+    this.phase = 'playing';
+    // Carry the clock over: only time actually spent playing counts.
+    this.startedAt = now - session.elapsedMs;
+    return true;
+  }
+
   score(now: number = Date.now()): number {
     if (this.phase !== 'won') return 0;
     const base = MINE_SETUPS[this.difficulty].base;
@@ -186,6 +265,8 @@ export function initMinesweeper(): void {
   const resultReporter = new ArcadeResultReporter('mines');
   let flagMode = false;
   let cursor = -1;
+  // True from a restore until the player's first move, so the status can say so.
+  let resumed = false;
   const CELL = 40;
 
   function sizeBoard(): void {
@@ -193,8 +274,14 @@ export function initMinesweeper(): void {
     board.height = game.rows * CELL;
   }
 
+  function persist(): void {
+    saveMineSession(game.session());
+  }
+
   function newGame(difficulty: MineDifficulty = game.difficulty): void {
     game.newGame(difficulty);
+    saveMineSession(null);
+    resumed = false;
     cursor = -1;
     sizeBoard();
     syncUi();
@@ -202,7 +289,7 @@ export function initMinesweeper(): void {
 
   function syncUi(): void {
     const now = Date.now();
-    if (status) status.textContent = game.statusText(now);
+    if (status) status.textContent = resumed && game.phase === 'playing' ? 'Saved board restored - keep sweeping.' : game.statusText(now);
     if (leftEl) leftEl.textContent = String(game.mineCount - game.flagsPlaced());
     if (timeEl) timeEl.textContent = String(game.elapsed(now));
     flagButton?.setAttribute('aria-pressed', flagMode ? 'true' : 'false');
@@ -218,6 +305,8 @@ export function initMinesweeper(): void {
     if (flag) game.toggleFlag(index);
     else if (cell.revealed) game.chord(index);
     else game.reveal(index);
+    resumed = false;
+    persist();
     syncUi();
   }
 
@@ -334,6 +423,12 @@ export function initMinesweeper(): void {
       game.newGame(saved);
     }
   } catch { /* keep Easy */ }
+  // An unfinished board beats a fresh one: pick up exactly where the player left off.
+  if (game.restore(loadMineSession())) {
+    resumed = true;
+    if (difficultySelect) difficultySelect.value = game.difficulty;
+  }
+  window.addEventListener('pagehide', persist);
 
   registerArcadeSession({
     gameId: 'mines',

@@ -1,6 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { MINE_SETUPS, MinesweeperGame, type MineDifficulty } from './mines.js';
+import {
+  MINES_SESSION_STORAGE_KEY,
+  MINE_SETUPS,
+  MinesweeperGame,
+  loadMineSession,
+  saveMineSession,
+  type MineDifficulty,
+} from './mines.js';
 
 function seeded(seed = 17): () => number {
   let state = seed;
@@ -120,4 +127,69 @@ test('a harder board is worth more for the same time', () => {
   const easy = MINE_SETUPS.easy.base;
   const hard = MINE_SETUPS.hard.base;
   assert.ok(hard > easy);
+});
+
+test('an unfinished board survives a reload exactly as it was left', () => {
+  const game = new MinesweeperGame(seeded(41));
+  game.newGame('medium');
+  game.reveal(70, 1_000);
+  const flagTarget = game.cells.findIndex(cell => cell.mine);
+  game.toggleFlag(flagTarget);
+  const saved = game.session(31_000);
+  assert.ok(saved, 'a game in progress is saved');
+
+  // Simulate a fresh page: new game object, restored from the JSON that was stored.
+  const back = new MinesweeperGame(seeded(99));
+  assert.equal(back.restore(JSON.parse(JSON.stringify(saved)), 50_000), true);
+  assert.equal(back.difficulty, 'medium');
+  assert.equal(back.phase, 'playing');
+  assert.deepEqual(back.cells, game.cells, 'mines, numbers, reveals and flags all match');
+  assert.equal(back.elapsed(50_000), 30, 'the clock resumes from where it stopped');
+  assert.equal(back.cells[flagTarget].flagged, true);
+});
+
+test('finished or untouched boards are not saved', () => {
+  const fresh = new MinesweeperGame(seeded(3));
+  assert.equal(fresh.session(), null, 'nothing to resume before the first tap');
+  const won = rigged([0]);
+  won.reveal(80, 5);
+  assert.equal(won.phase, 'won');
+  assert.equal(won.session(), null, 'a finished game clears its save');
+});
+
+test('a corrupted or tampered save is refused rather than loaded', () => {
+  const game = new MinesweeperGame(seeded(8));
+  game.newGame('easy');
+  game.reveal(40, 1);
+  const session = game.session(2)!;
+  const bad = [
+    { ...session, difficulty: 'impossible' },
+    { ...session, cells: session.cells.slice(1) },
+    { ...session, cells: session.cells.replace(/1/, '0') },           // a mine went missing
+    { ...session, cells: session.cells.replace(/1/, '3') },           // a mine marked as revealed
+    { ...session, cells: session.cells.replace(/./, 'x') },
+    null, 'garbage', 42,
+  ];
+  for (const candidate of bad) {
+    assert.equal(new MinesweeperGame().restore(candidate), false, `accepted ${JSON.stringify(candidate)?.slice(0, 60)}`);
+  }
+  assert.equal(new MinesweeperGame().restore({ ...session, elapsedMs: -5 }), true, 'a bad clock is repaired, not fatal');
+});
+
+test('the storage helpers round-trip and clear the save', () => {
+  const store = new Map<string, string>();
+  const storage = {
+    getItem: (k: string) => store.get(k) ?? null,
+    setItem: (k: string, v: string) => { store.set(k, v); },
+    removeItem: (k: string) => { store.delete(k); },
+  };
+  const game = new MinesweeperGame(seeded(12));
+  game.newGame('hard');
+  game.reveal(128, 1);
+  saveMineSession(game.session(2), storage);
+  assert.equal(loadMineSession(storage)?.difficulty, 'hard');
+  saveMineSession(null, storage);
+  assert.equal(loadMineSession(storage), null);
+  store.set(MINES_SESSION_STORAGE_KEY, '{not json');
+  assert.equal(loadMineSession(storage), null, 'a broken save never throws');
 });

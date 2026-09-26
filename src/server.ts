@@ -33,6 +33,7 @@ const mimeTypes: Record<string, string> = {
   '.map': 'application/json; charset=utf-8',
   '.png': 'image/png',
   '.webp': 'image/webp',
+  '.jpg': 'image/jpeg',
   '.txt': 'text/plain; charset=utf-8',
   '.xml': 'application/xml; charset=utf-8',
   '.svg': 'image/svg+xml',
@@ -66,7 +67,7 @@ function sendText(response: ServerResponse, body: string, type: string, cacheCon
 
 /** Assets are unhashed, so they revalidate; only the stable images get cached hard. */
 function cacheControlFor(publicPath: string): string {
-  if (publicPath.startsWith('public/') && /\.(png|webp|svg|ico)$/.test(publicPath)) {
+  if (publicPath.startsWith('public/') && /\.(png|jpg|webp|svg|ico)$/.test(publicPath)) {
     return 'public, max-age=604800';
   }
   return 'no-cache';

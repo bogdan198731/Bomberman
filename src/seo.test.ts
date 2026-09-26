@@ -4,6 +4,9 @@ import { readFileSync } from 'node:fs';
 import {
   GAME_SEO,
   HUB_SEO,
+  OG_IMAGE_HEIGHT,
+  OG_IMAGE_PATH,
+  OG_IMAGE_WIDTH,
   SEO_BLOCK_END,
   SEO_BLOCK_START,
   SITE_ORIGIN,
@@ -77,7 +80,7 @@ test('rendered tags carry the route title, canonical, and social card', () => {
   assert.match(tags, /<title>Mini Tanks[^<]*<\/title>/);
   assert.match(tags, new RegExp(`<link rel="canonical" href="${SITE_ORIGIN}/play/tanks">`));
   assert.match(tags, new RegExp(`<meta property="og:url" content="${SITE_ORIGIN}/play/tanks">`));
-  assert.match(tags, new RegExp(`<meta property="og:image" content="${SITE_ORIGIN}/public/og-v3\\.png">`));
+  assert.match(tags, new RegExp(`<meta property="og:image" content="${SITE_ORIGIN}/public/og-v4\\.jpg">`));
   assert.match(tags, /<meta name="twitter:card" content="summary_large_image">/);
   // Absolute image URLs are required: scrapers do not resolve relative paths.
   assert.doesNotMatch(tags, /content="\/public/);
@@ -214,4 +217,23 @@ test('applying metadata survives a document that is missing the tags', () => {
   const doc = { title: '', querySelector: () => null };
   applyRouteMeta('star', doc);
   assert.equal(doc.title, GAME_SEO.star.title);
+});
+
+test('the share image exists at the standard card size and stays light', () => {
+  const bytes = readFileSync(new URL(`..${OG_IMAGE_PATH}`, import.meta.url));
+  // Read the frame size from the JPEG's start-of-frame marker - no image library needed.
+  let offset = 2;
+  let size: [number, number] | null = null;
+  while (offset < bytes.length) {
+    const marker = bytes.readUInt16BE(offset);
+    const length = bytes.readUInt16BE(offset + 2);
+    if (marker === 0xffc0 || marker === 0xffc2) {
+      size = [bytes.readUInt16BE(offset + 7), bytes.readUInt16BE(offset + 5)];
+      break;
+    }
+    offset += 2 + length;
+  }
+  assert.deepEqual(size, [OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT], 'declared size matches the file');
+  assert.deepEqual([OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT], [1200, 630], 'the size social networks crop to');
+  assert.ok(bytes.length < 400_000, `share image is ${Math.round(bytes.length / 1024)} KB; keep it small, it is also precached`);
 });

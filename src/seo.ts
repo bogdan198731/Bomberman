@@ -2,9 +2,10 @@ import { ARCADE_GAME_IDS, GAME_META, isArcadeGameId, type ArcadeGameId } from '.
 
 export const SITE_ORIGIN = 'https://bomberman-mixj.onrender.com';
 export const SITE_NAME = 'Blast Arcade';
-export const OG_IMAGE_PATH = '/public/og-v3.png';
-export const OG_IMAGE_WIDTH = 1730;
-export const OG_IMAGE_HEIGHT = 909;
+// Tagline carries no game count, so it cannot go stale as games are added.
+export const OG_IMAGE_PATH = '/public/og-v4.jpg';
+export const OG_IMAGE_WIDTH = 1200;
+export const OG_IMAGE_HEIGHT = 630;
 export const GAME_PATH_PREFIX = '/play/';
 
 /** Marks the block in index.html that the server rewrites per route. */
@@ -116,6 +117,16 @@ export const GAME_SEO: Record<ArcadeGameId, PageSeo> = {
     title: 'Air Hockey — Free Online Air Hockey vs Bot or Friend',
     description:
       'Play Air Hockey free in your browser. Guard your goal, bank shots off the walls, and race to seven against a bot, a friend on the same screen, or online.',
+  },
+  reversi: {
+    title: 'Reversi — Free Online Reversi vs Bot or Friend',
+    description:
+      'Play Reversi free in your browser. Outflank and flip your rival\'s discs, grab the corners, and finish ahead against a three-level bot, a friend, or online.',
+  },
+  solitaire: {
+    title: 'Solitaire — Free Online Klondike Solitaire, No Download',
+    description:
+      'Play Klondike Solitaire free in your browser. Draw one or three, undo any move, and pick up where you left off - built for phones and desktops alike.',
   },
 };
 
