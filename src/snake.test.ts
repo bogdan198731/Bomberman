@@ -43,6 +43,22 @@ test('hitting the arena wall ends a solo run', () => {
   assert.match(game.statusText(), /wall/i);
 });
 
+test('a snake cannot pass through its own trailing body', () => {
+  const game = new NeonSnakeGame(() => 0.5);
+  game.food = { x: 0, y: 0 };
+  game.riders[1].body = [
+    { x: 5, y: 8 }, { x: 4, y: 8 }, { x: 4, y: 9 },
+    { x: 5, y: 9 }, { x: 6, y: 9 }, { x: 6, y: 8 },
+  ];
+  game.riders[1].direction = 'down';
+  game.riders[1].queuedDirection = 'down';
+  game.start();
+  game.tick();
+  assert.equal(game.riders[1].alive, false);
+  assert.equal(game.phase, 'finished');
+  assert.match(game.statusText(), /snake trail/i);
+});
+
 test('a head-on duel crash is a draw', () => {
   const game = new NeonSnakeGame(() => 0.5);
   game.restart('duel');
