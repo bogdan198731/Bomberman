@@ -10,7 +10,8 @@
     "start": "npm run build && node dist/server.js",
     "serve": "node dist/server.js",
     "dev": "npm run start",
-    "testers": "npm run build --silent && node dist/testers-cli.js"
+    "testers": "npm run build --silent && node dist/testers-cli.js",
+    "triage": "npm run build --silent && node dist/triage-agent.js"
   },
   "keywords": [
     "game",
