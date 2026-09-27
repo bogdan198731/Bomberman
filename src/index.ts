@@ -40,6 +40,7 @@ import { initSudoku } from './sudoku.js';
 import { ArcadeResultReporter, initArcadeProfile } from './stats.js';
 import { initGameCatalog } from './catalog.js';
 import { initArcadeSettings } from './settings.js';
+import { initBugReport } from './bug-report.js';
 import { initQuickPlay } from './quick-play.js';
 import { initArcadePwa } from './pwa.js';
 import { initArcadeLeaderboard } from './leaderboard.js';
@@ -2056,6 +2057,7 @@ if (typeof window !== 'undefined') {
   window.addEventListener('DOMContentLoaded', () => {
     initHubLayout();
     initArcadeSettings();
+    initBugReport();
     initArcadeSessionControl();
     initArcadeGameplayFeedback();
     initArcadePwa();

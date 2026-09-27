@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blast-arcade-prime-2048-2026-09-26';
+const CACHE_NAME = 'blast-arcade-bug-report-2026-09-27';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -54,6 +54,7 @@ const APP_SHELL = [
   '/dist/hockey.js',
   '/dist/reversi.js',
   '/dist/solitaire.js',
+  '/dist/bug-report.js',
 ];
 
 self.addEventListener('install', event => {

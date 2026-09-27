@@ -1,5 +1,6 @@
+import { execSync } from 'node:child_process';
 import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
-import { createServer, type ServerResponse } from 'node:http';
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { networkInterfaces } from 'node:os';
 import { extname, join, normalize } from 'node:path';
 import { WebSocketServer, type WebSocket } from 'ws';
@@ -12,6 +13,9 @@ import {
 import { InviteRoom, isOnlineGameId, isRelayPayload, type OnlineGameId, type RelayPlayerId } from './relay.js';
 import { MatchmakingQueue } from './matchmaking.js';
 import { buildRobotsTxt, buildSitemapXml, gameFromPath, renderPageForView, type SeoView } from './seo.js';
+import { BUG_REPORT_ENDPOINT, BUG_REPORT_LIMITS, validateBugReport } from './bug-report.js';
+import { ReportRateLimiter, createReportId, forwardReport, storeReport, type StoredReport } from './report-intake.js';
+import { TesterRegistry } from './testers.js';
 
 const PORT = Number(process.env.PORT || 4173);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -52,6 +56,115 @@ function readIndexHtml(): string {
   return indexCache.html;
 }
 
+const REPORTS_DIR = process.env.REPORTS_DIR || join(root, 'reports');
+const REPORT_WEBHOOK_URL = process.env.REPORT_WEBHOOK_URL;
+const REPORT_WEBHOOK_SECRET = process.env.REPORT_WEBHOOK_SECRET;
+// Only trust X-Forwarded-For when a reverse proxy we control sets it.
+const TRUST_PROXY = process.env.TRUST_PROXY === '1';
+const reportsPerClient = new ReportRateLimiter(5, 10 * 60_000);
+const reportsOverall = new ReportRateLimiter(100, 60 * 60_000);
+const reportsPerTester = new ReportRateLimiter(5, 24 * 60 * 60_000);
+const testers = new TesterRegistry(process.env.TESTERS_FILE || join(root, 'testers.json'));
+const deployedCommit = (() => {
+  if (process.env.COMMIT_SHA) return process.env.COMMIT_SHA;
+  try { return execSync('git rev-parse --short HEAD', { cwd: root, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); }
+  catch { return 'unknown'; }
+})();
+
+function sendJson(response: ServerResponse, status: number, body: unknown): void {
+  const json = JSON.stringify(body);
+  response.writeHead(status, {
+    'Content-Type': mimeTypes['.json'],
+    'Cache-Control': 'no-store',
+    'Content-Length': Buffer.byteLength(json),
+  });
+  response.end(json);
+}
+
+function clientAddress(request: IncomingMessage): string {
+  const forwarded = request.headers['x-forwarded-for'];
+  if (TRUST_PROXY && typeof forwarded === 'string') return forwarded.split(',')[0].trim();
+  return request.socket.remoteAddress ?? 'unknown';
+}
+
+function handleBugReport(request: IncomingMessage, response: ServerResponse): void {
+  if (request.method !== 'POST') {
+    response.setHeader('Allow', 'POST');
+    sendJson(response, 405, { error: 'Use POST.' });
+    return;
+  }
+  if (!String(request.headers['content-type']).startsWith('application/json')) {
+    sendJson(response, 415, { error: 'Send JSON.' });
+    return;
+  }
+  const chunks: Buffer[] = [];
+  let size = 0;
+  let aborted = false;
+  request.on('data', (chunk: Buffer) => {
+    if (aborted) return;
+    size += chunk.length;
+    if (size > BUG_REPORT_LIMITS.bodyBytes) {
+      aborted = true;
+      sendJson(response, 413, { error: 'That report is too large.' });
+      request.resume();
+      return;
+    }
+    chunks.push(chunk);
+  });
+  request.on('end', () => {
+    if (aborted) return;
+    let body: unknown;
+    try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); }
+    catch { sendJson(response, 400, { error: 'Invalid report.' }); return; }
+    const checked = validateBugReport(body);
+    if (!checked.ok) { sendJson(response, 400, { error: checked.error }); return; }
+    // A wrong code is an error, not a quiet downgrade: the tester must know their
+    // report will not take the trusted path.
+    const authorization = request.headers.authorization;
+    const testerCheck = authorization?.startsWith('Bearer ') ? testers.check(authorization.slice(7).trim()) : undefined;
+    if (testerCheck && !testerCheck.ok) {
+      const error = testerCheck.reason === 'expired' ? 'Your tester code has expired.'
+        : testerCheck.reason === 'revoked' ? 'Your tester code was revoked.'
+        : 'Tester code not recognized.';
+      sendJson(response, 401, { error });
+      return;
+    }
+    const tester = testerCheck?.ok ? testerCheck.tester : undefined;
+    // Counted after validation so a typo does not use up someone's allowance.
+    const withinLimits = tester
+      ? reportsPerTester.allow(tester.name, Date.now(), tester.dailyLimit)
+      : reportsPerClient.allow(clientAddress(request));
+    if (!withinLimits || !reportsOverall.allow('all')) {
+      sendJson(response, 429, {
+        error: tester ? 'You reached your daily tester report limit.' : 'Too many reports right now. Please try again later.',
+      });
+      return;
+    }
+    const stored: StoredReport = {
+      id: createReportId(),
+      receivedAt: new Date().toISOString(),
+      game: gameFromPath(checked.report.path) ?? 'hub',
+      commit: deployedCommit,
+      trust: tester ? 'tester' : 'public',
+      ...(tester ? { tester: tester.name } : {}),
+      report: checked.report,
+    };
+    storeReport(REPORTS_DIR, stored)
+      .then(() => {
+        sendJson(response, 202, { id: stored.id, trust: stored.trust });
+        console.log(`Bug report ${stored.id} (${stored.report.kind}, ${stored.game}, ${stored.tester ?? 'public'}) queued`);
+        if (REPORT_WEBHOOK_URL) {
+          forwardReport(REPORT_WEBHOOK_URL, stored, REPORT_WEBHOOK_SECRET)
+            .catch(error => console.error(`Bug report ${stored.id} webhook failed: ${(error as Error).message}`));
+        }
+      })
+      .catch(error => {
+        console.error(`Bug report ${stored.id} could not be saved: ${(error as Error).message}`);
+        sendJson(response, 500, { error: 'The report could not be saved. Try again later.' });
+      });
+  });
+}
+
 function sitemapLastModified(): string {
   return new Date(statSync(indexPath).mtimeMs).toISOString().slice(0, 10);
 }
@@ -76,6 +189,10 @@ function cacheControlFor(publicPath: string): string {
 const server = createServer((request, response) => {
   const requestPath = new URL(request.url || '/', `http://${request.headers.host}`).pathname;
 
+  if (requestPath === BUG_REPORT_ENDPOINT) {
+    handleBugReport(request, response);
+    return;
+  }
   if (requestPath === '/robots.txt') {
     sendText(response, buildRobotsTxt(), mimeTypes['.txt'], 'public, max-age=86400');
     return;
@@ -336,6 +453,12 @@ webSocketServer.on('connection', socket => {
     }
   });
 });
+
+setInterval(() => {
+  reportsPerClient.prune();
+  reportsPerTester.prune();
+  reportsOverall.prune();
+}, 10 * 60_000).unref();
 
 setInterval(() => {
   for (const [code, room] of rooms) {

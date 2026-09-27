@@ -56,8 +56,8 @@ test('every browser module is precached, so a new one cannot be forgotten', () =
   const modules = readdirSync(new URL('../src', import.meta.url))
     .filter(name => name.endsWith('.ts') && !name.endsWith('.test.ts') && !name.endsWith('.d.ts'))
     .map(name => name.replace(/\.ts$/, '.js'))
-    // server.js only ever runs on the server, so it has no business in a cache.
-    .filter(name => name !== 'server.js');
+    // Server-only modules never reach the browser, so they have no business in a cache.
+    .filter(name => !['server.js', 'report-intake.js', 'testers.js', 'testers-cli.js', 'triage.js', 'triage-agent.js', 'claude-cli.js', 'fix-policy.js', 'fix-agent.js', 'pr-policy.js', 'pr-agent.js'].includes(name));
 
   const missing = modules.filter(name => !workerSource.includes(`/dist/${name}`));
   assert.deepEqual(missing, [], `add these to APP_SHELL: ${missing.join(', ')}`);
