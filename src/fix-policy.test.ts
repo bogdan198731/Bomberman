@@ -92,6 +92,8 @@ test('prompts fence untrusted text and carry harness feedback', () => {
 test('schemas and clipping', () => {
   assert.deepEqual([...REPRODUCE_SCHEMA.required].sort(), ['explanation', 'status', 'testFile', 'testName']);
   assert.deepEqual([...FIX_SCHEMA.required].sort(), ['status', 'summary']);
+  // The fixer must be able to send a flawed test back instead of bending the code to it.
+  assert.ok(FIX_SCHEMA.properties.status.enum.includes('test-is-wrong'));
   assert.equal(clip('abc', 5), 'abc');
   assert.equal(clip('abcdefgh', 3), '…fgh');
 });

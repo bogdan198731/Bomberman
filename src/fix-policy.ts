@@ -91,7 +91,7 @@ export const FIX_SCHEMA = {
   additionalProperties: false,
   required: ['status', 'summary'],
   properties: {
-    status: { type: 'string', enum: ['fixed', 'gave-up'] },
+    status: { type: 'string', enum: ['fixed', 'test-is-wrong', 'gave-up'] },
     summary: { type: 'string', maxLength: 2000 },
   },
 } as const;
@@ -106,11 +106,15 @@ In this step your only job is to write a unit test that fails today because of t
 
 First trace the player's steps through the code, one input and one update at a time. Test the game's exported logic (classes and functions from src/<game>.ts), following the style of the existing tests in that file; do not test the DOM or visuals. Name the test after the correct behavior. Keep it small and deterministic.
 
+The test must fail for the reported reason and no other. Walk through your own test against the current code: make sure the setup does not end, win or lose the game, or trigger any other rule that changes the state you assert on, and that each assertion checks the reported behavior directly. Then check it would pass once the problem is fixed.
+
 If after tracing you are convinced the code already behaves correctly, or the problem cannot be expressed as a unit test, write nothing and answer cannot-reproduce with your explanation. A wrong test is worse than no test.`;
 
 export const FIX_SYSTEM_PROMPT = `${SHARED_RULES}
 
-A failing test now reproduces the problem. In this step make it pass with the smallest correct change to production code. You may edit src/*.ts files except tests and these protected modules: ${[...PROTECTED_MODULES].join(', ')}. Never change any test - the harness rejects the attempt if you do. Keep every other behavior intact; the whole suite must still pass. Match the surrounding code's style. Stay within ${FIX_LIMITS.files} files and ${FIX_LIMITS.lines} changed lines. If a correct fix needs more than that, answer gave-up and explain.`;
+A failing test now reproduces the problem. In this step make it pass with the smallest correct change to production code. You may edit src/*.ts files except tests and these protected modules: ${[...PROTECTED_MODULES].join(', ')}. Never change any test - the harness rejects the attempt if you do. Keep every other behavior intact; the whole suite must still pass. Match the surrounding code's style. Stay within ${FIX_LIMITS.files} files and ${FIX_LIMITS.lines} changed lines. If a correct fix needs more than that, answer gave-up and explain.
+
+The test was written by another agent and can be wrong. If it fails for a reason other than the reported problem, so that no correct fix could make it pass, change nothing and answer test-is-wrong, explaining exactly why in the summary.`;
 
 function reportBlock(report: TriagedReport): string {
   const { triage } = report;
