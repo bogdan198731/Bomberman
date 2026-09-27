@@ -1,10 +1,9 @@
-import { spawn } from 'node:child_process';
 import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { StoredReport } from './report-intake.js';
+import { baseClaudeArgs, parseClaudeResult, runClaude } from './claude-cli.js';
 import {
-  TRIAGE_SCHEMA, TRIAGE_SYSTEM_PROMPT, buildTriagePrompt, parseClaudeResult, parseTriage,
-  type PriorReport, type TriagedReport,
+  TRIAGE_SCHEMA, TRIAGE_SYSTEM_PROMPT, buildTriagePrompt, parseTriage, type PriorReport, type TriagedReport,
 } from './triage.js';
 
 const root = process.cwd();
@@ -15,52 +14,20 @@ const dirs = {
   triaged: join(reportsDir, 'triaged'),
   failed: join(reportsDir, 'failed'),
 };
-const CLAUDE = process.env.CLAUDE_BIN || 'claude';
 const MODEL = process.env.TRIAGE_MODEL;
 const MAX_USD = process.env.TRIAGE_MAX_USD || '0.50';
 const TIMEOUT_MS = 5 * 60_000;
 const POLL_MS = Number(process.env.TRIAGE_POLL_SECONDS || 30) * 1000;
 
 /**
- * The agent reads code and nothing else: no shell, no edits, no web, no MCP
- * servers, and none of the user's own settings, hooks or plugins. Reports and
- * tester hashes are also git-ignored, which keeps them out of Grep and Glob.
+ * The agent reads code and nothing else: no shell, no edits, no web. Reports
+ * and tester hashes are also git-ignored, which keeps them out of Grep and Glob.
  */
-function claudeArgs(): string[] {
-  return [
-    '-p',
-    '--restricted',
-    '--tools', 'Read,Grep,Glob',
-    '--disallowedTools', 'Read(./reports/**)', 'Read(./testers.json)', 'Read(./.env*)',
-    '--strict-mcp-config',
-    '--permission-mode', 'dontAsk',
-    '--no-session-persistence',
-    '--max-budget-usd', MAX_USD,
-    '--output-format', 'json',
-    '--json-schema', JSON.stringify(TRIAGE_SCHEMA),
-    '--append-system-prompt', TRIAGE_SYSTEM_PROMPT,
-    ...(MODEL ? ['--model', MODEL] : []),
-  ];
-}
-
-function runClaude(prompt: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    // The prompt goes through stdin so report text is never parsed as arguments.
-    const child = spawn(CLAUDE, claudeArgs(), { cwd: root, stdio: ['pipe', 'pipe', 'pipe'], shell: false });
-    let stdout = '';
-    let stderr = '';
-    const timer = setTimeout(() => { child.kill(); reject(new Error('Claude timed out.')); }, TIMEOUT_MS);
-    child.stdout.on('data', chunk => { stdout += chunk; });
-    child.stderr.on('data', chunk => { stderr += chunk; });
-    child.on('error', error => { clearTimeout(timer); reject(error); });
-    child.on('close', code => {
-      clearTimeout(timer);
-      if (code === 0 || stdout.trim()) resolve(stdout);
-      else reject(new Error(`Claude exited with ${code}: ${stderr.trim().slice(0, 300)}`));
-    });
-    child.stdin.end(prompt);
-  });
-}
+const claudeArgs = [
+  ...baseClaudeArgs({ schema: TRIAGE_SCHEMA, systemPrompt: TRIAGE_SYSTEM_PROMPT, maxUsd: MAX_USD, model: MODEL }),
+  '--tools', 'Read,Grep,Glob',
+  '--disallowedTools', 'Read(./reports/**)', 'Read(./testers.json)', 'Read(./.env*)',
+];
 
 async function readJson<T>(file: string): Promise<T> {
   return JSON.parse(await readFile(file, 'utf8')) as T;
@@ -91,7 +58,7 @@ async function triageOne(name: string): Promise<void> {
     stored = await readJson<StoredReport>(claimed);
     const prior = await priorReports();
     const started = Date.now();
-    const result = parseClaudeResult(await runClaude(buildTriagePrompt(stored, prior)));
+    const result = parseClaudeResult(await runClaude({ cwd: root, args: claudeArgs, prompt: buildTriagePrompt(stored, prior), timeoutMs: TIMEOUT_MS }));
     const triage = parseTriage(result.output, new Set(prior.map(item => item.id)));
     if (!triage) throw new Error('Claude answered, but not with a usable triage.');
     const triaged: TriagedReport = {

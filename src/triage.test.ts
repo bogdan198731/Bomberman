@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { TRIAGE_SCHEMA, buildTriagePrompt, parseClaudeResult, parseTriage } from './triage.js';
+import { TRIAGE_SCHEMA, buildTriagePrompt, parseTriage } from './triage.js';
+import { parseClaudeResult } from './claude-cli.js';
 import type { StoredReport } from './report-intake.js';
 
 const stored: StoredReport = {

@@ -11,7 +11,8 @@
     "serve": "node dist/server.js",
     "dev": "npm run start",
     "testers": "npm run build --silent && node dist/testers-cli.js",
-    "triage": "npm run build --silent && node dist/triage-agent.js"
+    "triage": "npm run build --silent && node dist/triage-agent.js",
+    "fix": "npm run build --silent && node dist/fix-agent.js"
   },
   "keywords": [
     "game",

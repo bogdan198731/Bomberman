@@ -139,20 +139,3 @@ export function parseTriage(value: unknown, knownIds: ReadonlySet<string>): Tria
     duplicateOf,
   };
 }
-
-/** Extracts the structured answer from `claude -p --output-format json` output. */
-export function parseClaudeResult(stdout: string): { output: unknown; costUsd: number; model: string } {
-  let data: Record<string, unknown>;
-  try { data = JSON.parse(stdout) as Record<string, unknown>; }
-  catch { throw new Error('Claude returned output that is not JSON.'); }
-  if (data.type !== 'result' || data.is_error === true || data.subtype !== 'success') {
-    throw new Error(`Claude run failed: ${String(data.subtype ?? 'unknown')}${data.result ? ` - ${String(data.result).slice(0, 300)}` : ''}`);
-  }
-  if (data.structured_output === undefined) throw new Error('Claude returned no structured output.');
-  const models = data.modelUsage && typeof data.modelUsage === 'object' ? Object.keys(data.modelUsage) : [];
-  return {
-    output: data.structured_output,
-    costUsd: typeof data.total_cost_usd === 'number' ? data.total_cost_usd : 0,
-    model: models.join(', ') || 'unknown',
-  };
-}
