@@ -140,16 +140,22 @@ async function main(): Promise<void> {
       console.log(`  labels: ${labels.join(', ')} | auto-merge: ${fix.autoMerge}${fix.autoMergeReasons.length ? ` (missing: ${fix.autoMergeReasons.join('; ')})` : ''}`);
       if (dryRun || !github) { console.log(`  dry run - would push ${fix.branch} and open a PR into ${PR_BASE}`); continue; }
 
-      if (!labelsReady) {
-        for (const label of Object.values(PR_LABELS)) await github.ensureLabel(label);
-        labelsReady = true;
-      }
       // Never forced: if the remote branch moved, a person should look.
       await git('push', '--quiet', 'origin', `${fix.branch}:${fix.branch}`);
       const pull = (await github.openPull(fix.branch)) ?? await github.createPull(fix.branch, title, prBody(input, autoMerge));
       fix.prNumber = pull.number;
       fix.prUrl = pull.html_url;
-      await github.addLabels(pull.number, labels);
+      // Labels are for people scanning the PR list; the merge gates live in code,
+      // so a token without Issues permission must not block the PR itself.
+      try {
+        if (!labelsReady) {
+          for (const label of Object.values(PR_LABELS)) await github.ensureLabel(label);
+          labelsReady = true;
+        }
+        await github.addLabels(pull.number, labels);
+      } catch (error) {
+        console.warn(`  labels skipped: ${(error as Error).message} (give the token Issues: read and write to enable them)`);
+      }
       if (autoMerge) {
         try {
           await github.enableAutoMerge(pull.node_id);

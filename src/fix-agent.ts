@@ -103,18 +103,20 @@ async function discard(worktree: string): Promise<void> {
 function claudeArgs(phase: 'reproduce' | 'fix'): string[] {
   const protectedFiles = [...PROTECTED_MODULES].flatMap(file => [file, file.replace(/\.ts$/, '.test.ts')]);
   const deny = (files: string[]) => files.flatMap(file => [`Edit(${file})`, `Write(${file})`]);
+  // Commit messages are hints, not evidence; the agents judge the code alone.
+  const hideHistory = 'Read(./.git/**)';
   return phase === 'reproduce'
     ? [
       ...baseClaudeArgs({ schema: REPRODUCE_SCHEMA, systemPrompt: REPRODUCE_SYSTEM_PROMPT, maxUsd: MAX_USD, model: MODEL }),
       '--tools', 'Read,Grep,Glob,Edit,Write',
       '--allowedTools', 'Edit(src/*.test.ts)', 'Write(src/*.test.ts)',
-      '--disallowedTools', ...deny(protectedFiles),
+      '--disallowedTools', hideHistory, ...deny(protectedFiles),
     ]
     : [
       ...baseClaudeArgs({ schema: FIX_SCHEMA, systemPrompt: FIX_SYSTEM_PROMPT, maxUsd: MAX_USD, model: MODEL }),
       '--tools', 'Read,Grep,Glob,Edit,Write',
       '--allowedTools', 'Edit(src/*.ts)', 'Write(src/*.ts)',
-      '--disallowedTools', ...deny(['src/*.test.ts', ...protectedFiles]),
+      '--disallowedTools', hideHistory, ...deny(['src/*.test.ts', ...protectedFiles]),
     ];
 }
 
