@@ -179,7 +179,7 @@ export class NeonSnakeGame {
       const head = nextHeads.get(player)!;
       const outOfBounds = head.x < 0 || head.x >= SNAKE_COLUMNS || head.y < 0 || head.y >= SNAKE_ROWS;
       const wallCollision = this.isWall(head);
-      const bodyCollision = occupied.has(`${head.x},${head.y}`);
+      const bodyCollision = (occupied.get(`${head.x},${head.y}`) || []).some(owner => owner !== player);
       if (outOfBounds || wallCollision || bodyCollision || headOnCollision) {
         this.riders[player].alive = false;
         this.collisionCause = outOfBounds || wallCollision ? 'wall' : headOnCollision ? 'head-on collision' : 'snake trail';
