@@ -2480,6 +2480,129 @@
       text-align: center;
     }
 
+    .bug-report-open-button {
+      width: 100%;
+      margin-top: 14px;
+    }
+
+    .bug-report-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 110;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      background: rgba(4, 7, 12, 0.72);
+      backdrop-filter: blur(10px);
+    }
+
+    .bug-report-overlay[hidden] {
+      display: none;
+    }
+
+    .bug-report-panel {
+      width: min(480px, 100%);
+      max-height: 100%;
+      padding: 24px;
+      overflow-y: auto;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      background: #121925;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+    }
+
+    .bug-report-form {
+      display: grid;
+      gap: 10px;
+    }
+
+    .bug-report-kind {
+      display: grid;
+      gap: 8px;
+      margin: 0 0 6px;
+      padding: 0;
+      border: 0;
+    }
+
+    .bug-report-kind label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 44px;
+      padding: 0 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.035);
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 750;
+    }
+
+    .bug-report-kind label:has(input:checked) {
+      border-color: rgba(84, 227, 142, 0.45);
+      background: rgba(84, 227, 142, 0.08);
+    }
+
+    .bug-report-kind input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--p1);
+    }
+
+    .bug-report-form textarea {
+      width: 100%;
+      min-height: 130px;
+      padding: 12px;
+      resize: vertical;
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      border-radius: 12px;
+      color: var(--ink);
+      background: #182231;
+      font: inherit;
+      font-size: 16px;
+      line-height: 1.45;
+    }
+
+    .bug-report-form textarea:focus-visible {
+      outline: 2px solid var(--p1);
+      outline-offset: 1px;
+    }
+
+    .bug-report-trap {
+      position: absolute;
+      left: -10000px;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+    }
+
+    .bug-report-privacy {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.68rem;
+      line-height: 1.45;
+    }
+
+    .bug-report-status {
+      margin: 0;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      font-size: 0.75rem;
+    }
+
+    .bug-report-status[data-tone="error"] {
+      border-color: rgba(255, 110, 110, 0.35);
+      color: #ffc2c2;
+      background: rgba(255, 110, 110, 0.08);
+    }
+
+    .bug-report-status[data-tone="success"] {
+      border-color: rgba(84, 227, 142, 0.35);
+      color: #bff5d4;
+      background: rgba(84, 227, 142, 0.08);
+    }
+
     .settings-session-note {
       margin: 14px 0 0;
       padding: 10px 12px;
@@ -9495,12 +9618,46 @@
         </label>
       </div>
 
+      <div class="settings-group">
+        <span class="settings-group-title">Feedback</span>
+        <div class="settings-toggle-row">
+          <span class="settings-toggle-copy"><strong>Found a problem?</strong><span>Tell us about a bug or share an idea to make the arcade better.</span></span>
+        </div>
+        <button class="settings-action-button bug-report-open-button" type="button" data-open-bug-report>Report a bug or idea</button>
+      </div>
+
       <div class="settings-button-row">
         <button id="settingsFullscreenButton" class="settings-action-button" type="button">Enter fullscreen</button>
         <button id="settingsResetButton" class="settings-action-button" type="button">Reset settings</button>
       </div>
       <p id="settingsSessionNote" class="settings-session-note" role="status" hidden></p>
       <p class="settings-device-note">Settings are saved privately on this device and apply to every game.</p>
+    </section>
+  </div>
+
+  <div id="bugReportOverlay" class="bug-report-overlay" hidden>
+    <section class="bug-report-panel" role="dialog" aria-modal="true" aria-labelledby="bugReportTitle">
+      <header class="settings-header">
+        <div>
+          <span class="catalog-kicker">Help us improve</span>
+          <h2 id="bugReportTitle">Report a bug or idea</h2>
+        </div>
+        <button id="bugReportCloseButton" class="settings-close-button" type="button" aria-label="Close bug report">×</button>
+      </header>
+      <form id="bugReportForm" class="bug-report-form" novalidate>
+        <fieldset class="bug-report-kind">
+          <legend class="settings-group-title">What is it?</legend>
+          <label><input type="radio" name="kind" value="bug" checked><span>Something is broken</span></label>
+          <label><input type="radio" name="kind" value="idea"><span>An idea or improvement</span></label>
+        </fieldset>
+        <label class="settings-group-title" for="bugReportDescription">Describe it</label>
+        <textarea id="bugReportDescription" name="description" rows="6" minlength="10" maxlength="2000" required
+          placeholder="What happened, and what did you expect? Which game, and what were you doing?"></textarea>
+        <label class="bug-report-trap" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label>
+        <p class="bug-report-privacy">We also send the page you are on, your screen size, browser, and any recent errors. No personal data.</p>
+        <p id="bugReportStatus" class="bug-report-status" role="status" hidden></p>
+        <button id="bugReportSubmit" class="settings-action-button primary" type="submit">Send report</button>
+      </form>
     </section>
   </div>
 

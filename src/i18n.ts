@@ -765,6 +765,21 @@ const UX_TRANSLATIONS: Record<string, string> = {
   'Online play continues while Settings is open. Your held controls were released.': 'Meciul online continuă cât timp setările sunt deschise. Comenzile apăsate au fost eliberate.',
   'Online stays live': 'Meciul online continuă',
   'Restart game': 'Reîncepe jocul', 'Continue playing': 'Continuă jocul',
+  'Feedback': 'Feedback', 'Found a problem?': 'Ai găsit o problemă?',
+  'Tell us about a bug or share an idea to make the arcade better.': 'Spune-ne despre o eroare sau propune o idee pentru a îmbunătăți arcada.',
+  'Report a bug or idea': 'Raportează o eroare sau o idee', 'Help us improve': 'Ajută-ne să ne îmbunătățim',
+  'Close bug report': 'Închide raportul', 'What is it?': 'Ce este?',
+  'Something is broken': 'Ceva nu funcționează', 'An idea or improvement': 'O idee sau o îmbunătățire',
+  'Describe it': 'Descrie', 'Send report': 'Trimite raportul', 'Sending…': 'Se trimite…',
+  'What happened, and what did you expect? Which game, and what were you doing?': 'Ce s-a întâmplat și ce te așteptai? Ce joc și ce făceai?',
+  'We also send the page you are on, your screen size, browser, and any recent errors. No personal data.': 'Trimitem și pagina pe care ești, mărimea ecranului, browserul și erorile recente. Fără date personale.',
+  'Thanks! Your report was sent.': 'Mulțumim! Raportul a fost trimis.',
+  'Choose bug or idea.': 'Alege eroare sau idee.',
+  'Please describe it in at least 10 characters.': 'Te rugăm să descrii în cel puțin 10 caractere.',
+  'Please keep it under 2000 characters.': 'Te rugăm să folosești sub 2000 de caractere.',
+  'Too many reports right now. Please try again later.': 'Prea multe rapoarte acum. Încearcă din nou mai târziu.',
+  'The report could not be sent. Try again later.': 'Raportul nu a putut fi trimis. Încearcă mai târziu.',
+  'You seem to be offline. Try again when you are connected.': 'Pari offline. Încearcă din nou când ești conectat.',
 };
 export function translateArcadeText(value: string, language: ArcadeLanguage = activeLanguage): string {
   if (language === 'en' || !value) return value;
