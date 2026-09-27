@@ -7,14 +7,15 @@ import { baseClaudeArgs, parseClaudeResult, runClaude } from './claude-cli.js';
 import {
   FIX_SCHEMA, FIX_SYSTEM_PROMPT, PROTECTED_MODULES, REPRODUCE_SCHEMA, REPRODUCE_SYSTEM_PROMPT,
   buildFixPrompt, buildReproducePrompt, checkFixPaths, checkReproducePaths, clip, fixEligibility,
-  linesFromNumstat, typeErrorsOutsideTests,
+  linesFromNumstat, typeErrorsOutsideTests, type FixRecord,
 } from './fix-policy.js';
 import type { TriagedReport } from './triage.js';
 
 const root = process.cwd();
 const reportsDir = process.env.REPORTS_DIR || join(root, 'reports');
 const dirs = { triaged: join(reportsDir, 'triaged'), fixed: join(reportsDir, 'fixed'), fixFailed: join(reportsDir, 'fix-failed') };
-const BASE = process.env.FIX_BASE || 'HEAD';
+// Fix branches start from what PRs merge into.
+const BASE = process.env.FIX_BASE || 'main';
 const MODEL = process.env.FIX_MODEL;
 const MAX_USD = process.env.FIX_MAX_USD || '2.00';
 const ATTEMPTS = 2;
@@ -117,26 +118,8 @@ function claudeArgs(phase: 'reproduce' | 'fix'): string[] {
     ];
 }
 
-interface FixRecord {
-  id: string;
-  title: string;
-  outcome: 'fixed' | 'not-reproduced' | 'reproduced-not-fixed' | 'error';
-  branch?: string;
-  commits: string[];
-  testFile?: string;
-  testName?: string;
-  explanation?: string;
-  summary?: string;
-  diffLines?: number;
-  /** Why the harness rejected the last attempt, for a person to diagnose. */
-  lastFeedback?: string;
-  error?: string;
-  costUsd: number;
-  finishedAt: string;
-}
-
-async function fixReport(report: TriagedReport): Promise<FixRecord> {
-  const record: FixRecord = { id: report.id, title: report.triage.title, outcome: 'error', commits: [], costUsd: 0, finishedAt: '' };
+async function fixReport(report: TriagedReport, forced: boolean): Promise<FixRecord> {
+  const record: FixRecord = { id: report.id, title: report.triage.title, outcome: 'error', forced, base: '', commits: [], costUsd: 0, finishedAt: '' };
   const branch = `fix/${report.id}`;
   const worktree = join(worktreesRoot, report.id);
   let keepBranch = false;
@@ -156,6 +139,7 @@ async function fixReport(report: TriagedReport): Promise<FixRecord> {
     if (!(await runSuite(worktree)).ok) throw new Error('The base test suite already fails; fix that first.');
 
     const base = (await git(worktree, 'rev-parse', 'HEAD')).trim();
+    record.base = base;
     let reproduceFeedback: string | undefined;
     for (let round = 1; round <= ROUNDS; round++) {
       // Step 1: a test that fails for the reported reason.
@@ -283,7 +267,7 @@ async function main(): Promise<void> {
     }
     attempted++;
     console.log(`${report.id}: ${report.triage.title}`);
-    const record = await fixReport(report);
+    const record = await fixReport(report, requested.length > 0);
     await rm(join(record.outcome === 'fixed' ? dirs.fixFailed : dirs.fixed, name), { force: true });
     await writeFile(join(record.outcome === 'fixed' ? dirs.fixed : dirs.fixFailed, name), `${JSON.stringify(record, null, 2)}\n`, 'utf8');
     console.log(`  -> ${record.outcome}${record.branch ? ` on ${record.branch}` : ''}${record.error ? `: ${record.error.split('\n')[0]}` : ''}  $${record.costUsd.toFixed(2)}`);

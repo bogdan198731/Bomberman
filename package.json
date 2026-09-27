@@ -12,7 +12,8 @@
     "dev": "npm run start",
     "testers": "npm run build --silent && node dist/testers-cli.js",
     "triage": "npm run build --silent && node dist/triage-agent.js",
-    "fix": "npm run build --silent && node dist/fix-agent.js"
+    "fix": "npm run build --silent && node dist/fix-agent.js",
+    "prs": "npm run build --silent && node dist/pr-agent.js"
   },
   "keywords": [
     "game",

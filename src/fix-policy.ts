@@ -7,6 +7,32 @@ export const PROTECTED_MODULES = new Set([
 ]);
 export const FIX_LIMITS = { files: 3, lines: 200 } as const;
 
+export interface FixRecord {
+  id: string;
+  title: string;
+  outcome: 'fixed' | 'not-reproduced' | 'reproduced-not-fixed' | 'error';
+  /** A person picked this report by id rather than triage flagging it; never auto-merged. */
+  forced: boolean;
+  /** Commit the fix branch started from. */
+  base: string;
+  branch?: string;
+  commits: string[];
+  testFile?: string;
+  testName?: string;
+  explanation?: string;
+  summary?: string;
+  diffLines?: number;
+  /** Why the harness rejected the last attempt, for a person to diagnose. */
+  lastFeedback?: string;
+  error?: string;
+  costUsd: number;
+  finishedAt: string;
+  prNumber?: number;
+  prUrl?: string;
+  autoMerge?: 'enabled' | 'not-eligible' | 'switched-off' | 'daily-cap' | 'failed';
+  autoMergeReasons?: string[];
+}
+
 export function isTestFile(path: string): boolean {
   return /^src\/[\w-]+\.test\.ts$/.test(path);
 }

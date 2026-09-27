@@ -80,6 +80,11 @@ export function checkTesterToken(file: TesterFile, token: string, now: Date = ne
   return { ok: true, tester };
 }
 
+/** Whether the named tester currently holds a live code - checked again at merge time, not just at report time. */
+export function isTesterActive(file: TesterFile, name: string, now: Date = new Date()): boolean {
+  return file.testers.some(tester => tester.name === name && !tester.revokedAt && Date.parse(tester.expiresAt) > now.getTime());
+}
+
 export function parseTesterFile(text: string): TesterFile {
   const data = JSON.parse(text) as Partial<TesterFile>;
   if (!Array.isArray(data.testers)) throw new Error('Tester file needs a "testers" array.');
