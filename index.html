@@ -2576,6 +2576,50 @@
       overflow: hidden;
     }
 
+    .bug-report-tester {
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.035);
+    }
+
+    .bug-report-tester summary {
+      min-height: 44px;
+      padding: 12px;
+      cursor: pointer;
+      color: #cbd5e4;
+      font-size: 0.75rem;
+      font-weight: 800;
+    }
+
+    /* Chrome ignores grid on <details> itself, so the layout lives on this wrapper. */
+    .bug-report-tester-body {
+      display: grid;
+      gap: 6px;
+      padding: 0 12px 12px;
+    }
+
+    .bug-report-tester-label {
+      font-size: 0.7rem;
+      font-weight: 800;
+    }
+
+    .bug-report-tester input {
+      min-height: 44px;
+      padding: 0 12px;
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      border-radius: 11px;
+      color: var(--ink);
+      background: #182231;
+      font: inherit;
+      font-size: 16px;
+    }
+
+    .bug-report-tester-hint {
+      color: var(--muted);
+      font-size: 0.66rem;
+      line-height: 1.4;
+    }
+
     .bug-report-privacy {
       margin: 0;
       color: var(--muted);
@@ -9654,6 +9698,14 @@
         <textarea id="bugReportDescription" name="description" rows="6" minlength="10" maxlength="2000" required
           placeholder="What happened, and what did you expect? Which game, and what were you doing?"></textarea>
         <label class="bug-report-trap" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label>
+        <details id="bugReportTester" class="bug-report-tester">
+          <summary>I have a tester code</summary>
+          <div class="bug-report-tester-body">
+            <label class="bug-report-tester-label" for="bugReportTesterCode">Tester code</label>
+            <input id="bugReportTesterCode" name="testerCode" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="tst_…">
+            <span class="bug-report-tester-hint">Saved on this device after a successful report. Clear the field to forget it.</span>
+          </div>
+        </details>
         <p class="bug-report-privacy">We also send the page you are on, your screen size, browser, and any recent errors. No personal data.</p>
         <p id="bugReportStatus" class="bug-report-status" role="status" hidden></p>
         <button id="bugReportSubmit" class="settings-action-button primary" type="submit">Send report</button>

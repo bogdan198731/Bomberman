@@ -14,7 +14,8 @@ import { InviteRoom, isOnlineGameId, isRelayPayload, type OnlineGameId, type Rel
 import { MatchmakingQueue } from './matchmaking.js';
 import { buildRobotsTxt, buildSitemapXml, gameFromPath, renderPageForView, type SeoView } from './seo.js';
 import { BUG_REPORT_ENDPOINT, BUG_REPORT_LIMITS, validateBugReport } from './bug-report.js';
-import { ReportRateLimiter, createReportId, forwardReport, storeReport } from './report-intake.js';
+import { ReportRateLimiter, createReportId, forwardReport, storeReport, type StoredReport } from './report-intake.js';
+import { TesterRegistry } from './testers.js';
 
 const PORT = Number(process.env.PORT || 4173);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -62,6 +63,8 @@ const REPORT_WEBHOOK_SECRET = process.env.REPORT_WEBHOOK_SECRET;
 const TRUST_PROXY = process.env.TRUST_PROXY === '1';
 const reportsPerClient = new ReportRateLimiter(5, 10 * 60_000);
 const reportsOverall = new ReportRateLimiter(100, 60 * 60_000);
+const reportsPerTester = new ReportRateLimiter(5, 24 * 60 * 60_000);
+const testers = new TesterRegistry(process.env.TESTERS_FILE || join(root, 'testers.json'));
 const deployedCommit = (() => {
   if (process.env.COMMIT_SHA) return process.env.COMMIT_SHA;
   try { return execSync('git rev-parse --short HEAD', { cwd: root, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); }
@@ -115,22 +118,41 @@ function handleBugReport(request: IncomingMessage, response: ServerResponse): vo
     catch { sendJson(response, 400, { error: 'Invalid report.' }); return; }
     const checked = validateBugReport(body);
     if (!checked.ok) { sendJson(response, 400, { error: checked.error }); return; }
-    // Counted after validation so a typo does not use up someone's allowance.
-    if (!reportsPerClient.allow(clientAddress(request)) || !reportsOverall.allow('all')) {
-      sendJson(response, 429, { error: 'Too many reports right now. Please try again later.' });
+    // A wrong code is an error, not a quiet downgrade: the tester must know their
+    // report will not take the trusted path.
+    const authorization = request.headers.authorization;
+    const testerCheck = authorization?.startsWith('Bearer ') ? testers.check(authorization.slice(7).trim()) : undefined;
+    if (testerCheck && !testerCheck.ok) {
+      const error = testerCheck.reason === 'expired' ? 'Your tester code has expired.'
+        : testerCheck.reason === 'revoked' ? 'Your tester code was revoked.'
+        : 'Tester code not recognized.';
+      sendJson(response, 401, { error });
       return;
     }
-    const stored = {
+    const tester = testerCheck?.ok ? testerCheck.tester : undefined;
+    // Counted after validation so a typo does not use up someone's allowance.
+    const withinLimits = tester
+      ? reportsPerTester.allow(tester.name, Date.now(), tester.dailyLimit)
+      : reportsPerClient.allow(clientAddress(request));
+    if (!withinLimits || !reportsOverall.allow('all')) {
+      sendJson(response, 429, {
+        error: tester ? 'You reached your daily tester report limit.' : 'Too many reports right now. Please try again later.',
+      });
+      return;
+    }
+    const stored: StoredReport = {
       id: createReportId(),
       receivedAt: new Date().toISOString(),
       game: gameFromPath(checked.report.path) ?? 'hub',
       commit: deployedCommit,
+      trust: tester ? 'tester' : 'public',
+      ...(tester ? { tester: tester.name } : {}),
       report: checked.report,
     };
     storeReport(REPORTS_DIR, stored)
       .then(() => {
-        sendJson(response, 202, { id: stored.id });
-        console.log(`Bug report ${stored.id} (${stored.report.kind}, ${stored.game}) queued`);
+        sendJson(response, 202, { id: stored.id, trust: stored.trust });
+        console.log(`Bug report ${stored.id} (${stored.report.kind}, ${stored.game}, ${stored.tester ?? 'public'}) queued`);
         if (REPORT_WEBHOOK_URL) {
           forwardReport(REPORT_WEBHOOK_URL, stored, REPORT_WEBHOOK_SECRET)
             .catch(error => console.error(`Bug report ${stored.id} webhook failed: ${(error as Error).message}`));
@@ -434,6 +456,7 @@ webSocketServer.on('connection', socket => {
 
 setInterval(() => {
   reportsPerClient.prune();
+  reportsPerTester.prune();
   reportsOverall.prune();
 }, 10 * 60_000).unref();
 

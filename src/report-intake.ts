@@ -8,9 +8,10 @@ export class ReportRateLimiter {
   private hits = new Map<string, number[]>();
   constructor(private readonly limit: number, private readonly windowMs: number) {}
 
-  allow(key: string, now: number = Date.now()): boolean {
+  /** `limit` overrides the default for keys with their own allowance, like each tester's daily cap. */
+  allow(key: string, now: number = Date.now(), limit: number = this.limit): boolean {
     const recent = (this.hits.get(key) ?? []).filter(time => now - time < this.windowMs);
-    if (recent.length >= this.limit) {
+    if (recent.length >= limit) {
       this.hits.set(key, recent);
       return false;
     }
@@ -32,6 +33,9 @@ export interface StoredReport {
   receivedAt: string;
   game: string;
   commit: string;
+  /** Set by the server from a verified tester code, never from the report body. */
+  trust: 'public' | 'tester';
+  tester?: string;
   report: BugReport;
 }
 

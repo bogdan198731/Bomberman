@@ -3,6 +3,7 @@ import { closeArcadeDialog, openArcadeDialog, registerArcadeDialog } from './dia
 export type BugReportKind = 'bug' | 'idea';
 
 export const BUG_REPORT_ENDPOINT = '/api/report';
+export const TESTER_CODE_STORAGE_KEY = 'blast-arcade-tester-code-v1';
 export const BUG_REPORT_LIMITS = {
   descriptionMin: 10,
   descriptionMax: 2000,
@@ -80,6 +81,18 @@ export class RecentErrors {
 
 const recentErrors = new RecentErrors();
 
+function readTesterCode(): string {
+  try { return localStorage.getItem(TESTER_CODE_STORAGE_KEY) ?? ''; }
+  catch { return ''; }
+}
+
+function rememberTesterCode(code: string): void {
+  try {
+    if (code) localStorage.setItem(TESTER_CODE_STORAGE_KEY, code);
+    else localStorage.removeItem(TESTER_CODE_STORAGE_KEY);
+  } catch { /* The code still works for this report; it just is not remembered. */ }
+}
+
 function describeError(error: unknown): string {
   // V8 stacks already start with "Name: message"; other engines' stacks do not.
   if (error instanceof Error) {
@@ -102,6 +115,8 @@ export function initBugReport(): void {
   const status = document.getElementById('bugReportStatus');
   const submit = document.getElementById('bugReportSubmit') as HTMLButtonElement | null;
   const closeButton = document.getElementById('bugReportCloseButton') as HTMLButtonElement | null;
+  const testerDetails = document.getElementById('bugReportTester') as HTMLDetailsElement | null;
+  const testerInput = document.getElementById('bugReportTesterCode') as HTMLInputElement | null;
   const openButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-open-bug-report]'));
   if (!overlay || !form || !description || !status || !submit || !openButtons.length) return;
   const activeOverlay = overlay;
@@ -122,6 +137,10 @@ export function initBugReport(): void {
   openButtons.forEach(button => button.addEventListener('click', () => {
     setStatus('', 'info');
     activeSubmit.disabled = false;
+    if (testerInput && testerDetails) {
+      testerInput.value = readTesterCode();
+      testerDetails.open = Boolean(testerInput.value);
+    }
     openArcadeDialog('bug-report');
   }));
   closeButton?.addEventListener('click', close);
@@ -142,17 +161,25 @@ export function initBugReport(): void {
     };
     const checked = validateBugReport(payload);
     if (!checked.ok) { setStatus(checked.error, 'error'); return; }
+    // Sent as a header so the code never ends up inside the stored report.
+    const testerCode = testerInput?.value.trim() ?? '';
     activeSubmit.disabled = true;
     setStatus('Sending…', 'info');
     fetch(BUG_REPORT_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(testerCode ? { Authorization: `Bearer ${testerCode}` } : {}),
+      },
       body: JSON.stringify(payload),
     })
       .then(async response => {
         if (response.ok) {
+          const body = await response.json().catch(() => ({})) as { trust?: string };
+          rememberTesterCode(testerCode);
           activeForm.reset();
-          setStatus('Thanks! Your report was sent.', 'success');
+          if (testerInput) testerInput.value = testerCode;
+          setStatus(body.trust === 'tester' ? 'Thanks! Your tester report was sent.' : 'Thanks! Your report was sent.', 'success');
           return;
         }
         const body = await response.json().catch(() => ({})) as { error?: string };

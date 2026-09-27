@@ -82,7 +82,7 @@ test('report ids sort by time and stored reports land in the queue folder', asyn
   try {
     const checked = validateBugReport(valid);
     assert.ok(checked.ok);
-    const stored = { id: early, receivedAt: '2026-09-27T10:00:00.000Z', game: 'bomberman', commit: 'abc123', report: checked.report };
+    const stored = { id: early, receivedAt: '2026-09-27T10:00:00.000Z', game: 'bomberman', commit: 'abc123', trust: 'public' as const, report: checked.report };
     const file = await storeReport(dir, stored);
     assert.equal(file, join(dir, 'queue', `${early}.json`));
     assert.deepEqual(JSON.parse(await readFile(file, 'utf8')), stored);

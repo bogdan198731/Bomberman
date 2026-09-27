@@ -780,6 +780,13 @@ const UX_TRANSLATIONS: Record<string, string> = {
   'Too many reports right now. Please try again later.': 'Prea multe rapoarte acum. Încearcă din nou mai târziu.',
   'The report could not be sent. Try again later.': 'Raportul nu a putut fi trimis. Încearcă mai târziu.',
   'You seem to be offline. Try again when you are connected.': 'Pari offline. Încearcă din nou când ești conectat.',
+  'I have a tester code': 'Am un cod de tester', 'Tester code': 'Cod de tester',
+  'Saved on this device after a successful report. Clear the field to forget it.': 'Se salvează pe acest dispozitiv după un raport trimis. Golește câmpul pentru a-l uita.',
+  'Thanks! Your tester report was sent.': 'Mulțumim! Raportul tău de tester a fost trimis.',
+  'Tester code not recognized.': 'Codul de tester nu este recunoscut.',
+  'Your tester code has expired.': 'Codul tău de tester a expirat.',
+  'Your tester code was revoked.': 'Codul tău de tester a fost revocat.',
+  'You reached your daily tester report limit.': 'Ai atins limita zilnică de rapoarte de tester.',
 };
 export function translateArcadeText(value: string, language: ArcadeLanguage = activeLanguage): string {
   if (language === 'en' || !value) return value;
