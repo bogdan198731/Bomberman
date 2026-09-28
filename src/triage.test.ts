@@ -100,3 +100,18 @@ test('failed or malformed CLI runs raise a readable error', () => {
   assert.throws(() => parseClaudeResult(JSON.stringify({ type: 'result', subtype: 'error_max_budget_usd', is_error: true })), /error_max_budget_usd/);
   assert.throws(() => parseClaudeResult(JSON.stringify({ type: 'result', subtype: 'success', is_error: false })), /no structured output/);
 });
+
+test('triage sees what the player pointed at and where their screenshot is', () => {
+  const withEvidence: StoredReport = {
+    ...stored,
+    screenshot: 'r.jpg',
+    report: {
+      ...stored.report,
+      element: { selector: '#snakeCanvas', tag: 'canvas', text: '', box: { x: 1, y: 2, width: 3, height: 4 }, styles: { opacity: '1' }, state: {} },
+    },
+  };
+  const prompt = buildTriagePrompt(withEvidence, [], 'C:/tmp/triage-shot-x/player-screenshot.jpg');
+  assert.match(prompt, /<element>\nSelector: #snakeCanvas \(canvas\)/);
+  assert.match(prompt, /screenshot of what they saw, with that element outlined in red: C:\/tmp\/triage-shot-x\/player-screenshot\.jpg/);
+  assert.doesNotMatch(buildTriagePrompt(stored, []), /<element>|screenshot/);
+});

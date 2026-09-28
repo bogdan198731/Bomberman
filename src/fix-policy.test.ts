@@ -166,3 +166,12 @@ test('visual fixes may not add CSS that loads anything', () => {
   ].join('\n');
   assert.deepEqual(unsafeCssAdditions(diff), ['background-image: url(https://evil.example/track.png);', '@import "https://evil.example/x.css";']);
 });
+
+test('the fix agent is told which element the player pointed at', () => {
+  const pointed: TriagedReport = {
+    ...report,
+    report: { ...report.report, element: { selector: '#minesFlagButton', tag: 'button', text: 'Flag mode', box: { x: 0, y: 0, width: 10, height: 10 }, styles: {}, state: { 'aria-pressed': 'true' } } },
+  };
+  assert.match(buildReproducePrompt(pointed), /<element>\nSelector: #minesFlagButton \(button\)[\s\S]*State: aria-pressed=true/);
+  assert.doesNotMatch(buildReproducePrompt(report), /<element>/);
+});

@@ -14,7 +14,7 @@ import { InviteRoom, isOnlineGameId, isRelayPayload, type OnlineGameId, type Rel
 import { MatchmakingQueue } from './matchmaking.js';
 import { buildRobotsTxt, buildSitemapXml, gameFromPath, renderPageForView, type SeoView } from './seo.js';
 import { BUG_REPORT_ENDPOINT, BUG_REPORT_LIMITS, validateBugReport } from './bug-report.js';
-import { ReportRateLimiter, createReportId, forwardReport, storeReport, type StoredReport } from './report-intake.js';
+import { ReportRateLimiter, createReportId, forwardReport, storeReport, storeScreenshot, type StoredReport } from './report-intake.js';
 import { TesterRegistry } from './testers.js';
 
 const PORT = Number(process.env.PORT || 4173);
@@ -45,6 +45,8 @@ const mimeTypes: Record<string, string> = {
 };
 
 const indexPath = join(root, 'index.html');
+// The report dialog's screenshot library, served from its package so there is no copy to keep in sync.
+const screenshotLibraryPath = join(root, 'node_modules', 'modern-screenshot', 'dist', 'index.mjs');
 let indexCache: { mtimeMs: number; html: string } | undefined;
 
 /** index.html rarely changes, so parse it once per deploy rather than per request. */
@@ -149,7 +151,10 @@ function handleBugReport(request: IncomingMessage, response: ServerResponse): vo
       ...(tester ? { tester: tester.name } : {}),
       report: checked.report,
     };
-    storeReport(REPORTS_DIR, stored)
+    const saved = checked.screenshot
+      ? storeScreenshot(REPORTS_DIR, stored.id, checked.screenshot).then(name => { stored.screenshot = name; })
+      : Promise.resolve();
+    saved.then(() => storeReport(REPORTS_DIR, stored))
       .then(() => {
         sendJson(response, 202, { id: stored.id, trust: stored.trust });
         console.log(`Bug report ${stored.id} (${stored.report.kind}, ${stored.game}, ${stored.tester ?? 'public'}) queued`);
@@ -191,6 +196,11 @@ const server = createServer((request, response) => {
 
   if (requestPath === BUG_REPORT_ENDPOINT) {
     handleBugReport(request, response);
+    return;
+  }
+  if (requestPath === '/vendor/modern-screenshot.js' && existsSync(screenshotLibraryPath)) {
+    response.writeHead(200, { 'Content-Type': mimeTypes['.js'], 'Cache-Control': 'public, max-age=86400' });
+    createReadStream(screenshotLibraryPath).pipe(response);
     return;
   }
   if (requestPath === '/robots.txt') {

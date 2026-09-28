@@ -787,6 +787,10 @@ const UX_TRANSLATIONS: Record<string, string> = {
   'Your tester code has expired.': 'Codul tău de tester a expirat.',
   'Your tester code was revoked.': 'Codul tău de tester a fost revocat.',
   'You reached your daily tester report limit.': 'Ai atins limita zilnică de rapoarte de tester.',
+  'Point at the problem': 'Arată problema', 'Include this screenshot': 'Include această captură de ecran',
+  'Tap the part that looks wrong': 'Atinge partea care arată greșit', 'Cancel': 'Anulează',
+  'Screenshot of the game that will be sent with the report': 'Captura de ecran a jocului care va fi trimisă cu raportul',
+  'We also send the page you are on, your screen size, browser, any recent errors, and the screenshot if it is ticked. No personal data.': 'Trimitem și pagina pe care ești, mărimea ecranului, browserul, erorile recente și captura de ecran dacă este bifată. Fără date personale.',
 };
 export function translateArcadeText(value: string, language: ArcadeLanguage = activeLanguage): string {
   if (language === 'en' || !value) return value;

@@ -4,7 +4,9 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { BUG_REPORT_LIMITS, RecentErrors, validateBugReport } from './bug-report.js';
+import {
+  BUG_REPORT_LIMITS, RecentErrors, describePicked, validateBugReport, validatePickedElement, validateScreenshot,
+} from './bug-report.js';
 import { ReportRateLimiter, createReportId, storeReport } from './report-intake.js';
 import { translateArcadeText } from './i18n.js';
 
@@ -102,5 +104,63 @@ test('the settings panel links to a bug report dialog with the fields the module
 test('bug report copy is translated to Romanian', () => {
   for (const text of ['Report a bug or idea', 'Send report', 'Thanks! Your report was sent.', 'Please describe it in at least 10 characters.']) {
     assert.notEqual(translateArcadeText(text, 'ro'), text, text);
+  }
+});
+
+const flagButton = {
+  selector: '#minesFlagButton', tag: 'BUTTON', text: '⚑ Flag mode',
+  box: { x: 833.4, y: 547, width: 112, height: 40 },
+  styles: { color: 'rgb(26, 18, 4)', 'background-image': 'linear-gradient(135deg, #ffd978, #ffc857)', cursor: 'pointer' },
+  state: { 'aria-pressed': 'true', onclick: 'evil()' },
+};
+
+test('a picked element keeps only known fields, cleaned', () => {
+  const picked = validatePickedElement(flagButton);
+  assert.deepEqual(picked, {
+    selector: '#minesFlagButton', tag: 'button', text: '⚑ Flag mode',
+    box: { x: 833, y: 547, width: 112, height: 40 },
+    styles: { color: 'rgb(26, 18, 4)', 'background-image': 'linear-gradient(135deg, #ffd978, #ffc857)' },
+    state: { 'aria-pressed': 'true' },
+  });
+  assert.equal(validatePickedElement({ ...flagButton, text: 'line\nbreak\u0000' })?.text, 'line break');
+  assert.equal(validatePickedElement({ ...flagButton, tag: '<script>' }), undefined);
+  assert.equal(validatePickedElement({ ...flagButton, box: { x: 'a', y: 0, width: 1, height: 1 } }), undefined);
+  assert.equal(validatePickedElement({ ...flagButton, selector: '' }), undefined);
+  assert.equal(validatePickedElement('nope'), undefined);
+});
+
+test('only a real JPEG within the limit is accepted as a screenshot', () => {
+  const jpeg = `data:image/jpeg;base64,/9j/${'A'.repeat(100)}`;
+  assert.equal(validateScreenshot(jpeg), `/9j/${'A'.repeat(100)}`);
+  assert.equal(validateScreenshot('data:image/png;base64,iVBORw0KGgo='), undefined);
+  assert.equal(validateScreenshot('data:image/jpeg;base64,iVBORw0KGgo='), undefined, 'PNG bytes under a JPEG label');
+  assert.equal(validateScreenshot('data:image/jpeg;base64,/9j/<script>'), undefined);
+  assert.equal(validateScreenshot(`data:image/jpeg;base64,/9j/${'A'.repeat(BUG_REPORT_LIMITS.screenshotChars)}`), undefined);
+});
+
+test('a report carries the picked element in the report and the screenshot beside it', () => {
+  const result = validateBugReport({ ...valid, element: flagButton, screenshot: `data:image/jpeg;base64,/9j/${'B'.repeat(8)}` });
+  assert.ok(result.ok);
+  assert.equal(result.report.element?.selector, '#minesFlagButton');
+  assert.equal(result.screenshot, `/9j/${'B'.repeat(8)}`);
+  assert.ok(!JSON.stringify(result.report).includes('/9j/'), 'the image is not stored inside the report JSON');
+  // A broken extra never costs the player their report.
+  const lenient = validateBugReport({ ...valid, element: 'garbage', screenshot: 'data:text/html,<b>' });
+  assert.ok(lenient.ok);
+  assert.equal(lenient.report.element, undefined);
+  assert.equal(lenient.screenshot, undefined);
+});
+
+test('agents get a picked element as plain labelled lines', () => {
+  const text = describePicked(validatePickedElement(flagButton)!);
+  assert.match(text, /^Selector: #minesFlagButton \(button\)$/m);
+  assert.match(text, /^State: aria-pressed=true$/m);
+  assert.match(text, /^On the player's screen: 112x40 px at 833,547$/m);
+});
+
+test('the report dialog offers pointing and a screenshot, and hides dialogs while pointing', () => {
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  for (const hook of ['id="bugReportPick"', 'id="bugReportPicked"', 'id="bugReportShotRow"', 'id="bugReportShotToggle"', 'id="bugReportShot"', 'body.bug-picking > :not(main):not(.bug-picker)']) {
+    assert.ok(html.includes(hook), hook);
   }
 });

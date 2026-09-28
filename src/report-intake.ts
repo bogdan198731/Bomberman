@@ -36,6 +36,8 @@ export interface StoredReport {
   /** Set by the server from a verified tester code, never from the report body. */
   trust: 'public' | 'tester';
   tester?: string;
+  /** File name of the player's screenshot in <reports>/screenshots, when one was sent. */
+  screenshot?: string;
   report: BugReport;
 }
 
@@ -51,6 +53,15 @@ export async function storeReport(dir: string, stored: StoredReport): Promise<st
   const file = join(queue, `${stored.id}.json`);
   await writeFile(file, `${JSON.stringify(stored, null, 2)}\n`, 'utf8');
   return file;
+}
+
+/** Saves a screenshot as <dir>/screenshots/<id>.jpg; the caller has validated the JPEG. */
+export async function storeScreenshot(dir: string, id: string, base64: string): Promise<string> {
+  const folder = join(dir, 'screenshots');
+  await mkdir(folder, { recursive: true });
+  const name = `${id}.jpg`;
+  await writeFile(join(folder, name), Buffer.from(base64, 'base64'));
+  return name;
 }
 
 /** Optional hand-off to another app (local agent runner, GitHub bridge, chat hook). */

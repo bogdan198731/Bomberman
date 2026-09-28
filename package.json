@@ -32,6 +32,7 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
+    "modern-screenshot": "^4.7.0",
     "ws": "^8.21.3"
   }
 }
