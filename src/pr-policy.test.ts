@@ -104,7 +104,8 @@ test('GitHub remotes parse from SSH and HTTPS', () => {
 
 test('a visual fix is eligible only when a browser spec and styles alone changed', () => {
   const approved = { approved: true, fixed: true, readable: true, fitsDesign: true, regressions: [], summary: 'Clearly green now.' };
-  const visualFix: FixRecord = { ...fix, kind: 'browser', testFile: 'tests/visual/mines-flag.spec.ts', review: approved };
+  const clean = { checked: 40, unstable: [], own: [], others: [] };
+  const visualFix: FixRecord = { ...fix, kind: 'browser', testFile: 'tests/visual/mines-flag.spec.ts', review: approved, sideEffects: clean };
   const visual: AutoMergeInput = {
     ...input, fix: visualFix, changedFiles: ['tests/visual/mines-flag.spec.ts', 'index.html'],
     triaged: { ...triaged, triage: { ...triaged.triage, testKind: 'browser' } },
@@ -124,6 +125,14 @@ test('a visual fix is eligible only when a browser spec and styles alone changed
   assert.match(prBody(visual, false), /\*\*Vision review: approved\*\* - ✅ problem gone · ✅ text readable · ✅ fits the design/);
   assert.match(prBody({ ...visual, fix: { ...visualFix, review: undefined } }, false), /none ran, so a person must check/);
   assert.doesNotMatch(prBody(input, false), /Vision review/);
+
+  const screens = 'no other game\'s screen or the hub changed';
+  const snake = { name: 'phone-snake.png', screen: 'snake', changed: 900, where: '704x88 px at 38,1192' };
+  assert.deepEqual(failing({ fix: { ...visualFix, sideEffects: { ...clean, others: [snake] } } }), [screens]);
+  assert.deepEqual(failing({ fix: { ...visualFix, sideEffects: undefined } }), [screens]);
+  assert.deepEqual(failing({ fix: { ...visualFix, sideEffects: { ...clean, checked: 0 } } }), [screens]);
+  assert.match(prBody(visual, false), /\*\*Side effects\*\* - 40 screens compared, 0 changed on the reported game, 0 changed elsewhere/);
+  assert.match(prBody({ ...visual, fix: { ...visualFix, sideEffects: undefined } }, false), /\*\*Side effects\*\* - not checked/);
 });
 
 test('screenshots pair by name, phone first, and a missing side stays visible', () => {
