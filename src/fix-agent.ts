@@ -250,7 +250,7 @@ async function fixReport(report: TriagedReport, forced: boolean): Promise<FixRec
         if (built && !strayErrors.length) {
           if (kind === 'browser') {
             // Screenshots of the failing states; replaced on every attempt so only the accepted test's remain.
-            await rm(join(evidenceRoot, report.id), { recursive: true, force: true });
+            await rm(join(evidenceRoot, report.id, 'before'), { recursive: true, force: true });
             const visual = await runVisual(worktree, changed, join(evidenceRoot, report.id, 'before'));
             tests = { ok: visual.ok, failures: visual.ok ? [] : [clip(visual.output, 6000)] };
           } else {
