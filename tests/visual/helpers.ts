@@ -35,8 +35,17 @@ export async function openGame(page: Page, game: string): Promise<void> {
 export async function renderedColor(locator: Locator): Promise<Rgb> {
   await locator.scrollIntoViewIfNeeded();
   await captureEvidence(locator);
-  const png = (await locator.screenshot({ animations: 'disabled' })).toString('base64');
-  return locator.page().evaluate(async data => {
+  return dominantColor(locator.page(), await locator.screenshot({ animations: 'disabled' }));
+}
+
+/** The colour a player sees in one region of the page, e.g. a single canvas tile. */
+export async function renderedColorAt(page: Page, clip: Box): Promise<Rgb> {
+  return dominantColor(page, await page.screenshot({ clip, animations: 'disabled' }));
+}
+
+async function dominantColor(page: Page, screenshot: Buffer): Promise<Rgb> {
+  const png = screenshot.toString('base64');
+  return page.evaluate(async data => {
     const image = new Image();
     image.src = `data:image/png;base64,${data}`;
     await image.decode();

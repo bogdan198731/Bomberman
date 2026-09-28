@@ -2824,6 +2824,13 @@
     .game-help-overlay[hidden],
     .arcade-result-overlay[hidden] { display: none; }
 
+    /* Players want to study the final Minesweeper board, so keep it sharp and move the card below it. */
+    .arcade-result-overlay[data-game="mines"] {
+      align-items: end;
+      background: rgba(3, 9, 15, .18);
+      backdrop-filter: none;
+    }
+
     .game-help-card,
     .arcade-result-card {
       width: min(100%, 570px);

@@ -246,6 +246,7 @@ The harness serves the real game and runs your spec in Chromium at two sizes: ph
 Helpers (read tests/visual/helpers.ts for details):
 - openGame(page, gameId): opens /play/<gameId> as a returning player (guide dismissed, animations off). Game ids are the /play/ paths, e.g. mines, snake, twenty48.
 - renderedColor(locator): the colour a player actually sees on an element, from its pixels (handles gradients).
+- renderedColorAt(page, {x, y, width, height}): the same for one region of the page, e.g. a single tile of a canvas game.
 - colorDifference(a, b): perceptual difference; at least CLEARLY_DIFFERENT (25) means players see it at a glance.
 - contrastRatio(a, b): WCAG ratio; 4.5 for text, 3 for UI parts. cssColor(locator, property) reads a computed colour.
 - textContrast(locator): contrast of an element's text against what is behind it; READABLE_TEXT is 4.5.
