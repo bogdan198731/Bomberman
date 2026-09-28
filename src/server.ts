@@ -14,8 +14,9 @@ import { InviteRoom, isOnlineGameId, isRelayPayload, type OnlineGameId, type Rel
 import { MatchmakingQueue } from './matchmaking.js';
 import { buildRobotsTxt, buildSitemapXml, gameFromPath, renderPageForView, type SeoView } from './seo.js';
 import { BUG_REPORT_ENDPOINT, BUG_REPORT_LIMITS, validateBugReport } from './bug-report.js';
-import { ReportRateLimiter, createReportId, forwardReport, storeReport, type StoredReport } from './report-intake.js';
+import { ReportRateLimiter, createReportId, forwardReport, storeReport, storeScreenshot, type StoredReport } from './report-intake.js';
 import { TesterRegistry } from './testers.js';
+import { DEFAULT_REPORT_SENDER, buildReportEmail, sendReportEmail } from './report-email.js';
 
 const PORT = Number(process.env.PORT || 4173);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -45,6 +46,8 @@ const mimeTypes: Record<string, string> = {
 };
 
 const indexPath = join(root, 'index.html');
+// The report dialog's screenshot library, served from its package so there is no copy to keep in sync.
+const screenshotLibraryPath = join(root, 'node_modules', 'modern-screenshot', 'dist', 'index.mjs');
 let indexCache: { mtimeMs: number; html: string } | undefined;
 
 /** index.html rarely changes, so parse it once per deploy rather than per request. */
@@ -59,6 +62,10 @@ function readIndexHtml(): string {
 const REPORTS_DIR = process.env.REPORTS_DIR || join(root, 'reports');
 const REPORT_WEBHOOK_URL = process.env.REPORT_WEBHOOK_URL;
 const REPORT_WEBHOOK_SECRET = process.env.REPORT_WEBHOOK_SECRET;
+// On hosts without a lasting disk (Render), email is where reports survive.
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const REPORT_EMAIL_TO = process.env.REPORT_EMAIL_TO;
+const REPORT_EMAIL_FROM = process.env.REPORT_EMAIL_FROM || DEFAULT_REPORT_SENDER;
 // Only trust X-Forwarded-For when a reverse proxy we control sets it.
 const TRUST_PROXY = process.env.TRUST_PROXY === '1';
 const reportsPerClient = new ReportRateLimiter(5, 10 * 60_000);
@@ -149,10 +156,18 @@ function handleBugReport(request: IncomingMessage, response: ServerResponse): vo
       ...(tester ? { tester: tester.name } : {}),
       report: checked.report,
     };
-    storeReport(REPORTS_DIR, stored)
+    const saved = checked.screenshot
+      ? storeScreenshot(REPORTS_DIR, stored.id, checked.screenshot).then(name => { stored.screenshot = name; })
+      : Promise.resolve();
+    saved.then(() => storeReport(REPORTS_DIR, stored))
       .then(() => {
         sendJson(response, 202, { id: stored.id, trust: stored.trust });
         console.log(`Bug report ${stored.id} (${stored.report.kind}, ${stored.game}, ${stored.tester ?? 'public'}) queued`);
+        if (RESEND_API_KEY && REPORT_EMAIL_TO) {
+          sendReportEmail(RESEND_API_KEY, buildReportEmail(stored, REPORT_EMAIL_TO, REPORT_EMAIL_FROM, checked.screenshot))
+            .then(() => console.log(`Bug report ${stored.id} emailed`))
+            .catch(error => console.error(`Bug report ${stored.id} email failed: ${(error as Error).message}`));
+        }
         if (REPORT_WEBHOOK_URL) {
           forwardReport(REPORT_WEBHOOK_URL, stored, REPORT_WEBHOOK_SECRET)
             .catch(error => console.error(`Bug report ${stored.id} webhook failed: ${(error as Error).message}`));
@@ -191,6 +206,11 @@ const server = createServer((request, response) => {
 
   if (requestPath === BUG_REPORT_ENDPOINT) {
     handleBugReport(request, response);
+    return;
+  }
+  if (requestPath === '/vendor/modern-screenshot.js' && existsSync(screenshotLibraryPath)) {
+    response.writeHead(200, { 'Content-Type': mimeTypes['.js'], 'Cache-Control': 'public, max-age=86400' });
+    createReadStream(screenshotLibraryPath).pipe(response);
     return;
   }
   if (requestPath === '/robots.txt') {

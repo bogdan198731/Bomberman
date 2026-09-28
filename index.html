@@ -2620,6 +2620,101 @@
       line-height: 1.4;
     }
 
+    .bug-report-evidence {
+      display: grid;
+      gap: 8px;
+    }
+
+    .bug-report-picked {
+      margin: 0;
+      color: #ffb3b3;
+      font-size: 0.75rem;
+      font-weight: 750;
+    }
+
+    .bug-report-shot {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: 6px 10px;
+      font-size: 0.75rem;
+      font-weight: 750;
+    }
+
+    .bug-report-shot[hidden] {
+      display: none;
+    }
+
+    .bug-report-shot input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--p1);
+    }
+
+    .bug-report-shot img {
+      grid-column: 1 / -1;
+      width: 100%;
+      max-height: 180px;
+      object-fit: contain;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      background: #0b1018;
+    }
+
+    .bug-report-shot input:not(:checked) ~ img {
+      opacity: 0.35;
+    }
+
+    /* While pointing at a problem, dialogs stay open but out of sight. */
+    body.bug-picking > :not(main):not(.bug-picker) {
+      visibility: hidden !important;
+    }
+
+    .bug-picker {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      cursor: crosshair;
+    }
+
+    .bug-picker-bar {
+      position: fixed;
+      top: max(12px, env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 8px 8px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 14px;
+      color: var(--ink);
+      background: #121925;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+      font-size: 0.82rem;
+      font-weight: 800;
+      cursor: default;
+    }
+
+    .bug-picker-bar button {
+      min-height: 40px;
+      padding: 0 14px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 10px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, 0.06);
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .bug-picker-highlight {
+      position: fixed;
+      border: 3px solid #ff6b6b;
+      border-radius: 6px;
+      box-shadow: 0 0 0 4000px rgba(4, 7, 12, 0.35);
+      pointer-events: none;
+    }
+
     .bug-report-privacy {
       margin: 0;
       color: var(--muted);
@@ -9706,7 +9801,16 @@
             <span class="bug-report-tester-hint">Saved on this device after a successful report. Clear the field to forget it.</span>
           </div>
         </details>
-        <p class="bug-report-privacy">We also send the page you are on, your screen size, browser, and any recent errors. No personal data.</p>
+        <div class="bug-report-evidence">
+          <button id="bugReportPick" class="settings-action-button" type="button">Point at the problem</button>
+          <p id="bugReportPicked" class="bug-report-picked" hidden></p>
+          <label id="bugReportShotRow" class="bug-report-shot" hidden>
+            <input id="bugReportShotToggle" type="checkbox" checked>
+            <span>Include this screenshot</span>
+            <img id="bugReportShot" alt="Screenshot of the game that will be sent with the report">
+          </label>
+        </div>
+        <p class="bug-report-privacy">We also send the page you are on, your screen size, browser, any recent errors, and the screenshot if it is ticked. No personal data.</p>
         <p id="bugReportStatus" class="bug-report-status" role="status" hidden></p>
         <button id="bugReportSubmit" class="settings-action-button primary" type="submit">Send report</button>
       </form>

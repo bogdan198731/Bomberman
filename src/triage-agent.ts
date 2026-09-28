@@ -1,4 +1,6 @@
-import { mkdir, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { copyFile, mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { StoredReport } from './report-intake.js';
 import { baseClaudeArgs, parseClaudeResult, runClaude } from './claude-cli.js';
@@ -59,7 +61,23 @@ async function triageOne(name: string): Promise<void> {
     stored = await readJson<StoredReport>(claimed);
     const prior = await priorReports();
     const started = Date.now();
-    const result = parseClaudeResult(await runClaude({ cwd: root, args: claudeArgs, prompt: buildTriagePrompt(stored, prior), timeoutMs: TIMEOUT_MS }));
+    // The screenshot is copied into a folder of its own: the only extra place the
+    // agent may read, while reports/ stays off-limits.
+    const shot = stored.screenshot ? join(reportsDir, 'screenshots', stored.screenshot) : undefined;
+    const shotDir = shot && existsSync(shot) ? await mkdtemp(join(tmpdir(), 'triage-shot-')) : undefined;
+    const shotCopy = shotDir ? join(shotDir, 'player-screenshot.jpg') : undefined;
+    if (shot && shotCopy) await copyFile(shot, shotCopy);
+    let result;
+    try {
+      result = parseClaudeResult(await runClaude({
+        cwd: root,
+        args: [...claudeArgs, ...(shotDir ? ['--add-dir', shotDir] : [])],
+        prompt: buildTriagePrompt(stored, prior, shotCopy),
+        timeoutMs: TIMEOUT_MS,
+      }));
+    } finally {
+      if (shotDir) await rm(shotDir, { recursive: true, force: true });
+    }
     const triage = parseTriage(result.output, new Set(prior.map(item => item.id)));
     if (!triage) throw new Error('Claude answered, but not with a usable triage.');
     const triaged: TriagedReport = {

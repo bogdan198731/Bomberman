@@ -14,7 +14,8 @@
     "testers": "npm run build --silent && node dist/testers-cli.js",
     "triage": "npm run build --silent && node dist/triage-agent.js",
     "fix": "npm run build --silent && node dist/fix-agent.js",
-    "prs": "npm run build --silent && node dist/pr-agent.js"
+    "prs": "npm run build --silent && node dist/pr-agent.js",
+    "import-report": "npm run build --silent && node dist/import-report.js"
   },
   "keywords": [
     "game",
@@ -32,6 +33,7 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
+    "modern-screenshot": "^4.7.0",
     "ws": "^8.21.3"
   }
 }
