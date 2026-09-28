@@ -12,6 +12,7 @@ import {
   type FixKind, type FixRecord,
 } from './fix-policy.js';
 import type { TriagedReport } from './triage.js';
+import { reviewFeedback, reviewScreenshots, type VisionReview } from './vision-review.js';
 
 const root = process.cwd();
 const reportsDir = process.env.REPORTS_DIR || join(root, 'reports');
@@ -22,6 +23,7 @@ const evidenceRoot = join(reportsDir, 'evidence');
 const BASE = process.env.FIX_BASE || 'main';
 const MODEL = process.env.FIX_MODEL;
 const MAX_USD = process.env.FIX_MAX_USD || '2.00';
+const REVIEW_MODEL = process.env.REVIEW_MODEL;
 const ATTEMPTS = 2;
 /** Rounds of reproduce-then-fix; a new round starts only when the fixer rejects the test. */
 const ROUNDS = 2;
@@ -296,20 +298,37 @@ async function fixReport(report: TriagedReport, forced: boolean): Promise<FixRec
         const tests = built?.code === 0 ? await runSuite(worktree) : undefined;
         // Every browser test, not just the new one: a style change can reach other screens.
         const visual = tests?.ok ? await runVisual(worktree) : undefined;
+        // Tests measure what they were written to measure; a reviewer looks at the
+        // whole picture. After shots are retaken per attempt so the PR shows this one.
+        let review: VisionReview | undefined;
+        if (kind === 'browser' && visual?.ok) {
+          const afterDir = join(evidenceRoot, report.id, 'after');
+          await rm(afterDir, { recursive: true, force: true });
+          const after = await runVisual(worktree, [record.testFile!], afterDir);
+          if (after.ok) {
+            try {
+              review = await reviewScreenshots(report, join(evidenceRoot, report.id), { model: REVIEW_MODEL });
+              record.costUsd += review.costUsd;
+              record.review = review;
+              log(`vision review: ${review.approved ? 'approved' : 'rejected'}`);
+            } catch (error) {
+              log(`vision review unavailable: ${(error as Error).message}`);
+            }
+          }
+        }
         if (!paths.ok) feedback = `${paths.error}${outsideStyle ? ` First changed line outside a style block: ${outsideStyle}` : ''}`;
         else if (unsafeCss.length) feedback = `Visual fixes may not load anything (url(), @import): ${unsafeCss.join(' | ')}`;
         else if (built!.code !== 0) feedback = `The build fails:\n${clip(built!.output)}`;
         else if (!tests!.ok) feedback = `Tests still fail:\n${clip(tests!.failures.join('\n'))}`;
         else if (!visual!.ok) feedback = `Browser tests still fail:\n${clip(visual!.output)}`;
+        else if (review && !review.approved) feedback = reviewFeedback(review);
         else {
           await git(worktree, 'commit', '-q', '-m', `fix: ${report.triage.title}\n\n${answer.summary}\n\nReport: ${report.id}\n\nCo-Authored-By: Claude <noreply@anthropic.com>`);
           record.commits.push((await git(worktree, 'rev-parse', '--short', 'HEAD')).trim());
           record.diffLines = lines;
           record.outcome = 'fixed';
           if (kind === 'browser') {
-            // The same spec on the fixed code gives matching names for the after shots.
-            const after = await runVisual(worktree, [record.testFile!], join(evidenceRoot, report.id, 'after'));
-            if (after.ok) record.evidenceDir = join(evidenceRoot, report.id);
+            if (existsSync(join(evidenceRoot, report.id, 'after'))) record.evidenceDir = join(evidenceRoot, report.id);
             else log('after screenshots failed; the PR will have none');
           }
           log(`fixed (${lines} lines in ${changed.join(', ')})`);

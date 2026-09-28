@@ -103,7 +103,8 @@ test('GitHub remotes parse from SSH and HTTPS', () => {
 });
 
 test('a visual fix is eligible only when a browser spec and styles alone changed', () => {
-  const visualFix: FixRecord = { ...fix, kind: 'browser', testFile: 'tests/visual/mines-flag.spec.ts' };
+  const approved = { approved: true, fixed: true, readable: true, fitsDesign: true, regressions: [], summary: 'Clearly green now.' };
+  const visualFix: FixRecord = { ...fix, kind: 'browser', testFile: 'tests/visual/mines-flag.spec.ts', review: approved };
   const visual: AutoMergeInput = {
     ...input, fix: visualFix, changedFiles: ['tests/visual/mines-flag.spec.ts', 'index.html'],
     triaged: { ...triaged, triage: { ...triaged.triage, testKind: 'browser' } },
@@ -115,6 +116,14 @@ test('a visual fix is eligible only when a browser spec and styles alone changed
   assert.deepEqual(failing({ changedFiles: ['index.html'] }), ['the branch changes both a test and code']);
   assert.equal(autoMergeChecks({ ...visual, changedFiles: ['tests/visual/mines-flag.spec.ts', 'public/arcade-ux.css'] }).eligible, true);
   assert.deepEqual(failing({ unsafeCss: ['background: url(https://evil.example/a.png)'] }), ['only styles changed (CSS in <style> blocks or public/*.css)']);
+  const review = 'a vision review approved the before/after screenshots';
+  assert.deepEqual(failing({ fix: { ...visualFix, review: undefined } }), [review]);
+  assert.deepEqual(failing({ fix: { ...visualFix, review: { ...approved, approved: false, readable: false } } }), [review]);
+  // Unit fixes have no screenshots, so the review check does not apply to them.
+  assert.ok(!autoMergeChecks(input).checks.some(check => check.label === review));
+  assert.match(prBody(visual, false), /\*\*Vision review: approved\*\* - ✅ problem gone · ✅ text readable · ✅ fits the design/);
+  assert.match(prBody({ ...visual, fix: { ...visualFix, review: undefined } }, false), /none ran, so a person must check/);
+  assert.doesNotMatch(prBody(input, false), /Vision review/);
 });
 
 test('screenshots pair by name, phone first, and a missing side stays visible', () => {
