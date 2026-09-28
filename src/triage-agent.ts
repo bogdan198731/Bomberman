@@ -22,11 +22,12 @@ const POLL_MS = Number(process.env.TRIAGE_POLL_SECONDS || 30) * 1000;
 /**
  * The agent reads code and nothing else: no shell, no edits, no web. Reports
  * and tester hashes are also git-ignored, which keeps them out of Grep and Glob.
+ * Git history is off-limits too: commit messages are not evidence about the code.
  */
 const claudeArgs = [
   ...baseClaudeArgs({ schema: TRIAGE_SCHEMA, systemPrompt: TRIAGE_SYSTEM_PROMPT, maxUsd: MAX_USD, model: MODEL }),
   '--tools', 'Read,Grep,Glob',
-  '--disallowedTools', 'Read(./reports/**)', 'Read(./testers.json)', 'Read(./.env*)',
+  '--disallowedTools', 'Read(./reports/**)', 'Read(./testers.json)', 'Read(./.env*)', 'Read(./.git/**)',
 ];
 
 async function readJson<T>(file: string): Promise<T> {

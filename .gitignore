@@ -6,3 +6,5 @@ dist/
 Thumbs.db
 reports/
 testers.json
+test-results/
+playwright-report/

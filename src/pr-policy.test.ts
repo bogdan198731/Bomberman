@@ -25,7 +25,7 @@ const fix: FixRecord = {
   testName: 'a long-press cannot flag a square that is already revealed', summary: 'Added a revealed guard.',
   diffLines: 2, costUsd: 0.18, finishedAt: '2026-09-27T11:05:00.000Z',
 };
-const input: AutoMergeInput = { triaged, fix, changedFiles: ['src/mines.test.ts', 'src/mines.ts'], diffLines: 2, testerActive: true };
+const input: AutoMergeInput = { triaged, fix, changedFiles: ['src/mines.test.ts', 'src/mines.ts'], diffLines: 2, testerActive: true, htmlStyleOnly: true };
 
 test('a verified tester\'s small, test-first fix is eligible', () => {
   const result = autoMergeChecks(input);
@@ -98,4 +98,19 @@ test('GitHub remotes parse from SSH and HTTPS', () => {
   assert.deepEqual(parseGitHubRemote('git@github.com:bogdan198731/Bomberman.git\n'), { owner: 'bogdan198731', repo: 'Bomberman' });
   assert.deepEqual(parseGitHubRemote('https://github.com/bogdan198731/Bomberman'), { owner: 'bogdan198731', repo: 'Bomberman' });
   assert.equal(parseGitHubRemote('https://gitlab.com/a/b.git'), null);
+});
+
+test('a visual fix is eligible only when a browser spec and styles alone changed', () => {
+  const visualFix: FixRecord = { ...fix, kind: 'browser', testFile: 'tests/visual/mines-flag.spec.ts' };
+  const visual: AutoMergeInput = {
+    ...input, fix: visualFix, changedFiles: ['tests/visual/mines-flag.spec.ts', 'index.html'],
+    triaged: { ...triaged, triage: { ...triaged.triage, testKind: 'browser' } },
+  };
+  assert.equal(autoMergeChecks(visual).eligible, true);
+  const failing = (change: Partial<AutoMergeInput>) => autoMergeChecks({ ...visual, ...change }).checks.filter(check => !check.ok).map(check => check.label);
+  assert.deepEqual(failing({ htmlStyleOnly: false }), ['only styles changed (CSS in <style> blocks or public/*.css)']);
+  assert.deepEqual(failing({ changedFiles: ['tests/visual/mines-flag.spec.ts', 'index.html', 'src/mines.ts'] }), ['only styles changed (CSS in <style> blocks or public/*.css)']);
+  assert.deepEqual(failing({ changedFiles: ['index.html'] }), ['the branch changes both a test and code']);
+  assert.equal(autoMergeChecks({ ...visual, changedFiles: ['tests/visual/mines-flag.spec.ts', 'public/arcade-ux.css'] }).eligible, true);
+  assert.deepEqual(failing({ unsafeCss: ['background: url(https://evil.example/a.png)'] }), ['only styles changed (CSS in <style> blocks or public/*.css)']);
 });

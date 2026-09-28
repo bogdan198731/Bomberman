@@ -1,4 +1,4 @@
-import { FIX_LIMITS, isFixableModule, isTestFile, type FixRecord } from './fix-policy.js';
+import { FIX_LIMITS, isBrowserSpec, isFixableModule, isStyleFile, isTestFile, type FixRecord } from './fix-policy.js';
 import type { TriagedReport } from './triage.js';
 
 export const PR_LABELS = {
@@ -17,6 +17,10 @@ export interface AutoMergeInput {
   diffLines: number;
   /** The reporting tester still holds a live code right now. */
   testerActive: boolean;
+  /** index.html, if the branch changes it, differs only inside <style> blocks. */
+  htmlStyleOnly: boolean;
+  /** Added CSS lines that load something (url(), @import); see unsafeCssAdditions. */
+  unsafeCss?: readonly string[];
 }
 
 /**
@@ -24,10 +28,12 @@ export interface AutoMergeInput {
  * or will not merge by itself. GitHub still waits for CI before merging.
  */
 export function autoMergeChecks(input: AutoMergeInput): { eligible: boolean; checks: { ok: boolean; label: string }[] } {
-  const { triaged, fix, changedFiles, diffLines, testerActive } = input;
+  const { triaged, fix, changedFiles, diffLines, testerActive, htmlStyleOnly } = input;
+  const kind = fix.kind ?? 'unit';
+  const isAnyTest = (file: string) => isTestFile(file) || isBrowserSpec(file);
   const { triage } = triaged;
-  const code = changedFiles.filter(file => !isTestFile(file));
-  const tests = changedFiles.filter(isTestFile);
+  const code = changedFiles.filter(file => !isAnyTest(file));
+  const tests = changedFiles.filter(isAnyTest);
   const checks = [
     { ok: triaged.trust === 'tester' && Boolean(triaged.tester), label: 'reported with a verified tester code' },
     { ok: testerActive, label: 'that tester\'s code is still active' },
@@ -38,7 +44,9 @@ export function autoMergeChecks(input: AutoMergeInput): { eligible: boolean; che
     { ok: !fix.forced, label: 'picked by triage, not forced by hand' },
     { ok: fix.outcome === 'fixed' && fix.commits.length === 2, label: 'a failing test came first, then the fix' },
     { ok: tests.length > 0 && code.length > 0, label: 'the branch changes both a test and code' },
-    { ok: code.every(isFixableModule), label: 'only unprotected game modules changed' },
+    kind === 'browser'
+      ? { ok: code.every(isStyleFile) && htmlStyleOnly && !input.unsafeCss?.length, label: 'only styles changed (CSS in <style> blocks or public/*.css)' }
+      : { ok: code.every(isFixableModule), label: 'only unprotected game modules changed' },
     { ok: code.length <= FIX_LIMITS.files && diffLines <= FIX_LIMITS.lines, label: `within ${FIX_LIMITS.files} files and ${FIX_LIMITS.lines} lines` },
   ];
   return { eligible: checks.every(check => check.ok), checks };

@@ -2,7 +2,9 @@ import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { isTestFile, linesFromNumstat, type FixRecord } from './fix-policy.js';
+import {
+  isBrowserSpec, isStyleFile, isTestFile, linesFromNumstat, styleOnlyChange, unsafeCssAdditions, type FixRecord,
+} from './fix-policy.js';
 import {
   DEFAULT_DAILY_AUTO_MERGES, PR_LABELS, autoMergeChecks, parseGitHubRemote, prBody, prTitle, withinDailyCap,
   type AutoMergeInput,
@@ -95,15 +97,20 @@ async function readJson<T>(file: string): Promise<T> {
   return JSON.parse(await readFile(file, 'utf8')) as T;
 }
 
-async function branchFacts(fix: FixRecord): Promise<{ changedFiles: string[]; diffLines: number }> {
+async function branchFacts(fix: FixRecord): Promise<{ changedFiles: string[]; diffLines: number; htmlStyleOnly: boolean; unsafeCss: string[] }> {
   const range = `${fix.base}..${fix.branch}`;
   const changedFiles = (await git('diff', '--name-only', range)).split('\n').map(line => line.trim()).filter(Boolean);
   // Size limits apply to production code; the test is allowed to be thorough.
   const codeNumstat = (await git('diff', '--numstat', range)).split('\n').filter(line => {
     const path = line.split('\t')[2];
-    return path && !isTestFile(path);
+    return path && !isTestFile(path) && !isBrowserSpec(path);
   }).join('\n');
-  return { changedFiles, diffLines: linesFromNumstat(codeNumstat) };
+  // Re-checked from git, not taken from the fix record.
+  const htmlStyleOnly = !changedFiles.includes('index.html')
+    || styleOnlyChange(await git('show', `${fix.base}:index.html`), await git('show', `${fix.branch}:index.html`));
+  const styleFiles = changedFiles.filter(isStyleFile);
+  const unsafeCss = styleFiles.length ? unsafeCssAdditions(await git('diff', '-U0', range, '--', ...styleFiles)) : [];
+  return { changedFiles, diffLines: linesFromNumstat(codeNumstat), htmlStyleOnly, unsafeCss };
 }
 
 async function main(): Promise<void> {
@@ -140,16 +147,22 @@ async function main(): Promise<void> {
       console.log(`  labels: ${labels.join(', ')} | auto-merge: ${fix.autoMerge}${fix.autoMergeReasons.length ? ` (missing: ${fix.autoMergeReasons.join('; ')})` : ''}`);
       if (dryRun || !github) { console.log(`  dry run - would push ${fix.branch} and open a PR into ${PR_BASE}`); continue; }
 
-      if (!labelsReady) {
-        for (const label of Object.values(PR_LABELS)) await github.ensureLabel(label);
-        labelsReady = true;
-      }
       // Never forced: if the remote branch moved, a person should look.
       await git('push', '--quiet', 'origin', `${fix.branch}:${fix.branch}`);
       const pull = (await github.openPull(fix.branch)) ?? await github.createPull(fix.branch, title, prBody(input, autoMerge));
       fix.prNumber = pull.number;
       fix.prUrl = pull.html_url;
-      await github.addLabels(pull.number, labels);
+      // Labels are for people scanning the PR list; the merge gates live in code,
+      // so a token without Issues permission must not block the PR itself.
+      try {
+        if (!labelsReady) {
+          for (const label of Object.values(PR_LABELS)) await github.ensureLabel(label);
+          labelsReady = true;
+        }
+        await github.addLabels(pull.number, labels);
+      } catch (error) {
+        console.warn(`  labels skipped: ${(error as Error).message} (give the token Issues: read and write to enable them)`);
+      }
       if (autoMerge) {
         try {
           await github.enableAutoMerge(pull.node_id);

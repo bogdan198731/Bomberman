@@ -1,13 +1,15 @@
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { cp, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join, relative } from 'node:path';
+import { createServer } from 'node:net';
+import { homedir, tmpdir } from 'node:os';
+import { dirname, join, relative } from 'node:path';
 import { baseClaudeArgs, parseClaudeResult, runClaude } from './claude-cli.js';
 import {
-  FIX_SCHEMA, FIX_SYSTEM_PROMPT, PROTECTED_MODULES, REPRODUCE_SCHEMA, REPRODUCE_SYSTEM_PROMPT,
-  buildFixPrompt, buildReproducePrompt, checkFixPaths, checkReproducePaths, clip, fixEligibility,
-  linesFromNumstat, typeErrorsOutsideTests, type FixRecord,
+  BROWSER_FIX_SYSTEM_PROMPT, BROWSER_REPRODUCE_SYSTEM_PROMPT, FIX_SCHEMA, FIX_SYSTEM_PROMPT, PROTECTED_MODULES,
+  REPRODUCE_SCHEMA, REPRODUCE_SYSTEM_PROMPT, buildFixPrompt, buildReproducePrompt, checkFixPaths, checkReproducePaths,
+  clip, firstNonStyleChange, fixEligibility, fixKindFor, linesFromNumstat, lintBrowserSpec, typeErrorsOutsideTests, unsafeCssAdditions,
+  type FixKind, type FixRecord,
 } from './fix-policy.js';
 import type { TriagedReport } from './triage.js';
 
@@ -23,7 +25,11 @@ const ATTEMPTS = 2;
 const ROUNDS = 2;
 const CLAUDE_TIMEOUT_MS = 10 * 60_000;
 const TEST_TIMEOUT_MS = 60_000;
+const VISUAL_TIMEOUT_MS = 5 * 60_000;
 const tsc = join(root, 'node_modules', 'typescript', 'lib', 'tsc.js');
+const playwrightCli = join('node_modules', '@playwright', 'test', 'cli.js');
+const browsersPath = process.env.PLAYWRIGHT_BROWSERS_PATH
+  || (process.platform === 'win32' ? join(process.env.LOCALAPPDATA ?? homedir(), 'ms-playwright') : join(homedir(), '.cache', 'ms-playwright'));
 const worktreesRoot = join(tmpdir(), 'bomberman-fix');
 
 /** Recursive deletes only ever happen inside the scratch area for worktrees. */
@@ -90,6 +96,38 @@ async function runSuite(worktree: string, only?: readonly string[]): Promise<{ o
   return { ok: failures.length === 0, failures };
 }
 
+function freePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.on('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const { port } = server.address() as { port: number };
+      server.close(() => resolve(port));
+    });
+  });
+}
+
+/**
+ * Browser tests need to start Chromium, so Node's permission model cannot wrap
+ * them; lintBrowserSpec restricts what a generated spec may contain instead.
+ * The environment is still emptied apart from what Playwright needs to run.
+ */
+async function runVisual(worktree: string, only?: readonly string[]): Promise<{ ok: boolean; output: string }> {
+  const scratch = `${worktree}-tmp`;
+  await mkdir(scratch, { recursive: true });
+  const result = await run(process.execPath, [playwrightCli, 'test', ...(only ?? []), '--pass-with-no-tests'], {
+    cwd: worktree,
+    env: {
+      // Playwright starts the game server through the system shell.
+      PATH: [dirname(process.execPath), ...(process.env.SystemRoot ? [join(process.env.SystemRoot, 'System32')] : ['/usr/bin', '/bin'])].join(process.platform === 'win32' ? ';' : ':'),
+      ComSpec: process.env.ComSpec, SystemRoot: process.env.SystemRoot, TEMP: scratch, TMP: scratch, TMPDIR: scratch,
+      PLAYWRIGHT_BROWSERS_PATH: browsersPath, VISUAL_PORT: String(await freePort()), CI: '1',
+    },
+    timeoutMs: VISUAL_TIMEOUT_MS,
+  });
+  return { ok: result.code === 0, output: result.output };
+}
+
 async function changedPaths(worktree: string): Promise<string[]> {
   await git(worktree, 'add', '-A');
   return (await git(worktree, 'diff', '--cached', '--name-only')).split('\n').map(line => line.trim()).filter(Boolean);
@@ -100,26 +138,44 @@ async function discard(worktree: string): Promise<void> {
   await git(worktree, 'clean', '-q', '-fd');
 }
 
-function claudeArgs(phase: 'reproduce' | 'fix'): string[] {
+function claudeArgs(phase: 'reproduce' | 'fix', kind: FixKind): string[] {
   const protectedFiles = [...PROTECTED_MODULES].flatMap(file => [file, file.replace(/\.ts$/, '.test.ts')]);
   const deny = (files: string[]) => files.flatMap(file => [`Edit(${file})`, `Write(${file})`]);
+  // Commit messages are hints, not evidence; the agents judge the code alone.
+  const hideHistory = 'Read(./.git/**)';
+  if (kind === 'browser') {
+    return phase === 'reproduce'
+      ? [
+        ...baseClaudeArgs({ schema: REPRODUCE_SCHEMA, systemPrompt: BROWSER_REPRODUCE_SYSTEM_PROMPT, maxUsd: MAX_USD, model: MODEL }),
+        '--tools', 'Read,Grep,Glob,Edit,Write',
+        '--allowedTools', 'Write(tests/visual/*.spec.ts)', 'Edit(tests/visual/*.spec.ts)',
+        '--disallowedTools', hideHistory, ...deny(['tests/visual/helpers.ts', 'playwright.config.ts']),
+      ]
+      : [
+        ...baseClaudeArgs({ schema: FIX_SCHEMA, systemPrompt: BROWSER_FIX_SYSTEM_PROMPT, maxUsd: MAX_USD, model: MODEL }),
+        '--tools', 'Read,Grep,Glob,Edit,Write',
+        '--allowedTools', 'Edit(index.html)', 'Edit(public/*.css)', 'Write(public/*.css)',
+        '--disallowedTools', hideHistory, ...deny(['tests/**', 'src/**', 'playwright.config.ts']),
+      ];
+  }
   return phase === 'reproduce'
     ? [
       ...baseClaudeArgs({ schema: REPRODUCE_SCHEMA, systemPrompt: REPRODUCE_SYSTEM_PROMPT, maxUsd: MAX_USD, model: MODEL }),
       '--tools', 'Read,Grep,Glob,Edit,Write',
       '--allowedTools', 'Edit(src/*.test.ts)', 'Write(src/*.test.ts)',
-      '--disallowedTools', ...deny(protectedFiles),
+      '--disallowedTools', hideHistory, ...deny(protectedFiles),
     ]
     : [
       ...baseClaudeArgs({ schema: FIX_SCHEMA, systemPrompt: FIX_SYSTEM_PROMPT, maxUsd: MAX_USD, model: MODEL }),
       '--tools', 'Read,Grep,Glob,Edit,Write',
       '--allowedTools', 'Edit(src/*.ts)', 'Write(src/*.ts)',
-      '--disallowedTools', ...deny(['src/*.test.ts', ...protectedFiles]),
+      '--disallowedTools', hideHistory, ...deny(['src/*.test.ts', ...protectedFiles]),
     ];
 }
 
 async function fixReport(report: TriagedReport, forced: boolean): Promise<FixRecord> {
-  const record: FixRecord = { id: report.id, title: report.triage.title, outcome: 'error', forced, base: '', commits: [], costUsd: 0, finishedAt: '' };
+  const kind = fixKindFor(report);
+  const record: FixRecord = { id: report.id, title: report.triage.title, kind, outcome: 'error', forced, base: '', commits: [], costUsd: 0, finishedAt: '' };
   const branch = `fix/${report.id}`;
   const worktree = join(worktreesRoot, report.id);
   let keepBranch = false;
@@ -137,6 +193,8 @@ async function fixReport(report: TriagedReport, forced: boolean): Promise<FixRec
     const baseBuild = await build(worktree);
     if (baseBuild.code !== 0) throw new Error(`The base does not build:\n${clip(baseBuild.output)}`);
     if (!(await runSuite(worktree)).ok) throw new Error('The base test suite already fails; fix that first.');
+    const baseVisual = await runVisual(worktree);
+    if (!baseVisual.ok) throw new Error(`The base browser tests already fail; fix that first.\n${clip(baseVisual.output)}`);
 
     const base = (await git(worktree, 'rev-parse', 'HEAD')).trim();
     record.base = base;
@@ -147,8 +205,8 @@ async function fixReport(report: TriagedReport, forced: boolean): Promise<FixRec
       let failure = '';
       record.testFile = undefined;
       for (let attempt = 1; attempt <= ATTEMPTS && !record.testFile; attempt++) {
-        log(`reproduce, attempt ${attempt}${round > 1 ? ` (round ${round})` : ''}`);
-        const result = parseClaudeResult(await runClaude({ cwd: worktree, args: claudeArgs('reproduce'), prompt: buildReproducePrompt(report, feedback), timeoutMs: CLAUDE_TIMEOUT_MS }));
+        log(`reproduce (${kind}), attempt ${attempt}${round > 1 ? ` (round ${round})` : ''}`);
+        const result = parseClaudeResult(await runClaude({ cwd: worktree, args: claudeArgs('reproduce', kind), prompt: buildReproducePrompt(report, feedback), timeoutMs: CLAUDE_TIMEOUT_MS }));
         record.costUsd += result.costUsd;
         const answer = result.output as { status: string; testFile: string; testName: string; explanation: string };
         record.explanation = answer.explanation;
@@ -158,11 +216,23 @@ async function fixReport(report: TriagedReport, forced: boolean): Promise<FixRec
           return record;
         }
         const changed = await changedPaths(worktree);
-        const paths = checkReproducePaths(changed);
-        const built = paths.ok ? await build(worktree) : undefined;
-        const strayErrors = built ? typeErrorsOutsideTests(built.output, changed) : [];
-        const tests = paths.ok && !strayErrors.length ? await runSuite(worktree, changed.map(file => file.replace(/^src\/(.+)\.ts$/, 'dist/$1.js'))) : undefined;
+        const paths = checkReproducePaths(changed, kind);
+        const lint = kind === 'browser' && paths.ok
+          ? (await Promise.all(changed.map(async file => lintBrowserSpec(await readFile(join(worktree, file), 'utf8')).map(problem => `${file}: ${problem}`)))).flat()
+          : [];
+        const built = paths.ok && !lint.length ? await build(worktree) : undefined;
+        const strayErrors = built && kind === 'unit' ? typeErrorsOutsideTests(built.output, changed) : [];
+        let tests: { ok: boolean; failures: string[] } | undefined;
+        if (built && !strayErrors.length) {
+          if (kind === 'browser') {
+            const visual = await runVisual(worktree, changed);
+            tests = { ok: visual.ok, failures: visual.ok ? [] : [clip(visual.output, 6000)] };
+          } else {
+            tests = await runSuite(worktree, changed.map(file => file.replace(/^src\/(.+)\.ts$/, 'dist/$1.js')));
+          }
+        }
         if (!paths.ok) feedback = paths.error;
+        else if (lint.length) feedback = `Your spec uses things browser tests may not use:\n${lint.join('\n')}`;
         else if (strayErrors.length) feedback = `Your test broke the build outside the test files:\n${clip(built!.output)}`;
         else if (tests!.ok) feedback = 'Your test passes against the current code, so it does not reproduce the problem.';
         else if (!tests!.failures.join('\n').includes(answer.testName)) feedback = `The failure did not come from "${answer.testName}":\n${clip(tests!.failures.join('\n'))}`;
@@ -191,8 +261,8 @@ async function fixReport(report: TriagedReport, forced: boolean): Promise<FixRec
       feedback = undefined;
       let testRejected = false;
       for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
-        log(`fix, attempt ${attempt}`);
-        const result = parseClaudeResult(await runClaude({ cwd: worktree, args: claudeArgs('fix'), prompt: buildFixPrompt(report, record.testFile, record.testName!, failure, feedback), timeoutMs: CLAUDE_TIMEOUT_MS }));
+        log(`fix (${kind}), attempt ${attempt}`);
+        const result = parseClaudeResult(await runClaude({ cwd: worktree, args: claudeArgs('fix', kind), prompt: buildFixPrompt(report, record.testFile, record.testName!, failure, feedback), timeoutMs: CLAUDE_TIMEOUT_MS }));
         record.costUsd += result.costUsd;
         const answer = result.output as { status: string; summary: string };
         record.summary = answer.summary;
@@ -211,12 +281,21 @@ async function fixReport(report: TriagedReport, forced: boolean): Promise<FixRec
         }
         const changed = await changedPaths(worktree);
         const lines = linesFromNumstat(await git(worktree, 'diff', '--cached', '--numstat'));
-        const paths = checkFixPaths(changed, lines);
-        const built = paths.ok ? await build(worktree) : undefined;
+        const outsideStyle = changed.includes('index.html')
+          ? firstNonStyleChange(await git(worktree, 'show', 'HEAD:index.html'), await readFile(join(worktree, 'index.html'), 'utf8'))
+          : undefined;
+        const htmlStyleOnly = outsideStyle === undefined;
+        const paths = checkFixPaths(changed, lines, kind, htmlStyleOnly);
+        const unsafeCss = kind === 'browser' ? unsafeCssAdditions(await git(worktree, 'diff', '--cached', '-U0')) : [];
+        const built = paths.ok && !unsafeCss.length ? await build(worktree) : undefined;
         const tests = built?.code === 0 ? await runSuite(worktree) : undefined;
-        if (!paths.ok) feedback = paths.error;
+        // Every browser test, not just the new one: a style change can reach other screens.
+        const visual = tests?.ok ? await runVisual(worktree) : undefined;
+        if (!paths.ok) feedback = `${paths.error}${outsideStyle ? ` First changed line outside a style block: ${outsideStyle}` : ''}`;
+        else if (unsafeCss.length) feedback = `Visual fixes may not load anything (url(), @import): ${unsafeCss.join(' | ')}`;
         else if (built!.code !== 0) feedback = `The build fails:\n${clip(built!.output)}`;
         else if (!tests!.ok) feedback = `Tests still fail:\n${clip(tests!.failures.join('\n'))}`;
+        else if (!visual!.ok) feedback = `Browser tests still fail:\n${clip(visual!.output)}`;
         else {
           await git(worktree, 'commit', '-q', '-m', `fix: ${report.triage.title}\n\n${answer.summary}\n\nReport: ${report.id}\n\nCo-Authored-By: Claude <noreply@anthropic.com>`);
           record.commits.push((await git(worktree, 'rev-parse', '--short', 'HEAD')).trim());
