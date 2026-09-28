@@ -1,4 +1,5 @@
 import { FIX_LIMITS, isBrowserSpec, isFixableModule, isStyleFile, isTestFile, type FixRecord } from './fix-policy.js';
+import { sideEffectSummary } from './side-effects.js';
 import type { TriagedReport } from './triage.js';
 
 export const PR_LABELS = {
@@ -47,7 +48,10 @@ export function autoMergeChecks(input: AutoMergeInput): { eligible: boolean; che
     kind === 'browser'
       ? { ok: code.every(isStyleFile) && htmlStyleOnly && !input.unsafeCss?.length, label: 'only styles changed (CSS in <style> blocks or public/*.css)' }
       : { ok: code.every(isFixableModule), label: 'only unprotected game modules changed' },
-    ...(kind === 'browser' ? [{ ok: fix.review?.approved === true, label: 'a vision review approved the before/after screenshots' }] : []),
+    ...(kind === 'browser' ? [
+      { ok: fix.review?.approved === true, label: 'a vision review approved the before/after screenshots' },
+      { ok: Boolean(fix.sideEffects && fix.sideEffects.checked > 0 && !fix.sideEffects.others.length), label: 'no other game\'s screen or the hub changed' },
+    ] : []),
     { ok: code.length <= FIX_LIMITS.files && diffLines <= FIX_LIMITS.lines, label: `within ${FIX_LIMITS.files} files and ${FIX_LIMITS.lines} lines` },
   ];
   return { eligible: checks.every(check => check.ok), checks };
@@ -108,6 +112,11 @@ ${pairs.map(pair => `| ${pair.label} | ${cell('before', pair.before)} | ${cell('
 
 function reviewSection(fix: FixRecord): string {
   if ((fix.kind ?? 'unit') !== 'browser') return '';
+  const effects = `**Side effects** - ${sideEffectSummary(fix.sideEffects)}${fix.sideEffects?.own.length ? `; on this game: ${fix.sideEffects.own.map(change => `${change.name} (${change.where})`).join(', ')}` : ''}\n\n`;
+  return effects + reviewText(fix);
+}
+
+function reviewText(fix: FixRecord): string {
   if (!fix.review) return '**Vision review** - none ran, so a person must check the screenshots.\n\n';
   const { review } = fix;
   const marks = [['problem gone', review.fixed], ['text readable', review.readable], ['fits the design', review.fitsDesign]] as const;

@@ -13,6 +13,7 @@ import {
 } from './fix-policy.js';
 import type { TriagedReport } from './triage.js';
 import { reviewFeedback, reviewScreenshots, type VisionReview } from './vision-review.js';
+import { compareScreens, findUnstable, sideEffectFeedback, sideEffectSummary, type SideEffects } from './side-effects.js';
 
 const root = process.cwd();
 const reportsDir = process.env.REPORTS_DIR || join(root, 'reports');
@@ -116,7 +117,7 @@ function freePort(): Promise<number> {
  * them; lintBrowserSpec restricts what a generated spec may contain instead.
  * The environment is still emptied apart from what Playwright needs to run.
  */
-async function runVisual(worktree: string, only?: readonly string[], evidenceDir?: string): Promise<{ ok: boolean; output: string }> {
+async function runVisual(worktree: string, only?: readonly string[], evidenceDir?: string, screensDir?: string): Promise<{ ok: boolean; output: string }> {
   const scratch = `${worktree}-tmp`;
   await mkdir(scratch, { recursive: true });
   const result = await run(process.execPath, [playwrightCli, 'test', ...(only ?? []), '--pass-with-no-tests'], {
@@ -127,6 +128,7 @@ async function runVisual(worktree: string, only?: readonly string[], evidenceDir
       ComSpec: process.env.ComSpec, SystemRoot: process.env.SystemRoot, TEMP: scratch, TMP: scratch, TMPDIR: scratch,
       PLAYWRIGHT_BROWSERS_PATH: browsersPath, VISUAL_PORT: String(await freePort()), CI: '1',
       ...(evidenceDir ? { VISUAL_EVIDENCE_DIR: evidenceDir } : {}),
+      ...(screensDir ? { VISUAL_SCREENS_DIR: screensDir } : {}),
     },
     timeoutMs: VISUAL_TIMEOUT_MS,
   });
@@ -200,6 +202,23 @@ async function fixReport(report: TriagedReport, forced: boolean): Promise<FixRec
     if (!(await runSuite(worktree)).ok) throw new Error('The base test suite already fails; fix that first.');
     const baseVisual = await runVisual(worktree);
     if (!baseVisual.ok) throw new Error(`The base browser tests already fail; fix that first.\n${clip(baseVisual.output)}`);
+
+    // Every screen, captured twice before any change: the reference for side
+    // effects, and a way to find screens too lively to compare.
+    const screensRoot = join(evidenceRoot, report.id, 'screens');
+    const screens = { a: join(screensRoot, 'baseline'), b: join(screensRoot, 'baseline-again'), after: join(screensRoot, 'after') };
+    let unstable: string[] | undefined;
+    if (kind === 'browser') {
+      await rm(screensRoot, { recursive: true, force: true });
+      await runVisual(worktree, ['tests/screens'], undefined, screens.a);
+      await runVisual(worktree, ['tests/screens'], undefined, screens.b);
+      if (existsSync(screens.a)) {
+        unstable = findUnstable(screens.a, screens.b);
+        log(`screens: ${(await readdir(screens.a)).length} captured${unstable.length ? `, ${unstable.length} unstable` : ''}`);
+      } else {
+        log('screens: this base cannot capture screens, so side effects will not be checked');
+      }
+    }
 
     const base = (await git(worktree, 'rev-parse', 'HEAD')).trim();
     record.base = base;
@@ -300,8 +319,16 @@ async function fixReport(report: TriagedReport, forced: boolean): Promise<FixRec
         const visual = tests?.ok ? await runVisual(worktree) : undefined;
         // Tests measure what they were written to measure; a reviewer looks at the
         // whole picture. After shots are retaken per attempt so the PR shows this one.
+        let effects: SideEffects | undefined;
+        if (kind === 'browser' && visual?.ok && unstable) {
+          await rm(screens.after, { recursive: true, force: true });
+          await runVisual(worktree, ['tests/screens'], undefined, screens.after);
+          effects = compareScreens(screens.a, screens.after, unstable, report.game);
+          record.sideEffects = effects;
+          log(`side effects: ${sideEffectSummary(effects)}`);
+        }
         let review: VisionReview | undefined;
-        if (kind === 'browser' && visual?.ok) {
+        if (kind === 'browser' && visual?.ok && !effects?.others.length) {
           const afterDir = join(evidenceRoot, report.id, 'after');
           await rm(afterDir, { recursive: true, force: true });
           const after = await runVisual(worktree, [record.testFile!], afterDir);
@@ -321,6 +348,7 @@ async function fixReport(report: TriagedReport, forced: boolean): Promise<FixRec
         else if (built!.code !== 0) feedback = `The build fails:\n${clip(built!.output)}`;
         else if (!tests!.ok) feedback = `Tests still fail:\n${clip(tests!.failures.join('\n'))}`;
         else if (!visual!.ok) feedback = `Browser tests still fail:\n${clip(visual!.output)}`;
+        else if (effects?.others.length) feedback = sideEffectFeedback(effects, report.game);
         else if (review && !review.approved) feedback = reviewFeedback(review);
         else {
           await git(worktree, 'commit', '-q', '-m', `fix: ${report.triage.title}\n\n${answer.summary}\n\nReport: ${report.id}\n\nCo-Authored-By: Claude <noreply@anthropic.com>`);

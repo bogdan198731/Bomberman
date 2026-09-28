@@ -4,7 +4,8 @@ import { defineConfig } from '@playwright/test';
 const port = Number(process.env.VISUAL_PORT || 4310);
 
 export default defineConfig({
-  testDir: 'tests/visual',
+  // Agent-written specs live in tests/visual; tests/screens holds the pipeline's own capture.
+  testDir: 'tests',
   reporter: [['list']],
   timeout: 30_000,
   use: {

@@ -1,3 +1,4 @@
+import type { SideEffects } from './side-effects.js';
 import type { TriagedReport } from './triage.js';
 
 /** Modules the agents must never change on their own: the pipeline itself, the server and the shell. */
@@ -38,6 +39,8 @@ export interface FixRecord {
   finishedAt: string;
   /** Holds before/ and after/ screenshots for a visual fix. */
   evidenceDir?: string;
+  /** Every screen before and after the committed fix; missing when the base could not capture them. */
+  sideEffects?: SideEffects;
   /** The vision review of the committed fix's screenshots; missing when none ran. */
   review?: { approved: boolean; fixed: boolean; readable: boolean; fitsDesign: boolean; regressions: string[]; summary: string };
   prNumber?: number;
