@@ -8,7 +8,7 @@ import { baseClaudeArgs, parseClaudeResult, runClaude } from './claude-cli.js';
 import {
   BROWSER_FIX_SYSTEM_PROMPT, BROWSER_REPRODUCE_SYSTEM_PROMPT, FIX_SCHEMA, FIX_SYSTEM_PROMPT, PROTECTED_MODULES,
   REPRODUCE_SCHEMA, REPRODUCE_SYSTEM_PROMPT, buildFixPrompt, buildReproducePrompt, checkFixPaths, checkReproducePaths,
-  clip, fixEligibility, fixKindFor, linesFromNumstat, lintBrowserSpec, styleOnlyChange, typeErrorsOutsideTests, unsafeCssAdditions,
+  clip, firstNonStyleChange, fixEligibility, fixKindFor, linesFromNumstat, lintBrowserSpec, typeErrorsOutsideTests, unsafeCssAdditions,
   type FixKind, type FixRecord,
 } from './fix-policy.js';
 import type { TriagedReport } from './triage.js';
@@ -118,7 +118,9 @@ async function runVisual(worktree: string, only?: readonly string[]): Promise<{ 
   const result = await run(process.execPath, [playwrightCli, 'test', ...(only ?? []), '--pass-with-no-tests'], {
     cwd: worktree,
     env: {
-      PATH: dirname(process.execPath), SystemRoot: process.env.SystemRoot, TEMP: scratch, TMP: scratch, TMPDIR: scratch,
+      // Playwright starts the game server through the system shell.
+      PATH: [dirname(process.execPath), ...(process.env.SystemRoot ? [join(process.env.SystemRoot, 'System32')] : ['/usr/bin', '/bin'])].join(process.platform === 'win32' ? ';' : ':'),
+      ComSpec: process.env.ComSpec, SystemRoot: process.env.SystemRoot, TEMP: scratch, TMP: scratch, TMPDIR: scratch,
       PLAYWRIGHT_BROWSERS_PATH: browsersPath, VISUAL_PORT: String(await freePort()), CI: '1',
     },
     timeoutMs: VISUAL_TIMEOUT_MS,
@@ -279,15 +281,17 @@ async function fixReport(report: TriagedReport, forced: boolean): Promise<FixRec
         }
         const changed = await changedPaths(worktree);
         const lines = linesFromNumstat(await git(worktree, 'diff', '--cached', '--numstat'));
-        const htmlStyleOnly = !changed.includes('index.html')
-          || styleOnlyChange(await git(worktree, 'show', 'HEAD:index.html'), await readFile(join(worktree, 'index.html'), 'utf8'));
+        const outsideStyle = changed.includes('index.html')
+          ? firstNonStyleChange(await git(worktree, 'show', 'HEAD:index.html'), await readFile(join(worktree, 'index.html'), 'utf8'))
+          : undefined;
+        const htmlStyleOnly = outsideStyle === undefined;
         const paths = checkFixPaths(changed, lines, kind, htmlStyleOnly);
         const unsafeCss = kind === 'browser' ? unsafeCssAdditions(await git(worktree, 'diff', '--cached', '-U0')) : [];
         const built = paths.ok && !unsafeCss.length ? await build(worktree) : undefined;
         const tests = built?.code === 0 ? await runSuite(worktree) : undefined;
         // Every browser test, not just the new one: a style change can reach other screens.
         const visual = tests?.ok ? await runVisual(worktree) : undefined;
-        if (!paths.ok) feedback = paths.error;
+        if (!paths.ok) feedback = `${paths.error}${outsideStyle ? ` First changed line outside a style block: ${outsideStyle}` : ''}`;
         else if (unsafeCss.length) feedback = `Visual fixes may not load anything (url(), @import): ${unsafeCss.join(' | ')}`;
         else if (built!.code !== 0) feedback = `The build fails:\n${clip(built!.output)}`;
         else if (!tests!.ok) feedback = `Tests still fail:\n${clip(tests!.failures.join('\n'))}`;

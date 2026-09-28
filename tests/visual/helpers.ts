@@ -91,6 +91,18 @@ export function contrastRatio(a: Rgb, b: Rgb): number {
   return (light + 0.05) / (dark + 0.05);
 }
 
+/** Minimum contrast for readable text (WCAG AA, normal size). */
+export const READABLE_TEXT = 4.5;
+
+/**
+ * Contrast between an element's text colour and the background players see
+ * behind it. Check it in every state a test visits, so a fix that makes a
+ * state stand out cannot make its label unreadable instead.
+ */
+export async function textContrast(locator: Locator): Promise<number> {
+  return contrastRatio(await renderedColor(locator), await cssColor(locator, 'color'));
+}
+
 /** Computed CSS colour of a property, e.g. 'color' or 'border-top-color'. */
 export async function cssColor(locator: Locator, property: string): Promise<Rgb> {
   const value = await locator.evaluate((element, name) => getComputedStyle(element).getPropertyValue(name), property);

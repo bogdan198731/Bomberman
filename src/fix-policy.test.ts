@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  checkFixPaths as checkPaths, isBrowserSpec, lintBrowserSpec, styleOnlyChange, unsafeCssAdditions,
+  checkFixPaths as checkPaths, firstNonStyleChange, isBrowserSpec, lintBrowserSpec, styleOnlyChange, unsafeCssAdditions,
   FIX_LIMITS, FIX_SCHEMA, REPRODUCE_SCHEMA, buildFixPrompt, buildReproducePrompt, checkFixPaths, checkReproducePaths,
   clip, filesWithTypeErrors, fixEligibility, isFixableModule, linesFromNumstat, typeErrorsOutsideTests,
 } from './fix-policy.js';
@@ -125,6 +125,10 @@ test('style-only detection ignores CSS edits and catches markup or script edits'
   assert.ok(!styleOnlyChange(page, page.replace('x()', 'y()')));
   assert.ok(!styleOnlyChange(page, page.replace('</style>', '</style><script>evil()</script>')));
   assert.ok(!styleOnlyChange(page, page.replace('<style>', '<style onload="evil()">')));
+  // An editor or git converting line endings is not a markup change.
+  const crlf = page.replace(/></g, '>\r\n<');
+  assert.ok(styleOnlyChange(crlf, crlf.replace(/\r\n/g, '\n').replace('color: red', 'color: blue')));
+  assert.equal(firstNonStyleChange(crlf, crlf.replace('Go', 'Stop')), '<button id="b">Stop</button>');
 });
 
 test('generated browser specs may use Playwright and the helpers, nothing else', () => {

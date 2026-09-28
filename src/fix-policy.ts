@@ -65,8 +65,20 @@ export function isStyleFile(path: string): boolean {
  * visual fix cannot slip in markup or script.
  */
 export function styleOnlyChange(before: string, after: string): boolean {
-  const withoutStyles = (html: string) => html.replace(/(<style\b[^>]*>)[\s\S]*?(<\/style>)/gi, '$1$2');
-  return withoutStyles(before) === withoutStyles(after);
+  return firstNonStyleChange(before, after) === undefined;
+}
+
+/**
+ * The first line outside <style> blocks that differs, for telling the agent
+ * what it touched. Line endings are ignored: editors and git may convert them.
+ */
+export function firstNonStyleChange(before: string, after: string): string | undefined {
+  const outsideStyles = (html: string) => html.replace(/\r\n?/g, '\n').replace(/(<style\b[^>]*>)[\s\S]*?(<\/style>)/gi, '$1$2').split('\n');
+  const [a, b] = [outsideStyles(before), outsideStyles(after)];
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    if (a[i] !== b[i]) return (b[i] ?? a[i] ?? '').trim().slice(0, 200) || '(a blank line)';
+  }
+  return undefined;
 }
 
 /**
@@ -228,15 +240,16 @@ Helpers (read tests/visual/helpers.ts for details):
 - renderedColor(locator): the colour a player actually sees on an element, from its pixels (handles gradients).
 - colorDifference(a, b): perceptual difference; at least CLEARLY_DIFFERENT (25) means players see it at a glance.
 - contrastRatio(a, b): WCAG ratio; 4.5 for text, 3 for UI parts. cssColor(locator, property) reads a computed colour.
+- textContrast(locator): contrast of an element's text against what is behind it; READABLE_TEXT is 4.5.
 - box(locator), insideViewport(locator), overlaps(boxA, boxB), MIN_TAP_TARGET (44 px).
 
-Find the element in index.html and the game's module, reach the state the player describes with real clicks or keys, and assert the measurable fact the player is missing - for example, that two states differ by at least CLEARLY_DIFFERENT, that text meets 4.5 contrast, or that a control fits on screen. Use stable selectors (ids, roles, visible text). Name the test after the correct behaviour. It must fail for the reported reason and no other, at both sizes unless the report is about one size (then skip the other with test.skip on the project name).
+Find the element in index.html and the game's module, reach the state the player describes with real clicks or keys, and assert the measurable fact the player is missing - for example, that two states differ by at least CLEARLY_DIFFERENT, that text meets 4.5 contrast, or that a control fits on screen. Whenever the element shows text, also assert textContrast(locator) >= READABLE_TEXT in every state you visit, so a fix cannot make one problem go away by creating another (for example a new background that makes the label unreadable). Use stable selectors (ids, roles, visible text). Name the test after the correct behaviour. It must fail for the reported reason and no other, at both sizes unless the report is about one size (then skip the other with test.skip on the project name).
 
 If the problem cannot be measured this way, write nothing and answer cannot-reproduce with your explanation. A wrong test is worse than no test.`;
 
 export const BROWSER_FIX_SYSTEM_PROMPT = `${SHARED_RULES}
 
-A failing browser test now reproduces a visual problem. In this step make it pass by changing styles only: CSS inside the <style> blocks of index.html, or public/*.css. Markup, scripts and every test are off-limits - the harness rejects the attempt if anything outside a <style> block changes. Prefer adjusting the existing rule for the element over adding new ones, reuse the colour variables defined in :root (for example --p1, --gold, --ink) so the fix fits the arcade's look, and keep the change small (within ${FIX_LIMITS.lines} changed lines). The whole unit suite and every browser test must still pass.
+A failing browser test now reproduces a visual problem. In this step make it pass by changing styles only: CSS inside the <style> blocks of index.html, or public/*.css. Markup, scripts and every test are off-limits - the harness rejects the attempt if anything outside a <style> block changes. Prefer adjusting the existing rule for the element over adding new ones, reuse the colour variables defined in :root (for example --p1, --gold, --ink) so the fix fits the arcade's look, keep every label readable (text contrast of 4.5 or more against its new background), and keep the change small (within ${FIX_LIMITS.lines} changed lines). The whole unit suite and every browser test must still pass.
 
 The test was written by another agent and can be wrong. If it fails for a reason other than the reported problem, so that no correct style change could make it pass, change nothing and answer test-is-wrong, explaining exactly why in the summary. If the problem cannot be fixed with styles alone, answer gave-up and explain.`;
 
