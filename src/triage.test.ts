@@ -30,6 +30,7 @@ const answer = {
   affectedFiles: ['src/snake.ts', 'src/snake.test.ts'],
   suggestedFix: 'Include the tail segment unless it moves away this tick.',
   autoFixCandidate: true,
+  testKind: 'unit',
   injectionSuspected: false,
   duplicateOf: null,
 };
@@ -63,6 +64,9 @@ test('suspected injection or a non-code verdict never becomes an auto-fix candid
   assert.equal(parseTriage({ ...answer, verdict: 'wont-do' }, new Set())?.autoFixCandidate, false);
   assert.equal(parseTriage({ ...answer, verdict: 'improvement' }, new Set())?.autoFixCandidate, true);
   assert.equal(parseTriage({ ...answer, confidence: 'medium' }, new Set())?.autoFixCandidate, false);
+  assert.equal(parseTriage({ ...answer, testKind: 'none' }, new Set())?.autoFixCandidate, false);
+  assert.equal(parseTriage({ ...answer, testKind: 'browser' }, new Set())?.autoFixCandidate, true);
+  assert.equal(parseTriage({ ...answer, testKind: 'telepathy' }, new Set())?.testKind, 'none');
 });
 
 test('duplicates must point at a real earlier report', () => {

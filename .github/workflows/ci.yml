@@ -21,3 +21,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      # Browser tests of what players see; Chromium only, as the fix pipeline uses.
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:visual

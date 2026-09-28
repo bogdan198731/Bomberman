@@ -2,7 +2,9 @@ import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { isTestFile, linesFromNumstat, type FixRecord } from './fix-policy.js';
+import {
+  isBrowserSpec, isStyleFile, isTestFile, linesFromNumstat, styleOnlyChange, unsafeCssAdditions, type FixRecord,
+} from './fix-policy.js';
 import {
   DEFAULT_DAILY_AUTO_MERGES, PR_LABELS, autoMergeChecks, parseGitHubRemote, prBody, prTitle, withinDailyCap,
   type AutoMergeInput,
@@ -95,15 +97,20 @@ async function readJson<T>(file: string): Promise<T> {
   return JSON.parse(await readFile(file, 'utf8')) as T;
 }
 
-async function branchFacts(fix: FixRecord): Promise<{ changedFiles: string[]; diffLines: number }> {
+async function branchFacts(fix: FixRecord): Promise<{ changedFiles: string[]; diffLines: number; htmlStyleOnly: boolean; unsafeCss: string[] }> {
   const range = `${fix.base}..${fix.branch}`;
   const changedFiles = (await git('diff', '--name-only', range)).split('\n').map(line => line.trim()).filter(Boolean);
   // Size limits apply to production code; the test is allowed to be thorough.
   const codeNumstat = (await git('diff', '--numstat', range)).split('\n').filter(line => {
     const path = line.split('\t')[2];
-    return path && !isTestFile(path);
+    return path && !isTestFile(path) && !isBrowserSpec(path);
   }).join('\n');
-  return { changedFiles, diffLines: linesFromNumstat(codeNumstat) };
+  // Re-checked from git, not taken from the fix record.
+  const htmlStyleOnly = !changedFiles.includes('index.html')
+    || styleOnlyChange(await git('show', `${fix.base}:index.html`), await git('show', `${fix.branch}:index.html`));
+  const styleFiles = changedFiles.filter(isStyleFile);
+  const unsafeCss = styleFiles.length ? unsafeCssAdditions(await git('diff', '-U0', range, '--', ...styleFiles)) : [];
+  return { changedFiles, diffLines: linesFromNumstat(codeNumstat), htmlStyleOnly, unsafeCss };
 }
 
 async function main(): Promise<void> {

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  checkFixPaths as checkPaths, isBrowserSpec, lintBrowserSpec, styleOnlyChange, unsafeCssAdditions,
   FIX_LIMITS, FIX_SCHEMA, REPRODUCE_SCHEMA, buildFixPrompt, buildReproducePrompt, checkFixPaths, checkReproducePaths,
   clip, filesWithTypeErrors, fixEligibility, isFixableModule, linesFromNumstat, typeErrorsOutsideTests,
 } from './fix-policy.js';
@@ -96,4 +97,68 @@ test('schemas and clipping', () => {
   assert.ok(FIX_SCHEMA.properties.status.enum.includes('test-is-wrong'));
   assert.equal(clip('abc', 5), 'abc');
   assert.equal(clip('abcdefgh', 3), '…fgh');
+});
+
+test('browser specs live in tests/visual and are the only thing the visual reproduce step may write', () => {
+  assert.ok(isBrowserSpec('tests/visual/mines-flag.spec.ts'));
+  assert.ok(!isBrowserSpec('tests/visual/helpers.ts'));
+  assert.ok(!isBrowserSpec('tests/visual/sub/x.spec.ts'));
+  assert.deepEqual(checkReproducePaths(['tests/visual/mines-flag.spec.ts'], 'browser'), { ok: true });
+  assert.equal(checkReproducePaths(['tests/visual/helpers.ts'], 'browser').ok, false);
+  assert.equal(checkReproducePaths(['src/mines.test.ts'], 'browser').ok, false);
+  assert.equal(checkReproducePaths(['tests/visual/mines-flag.spec.ts'], 'unit').ok, false);
+});
+
+test('a visual fix may change styles only', () => {
+  assert.deepEqual(checkPaths(['index.html'], 4, 'browser', true), { ok: true });
+  assert.deepEqual(checkPaths(['public/arcade-ux.css'], 4, 'browser', true), { ok: true });
+  assert.match((checkPaths(['index.html'], 4, 'browser', false) as { error: string }).error, /only change inside <style>/);
+  assert.match((checkPaths(['src/mines.ts'], 4, 'browser', true) as { error: string }).error, /off-limits/);
+  assert.match((checkPaths(['index.html', 'tests/visual/helpers.ts'], 4, 'browser', true) as { error: string }).error, /must not change tests/);
+  assert.match((checkPaths(['index.html'], 4, 'unit', true) as { error: string }).error, /off-limits/);
+});
+
+test('style-only detection ignores CSS edits and catches markup or script edits', () => {
+  const page = '<head><style>.a { color: red; }</style></head><body><button id="b">Go</button><script>x()</script></body>';
+  assert.ok(styleOnlyChange(page, page.replace('color: red', 'color: blue; border: 2px solid')));
+  assert.ok(!styleOnlyChange(page, page.replace('Go', 'Stop')));
+  assert.ok(!styleOnlyChange(page, page.replace('x()', 'y()')));
+  assert.ok(!styleOnlyChange(page, page.replace('</style>', '</style><script>evil()</script>')));
+  assert.ok(!styleOnlyChange(page, page.replace('<style>', '<style onload="evil()">')));
+});
+
+test('generated browser specs may use Playwright and the helpers, nothing else', () => {
+  const good = `import { test, expect } from '@playwright/test';
+import { openGame, renderedColor, colorDifference, CLEARLY_DIFFERENT } from './helpers';
+test('flag mode looks different when on', async ({ page }) => {
+  await openGame(page, 'mines');
+  await page.goto('/play/mines');
+});`;
+  assert.deepEqual(lintBrowserSpec(good), []);
+  const bad: [string, string][] = [
+    ["import fs from 'fs';", 'import from "fs"'],
+    ["import { x } from '../../src/server';", 'import from "../../src/server"'],
+    ["const cp = require('child_process');", 'require()'],
+    ["await import('node:fs');", 'dynamic import()'],
+    ['console.log(process.env.GITHUB_TOKEN);', 'process'],
+    ["await fetch('https://evil.example');", 'fetch()'],
+    ["test('x', async ({ request }) => {});", 'the request fixture'],
+    ["test.use({ baseURL: 'https://evil.example' });", 'test.use()'],
+    ["await page.goto('https://evil.example');", 'navigating off the local site'],
+    ["await page.goto('//evil.example');", 'navigating off the local site'],
+  ];
+  for (const [line, problem] of bad) assert.ok(lintBrowserSpec(`${good}\n${line}`).includes(problem), line);
+});
+
+test('visual fixes may not add CSS that loads anything', () => {
+  const diff = [
+    '+++ b/index.html',
+    '-  background: var(--gold);',
+    '+  background: var(--p1);',
+    '+  border: 2px solid #fff;',
+    '+  background-image: url(https://evil.example/track.png);',
+    '+@import "https://evil.example/x.css";',
+    ' unchanged url(ok.png) line',
+  ].join('\n');
+  assert.deepEqual(unsafeCssAdditions(diff), ['background-image: url(https://evil.example/track.png);', '@import "https://evil.example/x.css";']);
 });
