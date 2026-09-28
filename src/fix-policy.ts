@@ -38,6 +38,8 @@ export interface FixRecord {
   finishedAt: string;
   /** Holds before/ and after/ screenshots for a visual fix. */
   evidenceDir?: string;
+  /** The vision review of the committed fix's screenshots; missing when none ran. */
+  review?: { approved: boolean; fixed: boolean; readable: boolean; fitsDesign: boolean; regressions: string[]; summary: string };
   prNumber?: number;
   prUrl?: string;
   autoMerge?: 'enabled' | 'not-eligible' | 'switched-off' | 'daily-cap' | 'failed';

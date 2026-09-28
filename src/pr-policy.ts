@@ -47,6 +47,7 @@ export function autoMergeChecks(input: AutoMergeInput): { eligible: boolean; che
     kind === 'browser'
       ? { ok: code.every(isStyleFile) && htmlStyleOnly && !input.unsafeCss?.length, label: 'only styles changed (CSS in <style> blocks or public/*.css)' }
       : { ok: code.every(isFixableModule), label: 'only unprotected game modules changed' },
+    ...(kind === 'browser' ? [{ ok: fix.review?.approved === true, label: 'a vision review approved the before/after screenshots' }] : []),
     { ok: code.length <= FIX_LIMITS.files && diffLines <= FIX_LIMITS.lines, label: `within ${FIX_LIMITS.files} files and ${FIX_LIMITS.lines} lines` },
   ];
   return { eligible: checks.every(check => check.ok), checks };
@@ -105,6 +106,17 @@ ${pairs.map(pair => `| ${pair.label} | ${cell('before', pair.before)} | ${cell('
 `;
 }
 
+function reviewSection(fix: FixRecord): string {
+  if ((fix.kind ?? 'unit') !== 'browser') return '';
+  if (!fix.review) return '**Vision review** - none ran, so a person must check the screenshots.\n\n';
+  const { review } = fix;
+  const marks = [['problem gone', review.fixed], ['text readable', review.readable], ['fits the design', review.fitsDesign]] as const;
+  return `**Vision review: ${review.approved ? 'approved' : 'rejected'}** - ${marks.map(([label, ok]) => `${ok ? '✅' : '❌'} ${label}`).join(' · ')}${review.regressions.length ? ` · ❌ ${review.regressions.length} regression(s)` : ''}
+${fence([review.summary, ...review.regressions.map(item => `- ${item}`)].join('\n'))}
+
+`;
+}
+
 export function prBody(input: AutoMergeInput, autoMerge: boolean, screenshots = ''): string {
   const { triaged, fix } = input;
   const { checks } = autoMergeChecks(input);
@@ -123,7 +135,7 @@ ${fence(triaged.triage.reasoning)}
 **Fix** - ${fix.diffLines ?? '?'} changed lines
 ${fence(fix.summary ?? '')}
 
-${screenshots}**Auto-merge: ${autoMerge ? 'enabled - merges once CI passes' : 'off - needs a human review'}**
+${screenshots}${reviewSection(fix)}**Auto-merge: ${autoMerge ? 'enabled - merges once CI passes' : 'off - needs a human review'}**
 ${checks.map(check => `- [${check.ok ? 'x' : ' '}] ${check.label}`).join('\n')}
 
 ---
