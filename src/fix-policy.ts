@@ -36,6 +36,8 @@ export interface FixRecord {
   error?: string;
   costUsd: number;
   finishedAt: string;
+  /** Holds before/ and after/ screenshots for a visual fix. */
+  evidenceDir?: string;
   prNumber?: number;
   prUrl?: string;
   autoMerge?: 'enabled' | 'not-eligible' | 'switched-off' | 'daily-cap' | 'failed';

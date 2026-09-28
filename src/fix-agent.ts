@@ -16,6 +16,8 @@ import type { TriagedReport } from './triage.js';
 const root = process.cwd();
 const reportsDir = process.env.REPORTS_DIR || join(root, 'reports');
 const dirs = { triaged: join(reportsDir, 'triaged'), fixed: join(reportsDir, 'fixed'), fixFailed: join(reportsDir, 'fix-failed') };
+/** Before/after screenshots per report, taken by the browser helpers; the PR step uploads them. */
+const evidenceRoot = join(reportsDir, 'evidence');
 // Fix branches start from what PRs merge into.
 const BASE = process.env.FIX_BASE || 'main';
 const MODEL = process.env.FIX_MODEL;
@@ -112,7 +114,7 @@ function freePort(): Promise<number> {
  * them; lintBrowserSpec restricts what a generated spec may contain instead.
  * The environment is still emptied apart from what Playwright needs to run.
  */
-async function runVisual(worktree: string, only?: readonly string[]): Promise<{ ok: boolean; output: string }> {
+async function runVisual(worktree: string, only?: readonly string[], evidenceDir?: string): Promise<{ ok: boolean; output: string }> {
   const scratch = `${worktree}-tmp`;
   await mkdir(scratch, { recursive: true });
   const result = await run(process.execPath, [playwrightCli, 'test', ...(only ?? []), '--pass-with-no-tests'], {
@@ -122,6 +124,7 @@ async function runVisual(worktree: string, only?: readonly string[]): Promise<{ 
       PATH: [dirname(process.execPath), ...(process.env.SystemRoot ? [join(process.env.SystemRoot, 'System32')] : ['/usr/bin', '/bin'])].join(process.platform === 'win32' ? ';' : ':'),
       ComSpec: process.env.ComSpec, SystemRoot: process.env.SystemRoot, TEMP: scratch, TMP: scratch, TMPDIR: scratch,
       PLAYWRIGHT_BROWSERS_PATH: browsersPath, VISUAL_PORT: String(await freePort()), CI: '1',
+      ...(evidenceDir ? { VISUAL_EVIDENCE_DIR: evidenceDir } : {}),
     },
     timeoutMs: VISUAL_TIMEOUT_MS,
   });
@@ -225,7 +228,9 @@ async function fixReport(report: TriagedReport, forced: boolean): Promise<FixRec
         let tests: { ok: boolean; failures: string[] } | undefined;
         if (built && !strayErrors.length) {
           if (kind === 'browser') {
-            const visual = await runVisual(worktree, changed);
+            // Screenshots of the failing states; replaced on every attempt so only the accepted test's remain.
+            await rm(join(evidenceRoot, report.id), { recursive: true, force: true });
+            const visual = await runVisual(worktree, changed, join(evidenceRoot, report.id, 'before'));
             tests = { ok: visual.ok, failures: visual.ok ? [] : [clip(visual.output, 6000)] };
           } else {
             tests = await runSuite(worktree, changed.map(file => file.replace(/^src\/(.+)\.ts$/, 'dist/$1.js')));
@@ -301,6 +306,12 @@ async function fixReport(report: TriagedReport, forced: boolean): Promise<FixRec
           record.commits.push((await git(worktree, 'rev-parse', '--short', 'HEAD')).trim());
           record.diffLines = lines;
           record.outcome = 'fixed';
+          if (kind === 'browser') {
+            // The same spec on the fixed code gives matching names for the after shots.
+            const after = await runVisual(worktree, [record.testFile!], join(evidenceRoot, report.id, 'after'));
+            if (after.ok) record.evidenceDir = join(evidenceRoot, report.id);
+            else log('after screenshots failed; the PR will have none');
+          }
           log(`fixed (${lines} lines in ${changed.join(', ')})`);
           return record;
         }

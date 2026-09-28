@@ -70,7 +70,42 @@ export function fence(text: string): string {
   return `${ticks}text\n${text}\n${ticks}`;
 }
 
-export function prBody(input: AutoMergeInput, autoMerge: boolean): string {
+export interface ScreenshotPair { label: string; before?: string; after?: string }
+
+/**
+ * Matches before/after files by name (<size>-<test>-<step>.png, as the browser
+ * helpers write them), phone first. A state with only one side still shows,
+ * so a missing picture is visible rather than silently dropped.
+ */
+export function pairScreenshots(before: readonly string[], after: readonly string[]): ScreenshotPair[] {
+  const names = [...new Set([...before, ...after])].filter(name => name.endsWith('.png'));
+  const order = (name: string) => (name.startsWith('phone-') ? 0 : 1);
+  return names
+    .sort((a, b) => order(a) - order(b) || a.localeCompare(b, 'en', { numeric: true }))
+    .map(name => {
+      const match = name.match(/^([a-z]+)-(.+)-(\d+)\.png$/);
+      return {
+        label: match ? `${match[1]}, state ${match[3]}` : name,
+        before: before.includes(name) ? name : undefined,
+        after: after.includes(name) ? name : undefined,
+      };
+    });
+}
+
+/** Markdown table of before/after pictures; `url` turns a stage and file name into an image link. */
+export function screenshotSection(pairs: readonly ScreenshotPair[], url: (stage: 'before' | 'after', file: string) => string): string {
+  if (!pairs.length) return '';
+  const cell = (stage: 'before' | 'after', file?: string) => (file ? `<img src="${url(stage, file)}" width="360">` : '_none_');
+  return `**Screenshots** - each state the test measures, before and after the fix
+
+| | Before | After |
+|---|---|---|
+${pairs.map(pair => `| ${pair.label} | ${cell('before', pair.before)} | ${cell('after', pair.after)} |`).join('\n')}
+
+`;
+}
+
+export function prBody(input: AutoMergeInput, autoMerge: boolean, screenshots = ''): string {
   const { triaged, fix } = input;
   const { checks } = autoMergeChecks(input);
   return `Automated fix for a player report. The first commit adds a test that failed on \`${fix.base.slice(0, 7)}\`; the second makes it pass.
@@ -88,7 +123,7 @@ ${fence(triaged.triage.reasoning)}
 **Fix** - ${fix.diffLines ?? '?'} changed lines
 ${fence(fix.summary ?? '')}
 
-**Auto-merge: ${autoMerge ? 'enabled - merges once CI passes' : 'off - needs a human review'}**
+${screenshots}**Auto-merge: ${autoMerge ? 'enabled - merges once CI passes' : 'off - needs a human review'}**
 ${checks.map(check => `- [${check.ok ? 'x' : ' '}] ${check.label}`).join('\n')}
 
 ---
