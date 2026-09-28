@@ -6,7 +6,8 @@ import {
   isBrowserSpec, isStyleFile, isTestFile, linesFromNumstat, styleOnlyChange, unsafeCssAdditions, type FixRecord,
 } from './fix-policy.js';
 import {
-  DEFAULT_DAILY_AUTO_MERGES, PR_LABELS, autoMergeChecks, parseGitHubRemote, prBody, prTitle, withinDailyCap,
+  DEFAULT_DAILY_AUTO_MERGES, PR_LABELS, autoMergeChecks, pairScreenshots, parseGitHubRemote, prBody, prTitle,
+  screenshotSection, withinDailyCap,
   type AutoMergeInput,
 } from './pr-policy.js';
 import { isTesterActive, readTesterFile } from './testers.js';
@@ -24,8 +25,13 @@ const TOKEN = process.env.GITHUB_TOKEN;
 const dryRun = process.argv.includes('--dry-run');
 
 function git(...args: string[]): Promise<string> {
+  return gitWithInput(undefined, ...args);
+}
+
+function gitWithInput(input: string | undefined, ...args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn('git', args, { cwd: root, shell: false });
+    child.stdin.end(input ?? '');
     let output = '';
     child.stdout.on('data', chunk => { output += chunk; });
     child.stderr.on('data', chunk => { output += chunk; });
@@ -113,6 +119,47 @@ async function branchFacts(fix: FixRecord): Promise<{ changedFiles: string[]; di
   return { changedFiles, diffLines: linesFromNumstat(codeNumstat), htmlStyleOnly, unsafeCss };
 }
 
+const EVIDENCE_BRANCH = 'pr-evidence';
+
+/**
+ * Screenshots live on their own branch, which is never merged, so PRs can show
+ * them without adding images to main. The commit is built from blobs directly
+ * (hash-object, mktree, commit-tree), leaving the working tree and index alone.
+ * Returns the PR section, or '' when there is nothing to show.
+ */
+async function uploadEvidence(fix: FixRecord, owner: string, repo: string): Promise<string> {
+  if (!fix.evidenceDir || !existsSync(fix.evidenceDir)) return '';
+  const list = async (stage: 'before' | 'after') => {
+    const dir = join(fix.evidenceDir!, stage);
+    return existsSync(dir) ? (await readdir(dir)).filter(name => /^[\w.-]+\.png$/.test(name)).sort() : [];
+  };
+  const files = { before: await list('before'), after: await list('after') };
+  const pairs = pairScreenshots(files.before, files.after);
+  if (!pairs.length) return '';
+
+  const stageTree = async (stage: 'before' | 'after') => {
+    const entries = await Promise.all(files[stage].map(async name => `100644 blob ${(await git('hash-object', '-w', join(fix.evidenceDir!, stage, name))).trim()}\t${name}`));
+    return (await gitWithInput(`${entries.join('\n')}\n`, 'mktree')).trim();
+  };
+  const stages = [];
+  for (const stage of ['before', 'after'] as const) if (files[stage].length) stages.push(`040000 tree ${await stageTree(stage)}\t${stage}`);
+  const reportTree = (await gitWithInput(`${stages.join('\n')}\n`, 'mktree')).trim();
+
+  const remote = (await git('ls-remote', 'origin', `refs/heads/${EVIDENCE_BRANCH}`)).trim();
+  let parent: string | undefined;
+  let rootEntries: string[] = [];
+  if (remote) {
+    await git('fetch', '--quiet', 'origin', EVIDENCE_BRANCH);
+    parent = (await git('rev-parse', 'FETCH_HEAD')).trim();
+    rootEntries = (await git('ls-tree', parent)).split('\n').filter(line => line && !line.endsWith(`\t${fix.id}`));
+  }
+  const rootTree = (await gitWithInput(`${[...rootEntries, `040000 tree ${reportTree}\t${fix.id}`].join('\n')}\n`, 'mktree')).trim();
+  const commit = (await gitWithInput(`Screenshots for report ${fix.id}\n`, 'commit-tree', rootTree, ...(parent ? ['-p', parent] : []))).trim();
+  await git('push', '--quiet', 'origin', `${commit}:refs/heads/${EVIDENCE_BRANCH}`);
+  // Pinned to the commit, so later uploads to the branch never change this PR's pictures.
+  return screenshotSection(pairs, (stage, file) => `https://github.com/${owner}/${repo}/blob/${commit}/${fix.id}/${stage}/${file}?raw=true`);
+}
+
 async function main(): Promise<void> {
   if (!dryRun && !TOKEN) throw new Error('Set GITHUB_TOKEN (contents and pull requests: read and write), or pass --dry-run.');
   const remote = parseGitHubRemote(await git('remote', 'get-url', 'origin'));
@@ -149,7 +196,13 @@ async function main(): Promise<void> {
 
       // Never forced: if the remote branch moved, a person should look.
       await git('push', '--quiet', 'origin', `${fix.branch}:${fix.branch}`);
-      const pull = (await github.openPull(fix.branch)) ?? await github.createPull(fix.branch, title, prBody(input, autoMerge));
+      let screenshots = '';
+      try {
+        screenshots = await uploadEvidence(fix, github.owner, github.repo);
+      } catch (error) {
+        console.warn(`  screenshots skipped: ${(error as Error).message}`);
+      }
+      const pull = (await github.openPull(fix.branch)) ?? await github.createPull(fix.branch, title, prBody(input, autoMerge, screenshots));
       fix.prNumber = pull.number;
       fix.prUrl = pull.html_url;
       // Labels are for people scanning the PR list; the merge gates live in code,

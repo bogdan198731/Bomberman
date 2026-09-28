@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { autoMergeChecks, fence, parseGitHubRemote, prBody, prTitle, withinDailyCap, type AutoMergeInput } from './pr-policy.js';
+import {
+  autoMergeChecks, fence, pairScreenshots, parseGitHubRemote, prBody, prTitle, screenshotSection, withinDailyCap, type AutoMergeInput,
+} from './pr-policy.js';
 import { isTesterActive, type TesterFile } from './testers.js';
 import type { FixRecord } from './fix-policy.js';
 import type { TriagedReport } from './triage.js';
@@ -113,4 +115,18 @@ test('a visual fix is eligible only when a browser spec and styles alone changed
   assert.deepEqual(failing({ changedFiles: ['index.html'] }), ['the branch changes both a test and code']);
   assert.equal(autoMergeChecks({ ...visual, changedFiles: ['tests/visual/mines-flag.spec.ts', 'public/arcade-ux.css'] }).eligible, true);
   assert.deepEqual(failing({ unsafeCss: ['background: url(https://evil.example/a.png)'] }), ['only styles changed (CSS in <style> blocks or public/*.css)']);
+});
+
+test('screenshots pair by name, phone first, and a missing side stays visible', () => {
+  const pairs = pairScreenshots(
+    ['desktop-flag-mode-2.png', 'phone-flag-mode-1.png', 'phone-flag-mode-2.png', 'desktop-flag-mode-1.png', 'notes.txt'],
+    ['phone-flag-mode-1.png', 'phone-flag-mode-2.png', 'desktop-flag-mode-1.png'],
+  );
+  assert.deepEqual(pairs.map(pair => pair.label), ['phone, state 1', 'phone, state 2', 'desktop, state 1', 'desktop, state 2']);
+  assert.equal(pairs[3].after, undefined);
+  const section = screenshotSection(pairs, (stage, file) => `https://example.test/${stage}/${file}`);
+  assert.match(section, /\| phone, state 1 \| <img src="https:\/\/example.test\/before\/phone-flag-mode-1.png" width="360"> \| <img src="https:\/\/example.test\/after\/phone-flag-mode-1.png"/);
+  assert.match(section, /\| desktop, state 2 \| <img [^|]+ \| _none_ \|/);
+  assert.equal(screenshotSection([], () => ''), '');
+  assert.match(prBody(input, false, section), /\*\*Screenshots\*\*[\s\S]*\*\*Auto-merge: off/);
 });

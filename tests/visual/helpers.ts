@@ -1,4 +1,7 @@
-import type { Locator, Page } from '@playwright/test';
+import { createHash } from 'node:crypto';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { test, type Locator, type Page } from '@playwright/test';
 
 /**
  * Measurements for browser tests of what players see. Specs stay short and
@@ -31,6 +34,7 @@ export async function openGame(page: Page, game: string): Promise<void> {
  */
 export async function renderedColor(locator: Locator): Promise<Rgb> {
   await locator.scrollIntoViewIfNeeded();
+  await captureEvidence(locator);
   const png = (await locator.screenshot({ animations: 'disabled' })).toString('base64');
   return locator.page().evaluate(async data => {
     const image = new Image();
@@ -89,6 +93,43 @@ export function contrastRatio(a: Rgb, b: Rgb): number {
   };
   const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
   return (light + 0.05) / (dark + 0.05);
+}
+
+const lastEvidence = new Map<string, { count: number; hash: string }>();
+
+/**
+ * When the fix pipeline sets VISUAL_EVIDENCE_DIR, every state a test measures
+ * is saved as a close-up with some surroundings, named
+ * <project>-<test>-<step>.png. Running the same spec before and after a fix
+ * yields matching names, which become the before/after table in the PR.
+ * Repeated measurements of an unchanged state are saved once.
+ */
+async function captureEvidence(locator: Locator): Promise<void> {
+  const dir = process.env.VISUAL_EVIDENCE_DIR;
+  if (!dir) return;
+  const found = await locator.boundingBox();
+  const viewport = locator.page().viewportSize();
+  if (!found || !viewport) return;
+  const pad = 24;
+  const x = Math.max(0, found.x - pad);
+  const y = Math.max(0, found.y - pad);
+  const clip = {
+    x, y,
+    width: Math.min(viewport.width - x, found.width + pad * 2),
+    height: Math.min(viewport.height - y, found.height + pad * 2),
+  };
+  if (clip.width <= 0 || clip.height <= 0) return;
+  const image = await locator.page().screenshot({ clip, animations: 'disabled' });
+  const info = test.info();
+  const key = `${info.project.name}-${info.title}`;
+  const hash = createHash('sha1').update(image).digest('hex');
+  const last = lastEvidence.get(key);
+  if (last?.hash === hash) return;
+  const count = (last?.count ?? 0) + 1;
+  lastEvidence.set(key, { count, hash });
+  const slug = info.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, `${info.project.name}-${slug}-${count}.png`), image);
 }
 
 /** Minimum contrast for readable text (WCAG AA, normal size). */
