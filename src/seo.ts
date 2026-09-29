@@ -1,6 +1,6 @@
 import { ARCADE_GAME_IDS, GAME_META, isArcadeGameId, type ArcadeGameId } from './game-metadata.js';
 
-export const SITE_ORIGIN = 'https://bomberman-mixj.onrender.com';
+export const SITE_ORIGIN = 'https://blastarcade.ro';
 export const SITE_NAME = 'Blast Arcade';
 // Tagline carries no game count, so it cannot go stale as games are added.
 export const OG_IMAGE_PATH = '/public/og-v4.jpg';
