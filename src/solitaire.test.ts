@@ -4,6 +4,7 @@ import {
   CARD_H,
   SolitaireGame,
   TABLE_HEIGHT,
+  isDealStuck,
   normalizeSolitaireSession,
   tableauSpots,
   type Card,
@@ -171,4 +172,64 @@ test('an unfinished game survives a reload; a broken save is refused', () => {
     assert.equal(normalizeSolitaireSession(bad), null, `accepted ${JSON.stringify(bad)?.slice(0, 50)}`);
   }
   assert.equal(new SolitaireGame().session(), null, 'an untouched deal is not saved');
+});
+
+test('a dead end is spotted: nothing can ever turn a hidden card or reach the foundations', () => {
+  // A hidden ace under a lone 5 of hearts that fits nowhere; the stock holds only a 3 of clubs.
+  const game = emptyTable();
+  game.tableau[0] = [card(0, 1, false), card(1, 5)];
+  game.stock = [card(3, 3, false)];
+  assert.equal(isDealStuck(game, 1), true);
+  // A 4 of clubs in the stock still fits on the 5, but that frees nothing: still stuck.
+  game.stock = [card(3, 4, false)];
+  assert.equal(isDealStuck(game, 1), true);
+  // An ace in the stock can go home, so the deal is still open.
+  game.stock = [card(1, 1, false)];
+  assert.equal(isDealStuck(game, 1), false);
+});
+
+test('draw three can bury a card that draw one would reach', () => {
+  const game = emptyTable();
+  game.tableau[0] = [card(0, 1, false), card(1, 5)];
+  // Drawn three at a time, the ace of hearts is always in the middle of the fan.
+  game.stock = [card(3, 7, false), card(1, 1, false), card(3, 8, false)];
+  assert.equal(isDealStuck(game, 3), true);
+  assert.equal(isDealStuck(game, 1), false);
+});
+
+test('a card can come back off the foundations to unlock a column', () => {
+  const game = emptyTable();
+  // The 3 of spades is hidden under the 4 of hearts, which needs a black 5 to move onto...
+  game.tableau[0] = [card(0, 3, false), card(1, 4)];
+  // ...and the only black 5 sits on the foundations, above a red 6 it could come down onto.
+  game.tableau[1] = [card(1, 6)];
+  game.foundations[3] = [1, 2, 3, 4, 5].map(rank => card(3, rank));
+  assert.equal(isDealStuck(game, 1), false, 'take the 5 of clubs down, put the 4 on it, flip the 3');
+});
+
+test('reaching a dead end stops the game, says so, and undo reopens it', () => {
+  const game = emptyTable();
+  game.tableau[0] = [card(0, 1, false), card(1, 5)];
+  game.stock = [card(3, 3, false)];
+  assert.equal(game.draw(1_000), true);
+  assert.equal(game.phase, 'stuck');
+  assert.match(game.statusText(), /No moves left/);
+  assert.equal(game.draw(), false, 'a stopped game takes no more moves');
+  assert.equal(game.score(), 0);
+  assert.equal(game.session(), null, 'a dead end is not saved to resume');
+  assert.equal(game.canUndo(), true);
+  assert.equal(game.undo(), true);
+  assert.equal(game.phase, 'playing');
+});
+
+test('fresh deals are checked quickly and are almost never dead from the start', () => {
+  const random = seeded(99);
+  let stuck = 0;
+  const started = Date.now();
+  for (let i = 0; i < 100; i++) {
+    const game = new SolitaireGame(random, i % 2 ? 3 : 1);
+    if (isDealStuck(game, game.drawCount)) stuck++;
+  }
+  assert.ok(stuck <= 5, `${stuck} of 100 fresh deals were called dead`);
+  assert.ok(Date.now() - started < 3_000, 'the check is cheap enough to run after every move');
 });

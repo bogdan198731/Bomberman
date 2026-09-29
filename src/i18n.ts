@@ -37,6 +37,7 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Solitaire table': 'Masa Solitaire',
   'Solo · Klondike': 'Solo · Klondike',
   'Everything is face up - finish it off.': 'Totul este cu fața în sus - termină jocul.',
+  'No moves left - this deal can no longer be won. Undo or deal again.': 'Nu mai sunt mutări - jocul acesta nu mai poate fi câștigat. Anulează sau împarte din nou.',
   'Saved game restored - carry on.': 'Joc salvat restaurat - continuă.',
   'Moves': 'Mutări',
   'Deal': 'Împărțire',
