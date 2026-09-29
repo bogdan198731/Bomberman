@@ -2883,8 +2883,12 @@
     .game-help-overlay[hidden],
     .arcade-result-overlay[hidden] { display: none; }
 
-    /* Players want to study the final Minesweeper board, so keep it sharp and move the card below it. */
-    .arcade-result-overlay[data-game="mines"] {
+    /*
+     * Players want to study how the game ended (the final board, the hidden
+     * word), so the result card is small, sits at the bottom, and the game
+     * stays sharp behind a light tint.
+     */
+    .arcade-result-overlay {
       align-items: end;
       background: rgba(3, 9, 15, .18);
       backdrop-filter: none;
@@ -2926,8 +2930,31 @@
       font: 900 .85rem/1 inherit;
       cursor: pointer;
     }
-    .arcade-result-card { text-align: center; }
-    .arcade-result-actions { margin-top: 22px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .arcade-result-card {
+      width: min(100%, 440px);
+      padding: 14px 18px 16px;
+      border-radius: 20px;
+      text-align: center;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, .55);
+    }
+    .arcade-result-card h2 { margin: 4px 0; font-size: clamp(1.3rem, 4.4vw, 1.7rem); }
+    .arcade-result-explanation { font-size: .92rem; line-height: 1.4; }
+    .arcade-result-actions button { min-height: 44px; }
+    .arcade-result-actions { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    /* With room to spare, a short strip: text on the left, buttons on the right. */
+    @media (min-width: 720px) {
+      .arcade-result-card {
+        width: min(100%, 760px);
+        display: grid;
+        grid-template-columns: 1fr auto;
+        column-gap: 20px;
+        align-items: center;
+        text-align: left;
+      }
+      .arcade-result-card > :not(.arcade-result-actions) { grid-column: 1; }
+      .arcade-result-actions { grid-column: 2; grid-row: 1 / span 3; margin-top: 0; grid-template-columns: repeat(2, minmax(120px, auto)); }
+    }
     .arcade-result-actions [data-result-next] { grid-column: 1 / -1; background: #ffc857; color: #1a1203; }
     .arcade-result-actions [data-result-close] { background: #263246; color: #eaf1fa; }
 
@@ -3034,9 +3061,7 @@
     @media (max-width: 520px) {
       .game-help-button { padding-inline: 11px; font-size: 0; }
       .game-help-button::before { content: '?'; font-size: .9rem; }
-      .game-help-card, .arcade-result-card { border-radius: 20px; padding: 20px; }
-      .arcade-result-actions { grid-template-columns: 1fr; }
-      .arcade-result-actions [data-result-next] { grid-column: auto; }
+      .game-help-card { border-radius: 20px; padding: 20px; }
       .gameplay-option { gap: 4px; font-size: .61rem; }
       .gameplay-option select { padding-inline: 6px; }
       .upgrade-choice { grid-template-columns: 1fr; }
