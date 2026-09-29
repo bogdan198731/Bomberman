@@ -129,6 +129,12 @@ export const GAME_GUIDES: Record<ArcadeGameId, GuideCopy> = {
     rules: [copy('Build columns down in alternating colours; only a king can fill an empty column.', 'Construiește coloanele descrescător, alternând culorile; doar un rege poate ocupa o coloană goală.'), copy('Moving a card off a face-down card turns it over.', 'Când muți o carte de pe o carte cu fața în jos, aceasta se întoarce.'), copy('Draw 3 is harder but scores more; Undo takes back any move.', 'Tragerea a câte 3 este mai grea, dar aduce mai multe puncte; Anulează retrage orice mutare.')],
     tip: copy('Turn over face-down cards early - they are what keeps a game from getting stuck.', 'Întoarce devreme cărțile cu fața în jos - ele sunt cele care împiedică blocarea jocului.'),
   },
+  hangman: {
+    objective: copy('Guess the hidden word one letter at a time before the figure is complete.', 'Ghicește cuvântul ascuns literă cu literă înainte ca figura să fie completă.'),
+    controls: copy('Tap a letter on the on-screen keyboard, or type it on a real keyboard.', 'Apasă o literă pe tastatura de pe ecran sau scrie-o pe o tastatură reală.'),
+    rules: [copy('A right letter appears everywhere it occurs in the word.', 'O literă corectă apare peste tot unde se află în cuvânt.'), copy('Each wrong letter costs a try: Easy gives 8, Normal 6, Hard 4.', 'Fiecare literă greșită costă o încercare: Ușor are 8, Normal 6, Greu 4.'), copy('In Romanian, A also finds Ă and Â, I finds Î, S finds Ș and T finds Ț.', 'În română, A găsește și Ă și Â, I găsește Î, S găsește Ș și T găsește Ț.')],
+    tip: copy('Start with common vowels, then use the category to guess the rest.', 'Începe cu vocalele comune, apoi folosește categoria pentru a ghici restul.'),
+  },
 };
 
 const REPLAY_SELECTORS: Record<ArcadeGameId, string> = {
@@ -143,6 +149,7 @@ const REPLAY_SELECTORS: Record<ArcadeGameId, string> = {
   hockey: '#hockeyStartButton',
   reversi: '#reversiNextButton',
   solitaire: '#solitaireNewButton',
+  hangman: '#hangmanNewButton',
 };
 
 const RESULT_STATUS_SELECTORS: Record<ArcadeGameId, string> = {
@@ -156,6 +163,7 @@ const RESULT_STATUS_SELECTORS: Record<ArcadeGameId, string> = {
   hockey: '#hockeyStatus',
   reversi: '#reversiStatus',
   solitaire: '#solitaireStatus',
+  hangman: '#hangmanStatus',
 };
 
 
@@ -175,6 +183,7 @@ const KEYBOARD_CONTROLS: Partial<Record<ArcadeGameId, [string, string]>> = {
   hockey: copy('Mint: WASD. Coral: arrow keys. Against the bot, either set moves Mint. Space faces off.', 'Mint: WASD. Coral: săgețile. Contra botului, ambele seturi îl mută pe Mint. Spațiu pune pucul în joc.'),
   reversi: copy('Arrow keys move, Enter places a disc.', 'Săgețile mută, Enter pune un disc.'),
   solitaire: copy('Space draws, A sends cards to the foundations, U or Ctrl+Z undoes.', 'Spațiu trage, A trimite cărțile pe fundații, U sau Ctrl+Z anulează.'),
+  hangman: copy('Type any letter A-Z to guess it.', 'Scrie orice literă A-Z pentru a o ghici.'),
 };
 
 function localized(pair: [string, string]): string { return pair[currentArcadeLanguage() === 'ro' ? 1 : 0]; }
@@ -270,6 +279,7 @@ export function initGameExperience(): void {
       hockey: '#hockeyRestartButton',
       reversi: '#reversiRestartButton',
       solitaire: '#solitaireNewButton',
+      hangman: '#hangmanNewButton',
     };
     if (!reset[gameId]) return;
     // These reset handlers confirm progress loss and clear pause only after acceptance.
