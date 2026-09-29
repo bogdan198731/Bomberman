@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blast-arcade-report-evidence-2026-09-28';
+const CACHE_NAME = 'blast-arcade-mines-result-2026-09-28';
 const APP_SHELL = [
   '/',
   '/index.html',
