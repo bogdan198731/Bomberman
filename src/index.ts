@@ -30,6 +30,7 @@ import { initMicroRacers } from './racing.js';
 import { initBlockDrop } from './blocks.js';
 import { initTwenty48 } from './twenty48.js';
 import { initSolitaire } from './solitaire.js';
+import { initHangman } from './hangman.js';
 import { initReversi } from './reversi.js';
 import { initAirHockey } from './hockey.js';
 import { initMinesweeper } from './mines.js';
@@ -2079,6 +2080,7 @@ if (typeof window !== 'undefined') {
     initTwenty48();
     initSudoku();
     initSolitaire();
+    initHangman();
     initReversi();
     initAirHockey();
     initMinesweeper();

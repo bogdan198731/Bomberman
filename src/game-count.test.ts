@@ -28,7 +28,8 @@ function statedTotals(text: string): { phrase: string; count: number }[] {
     const count = /^\d+$/.test(token) ? Number(token) : ENGLISH[token];
     if (count !== undefined) found.push({ phrase: match[0], count });
   }
-  const romanian = /(\d+|[a-zăâîșț]+) jocuri (?:instant|active)\b|toate cele (\d+) jocuri/gi;
+  // Twenty and up take "de" in Romanian: "douăzeci de jocuri".
+  const romanian = /(\d+|[a-zăâîșț]+) (?:de )?jocuri (?:instant|active)\b|toate cele (\d+) (?:de )?jocuri/gi;
   for (const match of text.matchAll(romanian)) {
     const token = (match[1] ?? match[2]).toLowerCase();
     const count = /^\d+$/.test(token) ? Number(token) : ROMANIAN[token];

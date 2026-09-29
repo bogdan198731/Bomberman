@@ -1,6 +1,33 @@
 export type ArcadeLanguage = 'en' | 'ro';
 
 const ROMANIAN_TRANSLATIONS: Record<string, string> = {
+  'Guess the word · Solo word game': 'Ghicește cuvântul · Joc de cuvinte solo',
+  'Guess the hidden word letter by letter across six categories, in English or Romanian.': 'Ghicește cuvântul ascuns literă cu literă, în șase categorii, în engleză sau română.',
+  'Play Hangman': 'Joacă Hangman',
+  'Add Hangman to favorites': 'Adaugă Hangman la favorite',
+  'Solo · Word game': 'Solo · Joc de cuvinte',
+  'Hangman game': 'Joc Hangman',
+  'Hangman gallows. One part is drawn for each wrong letter': 'Spânzurătoarea Hangman. Se desenează o parte pentru fiecare literă greșită',
+  'Hangman difficulty': 'Dificultatea Hangman',
+  'Letter keyboard': 'Tastatura cu litere',
+  'Tries': 'Încercări',
+  'Streak': 'Serie',
+  'Difficulty': 'Dificultate',
+  'Easy · 8 tries': 'Ușor · 8 încercări',
+  'Normal · 6 tries': 'Normal · 6 încercări',
+  'Hard · 4 tries': 'Greu · 4 încercări',
+  'Animals': 'Animale',
+  'Food': 'Mâncare',
+  'Countries': 'Țări',
+  'Sports': 'Sporturi',
+  'Nature': 'Natură',
+  'Jobs': 'Meserii',
+  'Pick a letter to start.': 'Alege o literă pentru a începe.',
+  'Saved word restored - keep guessing.': 'Cuvânt salvat restaurat - continuă să ghicești.',
+  '1 try left.': 'O încercare rămasă.',
+  'New word': 'Cuvânt nou',
+  'Guess': 'Ghicește',
+  'Vowels first': 'Vocalele întâi',
   'Klondike · Solo card game': 'Klondike · Joc de cărți solo',
   'Classic Klondike: build the foundations from ace to king, with undo and saved games.': 'Klondike clasic: construiește fundațiile de la as la rege, cu anulare și jocuri salvate.',
   'Play Solitaire': 'Joacă Solitaire',
@@ -229,8 +256,8 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Finish a match to claim the first spot.': 'Termină un meci pentru a ocupa primul loc.',
   'Game library': 'Bibliotecă de jocuri',
   'Choose your next round': 'Alege următoarea rundă',
-  'Nineteen instant games, from explosive duels and Romanian classics to Sudoku, Minesweeper and number puzzles, neon racing, air hockey, co-op survival, and star-fighter missions.':
-    'Nouăsprezece jocuri instant, de la dueluri explozive și clasice românești la Sudoku, Minesweeper și puzzle-uri cu numere, curse neon, air hockey, supraviețuire cooperativă și misiuni stelare.',
+  'Twenty instant games, from explosive duels and Romanian classics to Sudoku, Minesweeper, Hangman and number puzzles, neon racing, air hockey, co-op survival, and star-fighter missions.':
+    'Douăzeci de jocuri instant, de la dueluri explozive și clasice românești la Sudoku, Minesweeper, Spânzurătoarea și puzzle-uri cu numere, curse neon, air hockey, supraviețuire cooperativă și misiuni stelare.',
   'Search games': 'Caută jocuri',
   'Clear game search': 'Șterge căutarea',
   'Filter games by play mode': 'Filtrează jocurile după modul de joc',
@@ -310,7 +337,7 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Try another search or show the complete arcade.': 'Încearcă altă căutare sau afișează întreaga arcadă.',
   'Show all games': 'Arată toate jocurile',
   'Blast Arcade · Play instantly in your browser': 'Blast Arcade · Joacă instant în browser',
-  'Nineteen live games · Keyboard, touch, bots, and online rooms': 'Nouăsprezece jocuri active · Tastatură, atingere, boți și camere online',
+  'Twenty live games · Keyboard, touch, bots, and online rooms': 'Douăzeci de jocuri active · Tastatură, atingere, boți și camere online',
   'Blast Arcade heroes surrounded by twelve game arenas': 'Eroii Blast Arcade înconjurați de douăsprezece arene de joc',
   'Bot · Local · Online PvP': 'Bot · Local · PvP online',
   'Bot · Local · Online': 'Bot · Local · Online',
@@ -583,6 +610,15 @@ const attributeRecords = new WeakMap<Element, Map<string, { source: string; rend
 const translatedAttributes = ['aria-label', 'placeholder', 'title', 'alt'] as const;
 
 function translateRomanianPattern(value: string): string | null {
+  // Hangman
+  const tries = value.match(/^(\d+) tries left\.$/);
+  if (tries) return `${tries[1]} încercări rămase.`;
+  const solvedWord = value.match(/^Solved! (\d+) points\.$/);
+  if (solvedWord) return `Rezolvat! ${solvedWord[1]} puncte.`;
+  const lostWord = value.match(/^Out of tries - the word was (.+)\.$/);
+  if (lostWord) return `Nu mai ai încercări - cuvântul era ${lostWord[1]}.`;
+  const shownWord = value.match(/^Word: (.+)$/);
+  if (shownWord) return `Cuvânt: ${shownWord[1]}`;
   // Solitaire
   const home = value.match(/^(\d+) of 52 cards home · (\d+) moves\.$/);
   if (home) return `${home[1]} din 52 de cărți la locul lor · ${home[2]} mutări.`;
@@ -603,7 +639,8 @@ function translateRomanianPattern(value: string): string | null {
   // Brick Breaker: level names come from the same table as the level picker.
   const brickName = (name: string): string => ROMANIAN_TRANSLATIONS[name] ?? name;
   const tour = value.match(/^Finish a match in all (\d+) games\.$/);
-  if (tour) return `Termină un meci în toate cele ${tour[1]} jocuri.`;
+  // Romanian puts "de" after numbers from twenty on.
+  if (tour) return `Termină un meci în toate cele ${tour[1]}${Number(tour[1]) >= 20 ? ' de' : ''} jocuri.`;
   let brick = value.match(/^Level (\d+) · (.+)\. Launch when ready\.$/);
   if (brick) return `Nivelul ${brick[1]} · ${brickName(brick[2])}. Lansează când ești gata.`;
   brick = value.match(/^Level (\d+) · (\d+) bricks to go\.$/);

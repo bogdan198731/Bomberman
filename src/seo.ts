@@ -128,6 +128,11 @@ export const GAME_SEO: Record<ArcadeGameId, PageSeo> = {
     description:
       'Play Klondike Solitaire free in your browser. Draw one or three, undo any move, and pick up where you left off - built for phones and desktops alike.',
   },
+  hangman: {
+    title: 'Hangman — Free Online Word Guessing Game',
+    description:
+      'Play Hangman free in your browser. Guess the hidden word one letter at a time across six categories, in English or Romanian, before the figure is drawn.',
+  },
 };
 
 /** Every route the crawler should know about: the hub plus one page per game. */

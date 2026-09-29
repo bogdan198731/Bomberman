@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blast-arcade-mines-result-2026-09-28';
+const CACHE_NAME = 'blast-arcade-hangman-2026-09-29';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -54,6 +54,7 @@ const APP_SHELL = [
   '/dist/hockey.js',
   '/dist/reversi.js',
   '/dist/solitaire.js',
+  '/dist/hangman.js',
   '/dist/bug-report.js',
   '/dist/report-capture.js',
 ];
