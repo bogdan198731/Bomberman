@@ -326,7 +326,7 @@ export function initGameExperience(): void {
     dismissArcadeDialogs('result');
     clearArcadePause();
     resultGame = detail.gameId;
-    // Lets a game style its own result backdrop, e.g. Minesweeper keeps the final board in view.
+    // Lets a game adjust its own result card if its end screen needs a different spot.
     resultOverlay.dataset.game = detail.gameId;
     const ro = currentArcadeLanguage() === 'ro';
     const label = detail.result.outcome === 'win' ? (ro ? 'VICTORIE' : 'VICTORY')
