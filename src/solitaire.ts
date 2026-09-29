@@ -33,6 +33,114 @@ interface SolitaireState {
 
 const cloneState = (state: SolitaireState): SolitaireState => JSON.parse(JSON.stringify(state));
 
+/**
+ * Positions the dead-end check may visit before assuming the deal is still
+ * open. In random play every real dead end showed up within 1,000 positions;
+ * the check averages about a millisecond per move and stays under a tenth of
+ * a second when it hits the cap.
+ */
+const STUCK_SEARCH_LIMIT = 2_000;
+
+/**
+ * True when no sequence of moves can ever turn a face-down card over or put
+ * one more card on the foundations - so the deal can no longer be won. It
+ * walks every position reachable without such progress (stock cycles, runs
+ * shuffled between columns, cards taken back off the foundations). If that
+ * space is too big to finish, it answers false: better to let a player carry
+ * on than to end a game that could still be won.
+ */
+export function isDealStuck(state: Pick<SolitaireState, 'stock' | 'waste' | 'foundations' | 'tableau'>, drawCount: 1 | 3, limit = STUCK_SEARCH_LIMIT): boolean {
+  const code = (card: Card): number => card.suit * 13 + card.rank - 1;
+  const suitOf = (card: number): number => Math.floor(card / 13);
+  const rankOf = (card: number): number => (card % 13) + 1;
+  const red = (card: number): boolean => suitOf(card) === 1 || suitOf(card) === 2;
+  // Any flip ends the search as progress, so hidden cards only matter as a count.
+  const hidden = state.tableau.map(pile => pile.filter(card => !card.up).length);
+  const found = [0, 0, 0, 0];
+  for (const pile of state.foundations) if (pile.length) found[pile[0].suit] = pile.length;
+  const home = found.reduce((sum, count) => sum + count, 0);
+  if (home === 52) return false;
+
+  interface Position { stock: number[]; waste: number[]; found: number[]; cols: number[][] }
+  const origin: Position = {
+    stock: state.stock.map(code), waste: state.waste.map(code), found,
+    cols: state.tableau.map(pile => pile.filter(card => card.up).map(code)),
+  };
+  const key = (p: Position): string => `${p.stock}/${p.waste}/${p.found}/${p.cols.join(';')}`;
+  const seen = new Set<string>([key(origin)]);
+  const todo: Position[] = [origin];
+  const fitsColumn = (card: number, cols: number[][], column: number): boolean => {
+    const top = cols[column][cols[column].length - 1];
+    if (top === undefined) return hidden[column] === 0 && rankOf(card) === 13;
+    return red(top) !== red(card) && rankOf(top) === rankOf(card) + 1;
+  };
+
+  while (todo.length) {
+    const p = todo.pop()!;
+    const next: Position[] = [];
+    // Draw, or turn the waste back over.
+    if (p.stock.length) {
+      const n = Math.min(drawCount, p.stock.length);
+      next.push({ ...p, stock: p.stock.slice(0, -n), waste: [...p.waste, ...p.stock.slice(-n).reverse()] });
+    } else if (p.waste.length) {
+      next.push({ ...p, stock: [...p.waste].reverse(), waste: [] });
+    }
+    const homeNow = p.found.reduce((sum, count) => sum + count, 0);
+    const raise = (card: number): number[] => p.found.map((count, suit) => (suit === suitOf(card) ? count + 1 : count));
+    // The waste top: up to the foundations, or onto a column.
+    if (p.waste.length) {
+      const card = p.waste[p.waste.length - 1];
+      if (p.found[suitOf(card)] === rankOf(card) - 1) {
+        if (homeNow + 1 > home) return false;
+        next.push({ ...p, waste: p.waste.slice(0, -1), found: raise(card) });
+      }
+      for (let column = 0; column < 7; column++) {
+        if (!fitsColumn(card, p.cols, column)) continue;
+        const cols = p.cols.map((col, i) => (i === column ? [...col, card] : col));
+        next.push({ ...p, waste: p.waste.slice(0, -1), cols });
+      }
+    }
+    for (let from = 0; from < 7; from++) {
+      const col = p.cols[from];
+      if (!col.length) continue;
+      // A column's top card up to the foundations.
+      const top = col[col.length - 1];
+      if (p.found[suitOf(top)] === rankOf(top) - 1) {
+        if (homeNow + 1 > home || (col.length === 1 && hidden[from] > 0)) return false;
+        next.push({ ...p, found: raise(top), cols: p.cols.map((other, i) => (i === from ? col.slice(0, -1) : other)) });
+      }
+      // Any face-up run onto another column.
+      for (let start = 0; start < col.length; start++) {
+        for (let to = 0; to < 7; to++) {
+          if (to === from || !fitsColumn(col[start], p.cols, to)) continue;
+          if (start === 0 && hidden[from] > 0) return false; // uncovers a hidden card
+          if (start === 0 && !p.cols[to].length) continue; // a whole column into an empty one changes nothing
+          const cols = p.cols.map((other, i) => (i === from ? col.slice(0, start) : i === to ? [...other, ...col.slice(start)] : other));
+          next.push({ ...p, cols });
+        }
+      }
+    }
+    // A foundation card back down onto a column, to make room for something else.
+    for (let suit = 0; suit < 4; suit++) {
+      if (!p.found[suit]) continue;
+      const card = suit * 13 + p.found[suit] - 1;
+      for (let column = 0; column < 7; column++) {
+        if (!fitsColumn(card, p.cols, column)) continue;
+        const cols = p.cols.map((col, i) => (i === column ? [...col, card] : col));
+        next.push({ ...p, found: p.found.map((count, i) => (i === suit ? count - 1 : count)), cols });
+      }
+    }
+    for (const position of next) {
+      const id = key(position);
+      if (seen.has(id)) continue;
+      if (seen.size >= limit) return false;
+      seen.add(id);
+      todo.push(position);
+    }
+  }
+  return true;
+}
+
 export class SolitaireGame {
   stock: Card[] = [];
   waste: Card[] = [];
@@ -40,7 +148,8 @@ export class SolitaireGame {
   tableau: Card[][] = [[], [], [], [], [], [], []];
   drawCount: 1 | 3 = 1;
   moves = 0;
-  phase: 'playing' | 'won' = 'playing';
+  /** 'stuck' means no sequence of moves can win this deal any more. */
+  phase: 'playing' | 'won' | 'stuck' = 'playing';
   startedAt = 0;
   finishedAt = 0;
   private history: SolitaireState[] = [];
@@ -87,6 +196,7 @@ export class SolitaireGame {
       this.waste = [];
     }
     this.moves += 1;
+    this.checkStuck(now);
     return true;
   }
 
@@ -143,6 +253,7 @@ export class SolitaireGame {
     }
     this.moves += 1;
     this.checkWin(now);
+    this.checkStuck(now);
     return true;
   }
 
@@ -178,15 +289,19 @@ export class SolitaireGame {
     return this.phase === 'playing' && !this.stock.length && !this.waste.length && this.tableau.every(pile => pile.every(card => card.up));
   }
 
+  /** Also works from a dead end, so the player can back up and try another line. */
   undo(): boolean {
+    if (this.phase === 'won') return false;
     const previous = this.history.pop();
-    if (!previous || this.phase !== 'playing') return false;
+    if (!previous) return false;
     Object.assign(this, cloneState(previous));
+    this.phase = 'playing';
+    this.finishedAt = 0;
     return true;
   }
 
   canUndo(): boolean {
-    return this.history.length > 0 && this.phase === 'playing';
+    return this.history.length > 0 && this.phase !== 'won';
   }
 
   elapsed(now: number): number {
@@ -203,6 +318,7 @@ export class SolitaireGame {
   statusText(now: number = Date.now()): string {
     if (this.phase === 'won') return `Solved in ${this.moves} moves and ${this.elapsed(now)}s - ${this.score(now)} points!`;
     const home = this.foundations.reduce((sum, pile) => sum + pile.length, 0);
+    if (this.phase === 'stuck') return 'No moves left - this deal can no longer be won. Undo or deal again.';
     if (this.canAutoComplete()) return 'Everything is face up - finish it off.';
     return `${home} of 52 cards home · ${this.moves} moves.`;
   }
@@ -226,6 +342,7 @@ export class SolitaireGame {
     this.startedAt = now - state.elapsedMs;
     this.finishedAt = 0;
     this.history = [];
+    this.checkStuck(now);
     return true;
   }
 
@@ -233,6 +350,12 @@ export class SolitaireGame {
     if (!this.startedAt) this.startedAt = now;
     this.history.push(cloneState({ stock: this.stock, waste: this.waste, foundations: this.foundations, tableau: this.tableau, moves: this.moves }));
     if (this.history.length > MAX_UNDO) this.history.shift();
+  }
+
+  private checkStuck(now: number): void {
+    if (this.phase !== 'playing' || !isDealStuck(this, this.drawCount)) return;
+    this.phase = 'stuck';
+    this.finishedAt = now;
   }
 
   private checkWin(now: number): void {
@@ -360,7 +483,7 @@ export function initSolitaire(): void {
     if (timeEl) timeEl.textContent = String(game.elapsed(now));
     if (undoButton) undoButton.disabled = !game.canUndo();
     if (autoButton) autoButton.textContent = game.canAutoComplete() ? 'Finish' : 'Auto-play';
-    resultReporter.report(game.phase === 'won', { outcome: 'complete', score: game.score(now) });
+    resultReporter.report(game.phase !== 'playing', { outcome: game.phase === 'won' ? 'complete' : 'loss', score: game.score(now) });
   }
 
   function after(): void {
