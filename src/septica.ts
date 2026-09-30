@@ -336,7 +336,7 @@ export function initSeptica(): void {
   let room: GameRoomClient | null = null;
   let offlineMode: SepticaOfflineMode = 'bot';
   let localHandVisible = false;
-  // Three or four players are for games against bots; same-device and online stay two-player.
+  // Table size for play on this device, against bots or passing it round; online rooms bring their own.
   let botPlayerCount: SepticaPlayerCount = 2;
   try {
     const saved = Number(localStorage.getItem('blast-arcade-septica-players-v1'));
@@ -344,8 +344,7 @@ export function initSeptica(): void {
   } catch { /* two players */ }
   if (playersSelect) playersSelect.value = String(botPlayerCount);
   const resultReporter = new ArcadeResultReporter('septica');
-  const playingBots = (): boolean => !room?.session().online && offlineMode === 'bot';
-  const offlineCount = (): SepticaPlayerCount => (offlineMode === 'bot' ? botPlayerCount : 2);
+  const offlineCount = (): SepticaPlayerCount => botPlayerCount;
   if (botPlayerCount !== 2) game.restart(botPlayerCount);
 
   function localPlayer(): SepticaPlayer {
@@ -456,7 +455,7 @@ export function initSeptica(): void {
         : localHotSeat
           ? localHandVisible
             ? onlineStatus(player)
-            : `Pass the device to ${player === 1 ? 'Mint' : 'Coral'}, then reveal the hand.`
+            : `Pass the device to ${SEPTICA_PLAYER_NAMES[player]}, then reveal the hand.`
           : game.statusText();
     // Two players: Mint vs Coral. Three: Mint vs the two rivals. Four: the two teams.
     if (mintLabel) mintLabel.textContent = game.teams ? 'Mint & Sky' : 'Mint';
@@ -464,7 +463,7 @@ export function initSeptica(): void {
     if (goal) goal.textContent = game.playerCount === 3 ? 'Most points wins' : 'Eight points in the deck';
     if (mintPoints) mintPoints.textContent = String(game.sidePoints(1));
     if (coralPoints) coralPoints.textContent = game.playerCount === 3 ? `${game.points[2]} · ${game.points[3]}` : String(game.sidePoints(2));
-    if (playersOption) playersOption.hidden = !playingBots();
+    if (playersOption) playersOption.hidden = Boolean(room?.session().online);
     if (deckCount) deckCount.textContent = String(game.deck.length);
     if (passButton) passButton.hidden = !(game.currentPlayer === player && game.phase === 'continue-choice' && (!localHotSeat || localHandVisible));
     if (revealButton) revealButton.hidden = !(localHotSeat && !localHandVisible && game.phase !== 'finished' && game.phase !== 'settling');
@@ -504,7 +503,7 @@ export function initSeptica(): void {
   playersSelect?.addEventListener('change', () => {
     const count = Number(playersSelect.value);
     if (count !== 2 && count !== 3 && count !== 4) return;
-    if (!playingBots() || count === game.playerCount) return;
+    if (room?.session().online || count === game.playerCount) return;
     if (shouldConfirmSepticaRestart(game)
       && !window.confirm(translateArcadeText('Change the number of players? The current Șeptică deal will be lost.'))) {
       playersSelect.value = String(game.playerCount);
@@ -514,6 +513,7 @@ export function initSeptica(): void {
     try { localStorage.setItem('blast-arcade-septica-players-v1', String(count)); } catch { /* optional */ }
     window.clearTimeout(settleTimer);
     window.clearTimeout(botTimer);
+    localHandVisible = false;
     game.restart(count);
     render();
     scheduleBot();
@@ -554,7 +554,7 @@ export function initSeptica(): void {
       game: 'septica',
       mount: roomMount,
       offlineModes: [
-        { id: 'local', label: 'Local 2P', description: 'Pass the device between players.', onSelect: () => selectOfflineMode('local') },
+        { id: 'local', label: 'Local 2P', description: 'Pass the device between 2, 3 or 4 players.', onSelect: () => selectOfflineMode('local') },
         { id: 'bot', label: 'Vs bot', description: 'Play Mint against the Coral bot.', onSelect: () => selectOfflineMode('bot') },
       ],
       initialOfflineMode: 'bot',

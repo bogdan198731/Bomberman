@@ -438,6 +438,7 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Two builders share this device.': 'Doi constructori împart acest dispozitiv.',
   'Outbuild the Coral computer.': 'Construiește mai bine decât calculatorul Coral.',
   'Pass the device between players.': 'Dați dispozitivul de la un jucător la altul.',
+  'Pass the device between 2, 3 or 4 players.': 'Dați dispozitivul de la un jucător la altul, între 2, 3 sau 4 jucători.',
   'Play Mint against the Coral bot.': 'Joacă drept Mint împotriva botului Coral.',
   'Two players share the same board.': 'Doi jucători folosesc aceeași tablă.',
   'Choose a bot difficulty to start.': 'Alege dificultatea botului pentru a începe.',
@@ -723,7 +724,7 @@ function translateRomanianPattern(value: string): string | null {
   if (match) return `${match[1]} câștigă partida!`;
   match = value.match(/^(Mint|Coral|Sky|Gold) is choosing a card…$/);
   if (match) return `${match[1]} își alege cartea…`;
-  match = value.match(/^Pass the device to (Mint|Coral), then reveal the hand\.$/);
+  match = value.match(/^Pass the device to (Mint|Coral|Sky|Gold), then reveal the hand\.$/);
   if (match) return `Dă dispozitivul lui ${match[1]}, apoi arată cărțile.`;
   match = value.match(/^Coral Bot · (Easy|Normal|Hard)$/);
   if (match) {
