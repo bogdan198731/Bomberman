@@ -169,7 +169,7 @@ test('online snapshots reveal only the receiving player hand', () => {
 
   const guestState = createSepticaOnlineState(hostGame, 2);
   assert.deepEqual(guestState.hand, hostGame.hands[2]);
-  assert.equal(guestState.opponentHandCount, 2);
+  assert.deepEqual(guestState.handCounts, { 1: 2 });
   assert.equal(guestState.deckCount, 2);
   assert.equal(JSON.stringify(guestState).includes('A-spades'), false);
   assert.equal(JSON.stringify(guestState).includes('10-hearts'), false);
@@ -295,4 +295,22 @@ test('an online snapshot always sets up a two-player table', () => {
   assert.equal(guest.playerCount, 2);
   assert.deepEqual(guest.players(), [1, 2]);
   assert.equal(guest.hands[1].length, 4);
+});
+
+test('in a four-seat online game each seat sees only its own hand', () => {
+  const host = new SepticaGame(seeded(3), 4);
+  for (const seat of [2, 3, 4] as const) {
+    const view = createSepticaOnlineState(host, seat);
+    assert.equal(view.playerCount, 4);
+    assert.deepEqual(view.hand, host.hands[seat]);
+    const text = JSON.stringify(view);
+    for (const other of host.players().filter(p => p !== seat)) {
+      for (const hidden of host.hands[other]) assert.equal(text.includes(hidden.id), false, `seat ${seat} sees ${hidden.id}`);
+    }
+    const guest = new SepticaGame(() => .5);
+    applySepticaOnlineState(guest, view);
+    assert.deepEqual(guest.players(), [1, 2, 3, 4]);
+    assert.deepEqual(guest.players().map(p => guest.hands[p].length), [4, 4, 4, 4]);
+    assert.deepEqual(guest.hands[seat], host.hands[seat]);
+  }
 });

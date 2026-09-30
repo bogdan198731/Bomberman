@@ -22,8 +22,10 @@ export interface SepticaCard {
 
 export interface SepticaOnlineState {
   localPlayer: SepticaPlayer;
+  playerCount: SepticaPlayerCount;
   hand: SepticaCard[];
-  opponentHandCount: number;
+  /** How many cards every other seat holds - never which cards. */
+  handCounts: Record<number, number>;
   deckCount: number;
   table: Array<{ player: SepticaPlayer; card: SepticaCard }>;
   points: Record<number, number>;
@@ -253,12 +255,15 @@ export class SepticaGame {
   }
 }
 
+/** What one seat may see: its own hand, and only the size of everyone else's. */
 export function createSepticaOnlineState(game: SepticaGame, localPlayer: SepticaPlayer): SepticaOnlineState {
-  const opponent = otherPlayer(localPlayer);
+  const handCounts: Record<number, number> = {};
+  for (const seat of game.players()) if (seat !== localPlayer) handCounts[seat] = game.hands[seat].length;
   return {
     localPlayer,
+    playerCount: game.playerCount,
     hand: game.hands[localPlayer],
-    opponentHandCount: game.hands[opponent].length,
+    handCounts,
     deckCount: game.deck.length,
     table: game.table,
     points: game.points,
@@ -273,13 +278,15 @@ export function createSepticaOnlineState(game: SepticaGame, localPlayer: Septica
 }
 
 export function applySepticaOnlineState(game: SepticaGame, state: SepticaOnlineState): void {
-  const opponent = otherPlayer(state.localPlayer);
   const hiddenCard = (index: number): SepticaCard => ({ rank: '8', suit: 'clubs', id: `hidden-${index}` });
-  // Online is always two players, whatever this device last played against bots.
-  game.playerCount = 2;
+  // The host's table size wins over whatever this device last played against bots.
+  game.playerCount = state.playerCount === 3 || state.playerCount === 4 ? state.playerCount : 2;
   game.hands = {};
-  game.hands[state.localPlayer] = state.hand;
-  game.hands[opponent] = Array.from({ length: state.opponentHandCount }, (_, index) => hiddenCard(index));
+  for (const seat of game.players()) {
+    game.hands[seat] = seat === state.localPlayer
+      ? state.hand
+      : Array.from({ length: state.handCounts?.[seat] ?? 0 }, (_, index) => hiddenCard(index));
+  }
   game.deck = Array.from({ length: state.deckCount }, (_, index) => hiddenCard(index));
   game.table = state.table;
   game.points = state.points;
@@ -343,20 +350,23 @@ export function initSeptica(): void {
 
   function localPlayer(): SepticaPlayer {
     if (!room?.session().online && offlineMode === 'local') return game.currentPlayer;
-    return (room?.session().playerId as SepticaPlayer | null) ?? 1;
+    return (room?.session().seat as SepticaPlayer | null) ?? 1;
   }
 
   function onlineStatus(player: SepticaPlayer): string {
     if (game.phase === 'finished') return game.statusText();
     if (game.phase === 'settling') return 'The cards stay on the table for a moment…';
-    if (game.currentPlayer !== player) return `${game.currentPlayer === 1 ? 'Mint' : 'Coral'} is choosing a card…`;
+    if (game.currentPlayer !== player) return `${SEPTICA_PLAYER_NAMES[game.currentPlayer]} is choosing a card…`;
     if (game.phase === 'continue-choice') return 'You were cut. Continue with a 7 or the opening rank, or concede the trick.';
     if (game.table.length === 0) return 'Your turn: lead a new trick.';
     return 'Your turn: play any card. A 7 or the opening rank cuts.';
   }
 
+  /** The host sends each other seat its own view, so hands stay private. */
   function broadcastState(): void {
-    room?.broadcastState(createSepticaOnlineState(game, 2) as unknown as Record<string, unknown>, true);
+    for (const seat of game.players()) {
+      if (seat !== 1) room?.sendStateTo(seat, createSepticaOnlineState(game, seat) as unknown as Record<string, unknown>);
+    }
   }
 
   function scheduleSettlement(): void {
@@ -462,7 +472,7 @@ export function initSeptica(): void {
       button.classList.toggle('active', button.dataset.septicaMode === offlineMode);
       button.disabled = Boolean(room?.session().online);
     });
-    const trackedPlayer = (room?.session().online ? room.session().playerId : 1) ?? 1;
+    const trackedPlayer = (room?.session().online ? room.session().seat : 1) ?? 1;
     resultReporter.report(game.phase === 'finished', {
       outcome: game.winner === 0 ? 'draw' : game.isWinner(trackedPlayer as SepticaPlayer) ? 'win' : 'loss',
       score: game.sidePoints(trackedPlayer as SepticaPlayer),
@@ -556,20 +566,22 @@ export function initSeptica(): void {
           localHandVisible = false;
           game.restart(offlineCount());
           scheduleBot();
-        } else if (session.ready && session.playerId === 1) {
+        } else if (session.ready && session.seat === 1) {
           window.clearTimeout(settleTimer);
           localHandVisible = false;
-          game.restart(2);
+          game.restart(session.capacity === 3 || session.capacity === 4 ? session.capacity : 2);
           broadcastState();
         }
         render();
       },
-      onRemoteAction: (action, from) => {
-        if (!room?.isHost() || from !== 2) return;
+      onRemoteAction: () => undefined,
+      // Every seat but the host's; each may only act on its own turn.
+      onSeatAction: (action, from) => {
+        if (!room?.isHost() || from === 1 || !game.players().includes(from)) return;
         let changed = false;
-        if (action.type === 'play' && typeof action.index === 'number' && Number.isInteger(action.index) && game.currentPlayer === 2) {
-          changed = game.playCard(2, action.index);
-        } else if (action.type === 'pass' && game.currentPlayer === 2) changed = game.pass(2);
+        if (action.type === 'play' && typeof action.index === 'number' && Number.isInteger(action.index) && game.currentPlayer === from) {
+          changed = game.playCard(from, action.index);
+        } else if (action.type === 'pass' && game.currentPlayer === from) changed = game.pass(from);
         else if (action.type === 'restart') { window.clearTimeout(settleTimer); game.restart(); changed = true; }
         if (changed) afterAuthoritativeMove();
       },

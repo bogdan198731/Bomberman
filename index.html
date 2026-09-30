@@ -7202,6 +7202,21 @@
 
     .game-room-join input:focus { border-color: #55d9ff; }
 
+    /* Room size, for games that seat more than two online (Șeptică). */
+    .game-room-size { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: .8rem; font-weight: 850; }
+    .game-room-size select {
+      min-height: 38px;
+      padding: 0 8px;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 10px;
+      color: var(--ink);
+      background: #1a2536;
+      font-weight: 850;
+    }
+
+    /* The vs-bot player count means nothing while Online is picked. */
+    #septicaView:has([data-room-selected-mode="online"]) #septicaPlayersOption { display: none; }
+
     .game-room-code {
       padding: 8px 10px;
       border-radius: 10px;

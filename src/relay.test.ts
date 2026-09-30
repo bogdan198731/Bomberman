@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { InviteRoom, isOnlineGameId, isRelayPayload } from './relay.js';
+import { InviteRoom, isOnlineGameId, isRelayPayload, roomSize } from './relay.js';
 
 test('only multiplayer arcade games can create invite rooms', () => {
   assert.equal(isOnlineGameId('tintar'), true);
@@ -30,7 +30,7 @@ test('a disconnected invite seat can be reclaimed', () => {
 test('invite snapshots retain the game and room identity', () => {
   const room = new InviteRoom('tank2', 'tanks');
   room.join();
-  assert.deepEqual(room.snapshot(), { roomCode: 'TANK2', game: 'tanks', connectedPlayers: [1] });
+  assert.deepEqual(room.snapshot(), { roomCode: 'TANK2', game: 'tanks', connectedPlayers: [1], capacity: 2 });
 });
 
 test('relay payload validation rejects invalid and oversized data', () => {
@@ -38,4 +38,25 @@ test('relay payload validation rejects invalid and oversized data', () => {
   assert.equal(isRelayPayload(null), false);
   assert.equal(isRelayPayload('turn'), false);
   assert.equal(isRelayPayload({ value: 'x'.repeat(70_000) }), false);
+});
+
+test('only Șeptică rooms seat three or four; everything else stays two-player', () => {
+  assert.equal(roomSize('septica', 4), 4);
+  assert.equal(roomSize('septica', 3), 3);
+  assert.equal(roomSize('septica', 9), 2);
+  assert.equal(roomSize('septica', undefined), 2);
+  assert.equal(roomSize('paddle', 4), 2);
+  assert.equal(new InviteRoom('SNK22', 'snake', 4).capacity, 2);
+});
+
+test('a four-seat room fills in order, is full at four, and hands back a dropped seat', () => {
+  const room = new InviteRoom('CARD4', 'septica', 4);
+  assert.deepEqual([room.join(), room.join(), room.join()], [1, 2, 3]);
+  assert.equal(room.isFull(), false);
+  assert.equal(room.join(), 4);
+  assert.equal(room.isFull(), true);
+  assert.equal(room.join(), null);
+  room.leave(3);
+  assert.equal(room.join(), 3);
+  assert.deepEqual(room.snapshot().connectedPlayers, [1, 2, 3, 4]);
 });
