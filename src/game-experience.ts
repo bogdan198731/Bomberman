@@ -48,7 +48,7 @@ export const GAME_GUIDES: Record<ArcadeGameId, GuideCopy> = {
   septica: {
     objective: copy('Capture aces and tens; each is worth one point.', 'Capturează așii și zecarii; fiecare valorează un punct.'),
     controls: copy('Tap a card to play. When cut, continue with a 7/opening rank or concede.', 'Apasă o carte. Când ești tăiat, continuă cu un 7/figura de deschidere sau cedează.'),
-    rules: [copy('Sample: Mint leads A, Coral plays 9—Mint takes the trick.', 'Exemplu: Mint deschide cu A, Coral pune 9—Mint ia masa.'), copy('Any 7 or a card matching the opening rank cuts.', 'Orice 7 sau o carte cu aceeași figură ca deschiderea taie.'), copy('After a cut back, the responder still plays one final card before the exchange ends.', 'După o tăiere înapoi, adversarul mai joacă o carte înainte ca schimbul să se încheie.')],
+    rules: [copy('Sample: Mint leads A, Coral plays 9—Mint takes the trick.', 'Exemplu: Mint deschide cu A, Coral pune 9—Mint ia masa.'), copy('Any 7 or a card matching the opening rank cuts.', 'Orice 7 sau o carte cu aceeași figură ca deschiderea taie.'), copy('After a cut back, the responder still plays one final card before the exchange ends.', 'După o tăiere înapoi, adversarul mai joacă o carte înainte ca schimbul să se încheie.'), copy('Against bots you can pick 3 players (two eights removed, most points wins) or 4 (you and Sky against Coral and Gold; 5 points wins).', 'Contra boților poți alege 3 jucători (fără doi de 8, câștigă cine are cele mai multe puncte) sau 4 (tu și Sky contra lui Coral și Gold; 5 puncte câștigă).')],
     tip: copy('Save sevens to contest valuable ace-and-ten tricks.', 'Păstrează șeptarii pentru mesele valoroase cu ași și zecari.'),
   },
   survival: {
