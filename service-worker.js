@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blast-arcade-septica-same-device-2026-09-30';
+const CACHE_NAME = 'blast-arcade-septica-online-bots-2026-09-30';
 const APP_SHELL = [
   '/',
   '/index.html',

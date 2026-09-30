@@ -437,6 +437,16 @@ webSocketServer.on('connection', socket => {
       joinInviteRoom(socket, data.roomCode.trim(), data.game, false);
       return;
     }
+    if (data.type === 'fillGameRoomWithBots') {
+      const client = clients.get(socket);
+      // Only the host decides, since the host's device plays the bots.
+      if (!client || client.kind !== 'invite' || client.playerId !== 1) return;
+      const room = inviteRooms.get(client.roomCode);
+      if (!room || !room.fillWithBots().length) return;
+      matchmaking.remove(client.roomCode);
+      broadcastInviteStatus(client.roomCode);
+      return;
+    }
     if (data.type === 'gameAction' && isRelayPayload(data.action, 16_384)) {
       const client = clients.get(socket);
       if (!client || client.kind !== 'invite') return;

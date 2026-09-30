@@ -30,7 +30,7 @@ test('a disconnected invite seat can be reclaimed', () => {
 test('invite snapshots retain the game and room identity', () => {
   const room = new InviteRoom('tank2', 'tanks');
   room.join();
-  assert.deepEqual(room.snapshot(), { roomCode: 'TANK2', game: 'tanks', connectedPlayers: [1], capacity: 2 });
+  assert.deepEqual(room.snapshot(), { roomCode: 'TANK2', game: 'tanks', connectedPlayers: [1], capacity: 2, botSeats: [] });
 });
 
 test('relay payload validation rejects invalid and oversized data', () => {
@@ -59,4 +59,16 @@ test('a four-seat room fills in order, is full at four, and hands back a dropped
   room.leave(3);
   assert.equal(room.join(), 3);
   assert.deepEqual(room.snapshot().connectedPlayers, [1, 2, 3, 4]);
+});
+
+test('the host can hand empty seats to bots, which fills the room', () => {
+  const room = new InviteRoom('BOTS4', 'septica', 4);
+  room.join(); room.join();
+  assert.deepEqual(room.fillWithBots(), [3, 4]);
+  assert.equal(room.isFull(), true);
+  assert.equal(room.join(), null, 'nobody can take a bot seat');
+  assert.deepEqual(room.snapshot().botSeats, [3, 4]);
+  room.leave(2);
+  assert.equal(room.join(), 2, 'a human seat can still be reclaimed');
+  assert.deepEqual(new InviteRoom('TWO22', 'septica', 2).fillWithBots(), [], 'two-seat rooms stay human');
 });
