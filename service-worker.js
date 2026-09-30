@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blast-arcade-hangman-2026-09-29';
+const CACHE_NAME = 'blast-arcade-septica-players-2026-09-30';
 const APP_SHELL = [
   '/',
   '/index.html',

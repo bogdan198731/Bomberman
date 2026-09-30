@@ -6842,6 +6842,34 @@
 
     .septica-card.played-mint { transform: rotate(-4deg); }
     .septica-card.played-coral { transform: rotate(4deg); }
+    .septica-card.played-sky { transform: rotate(-2deg); }
+    .septica-card.played-gold { transform: rotate(2deg); }
+    /* With three or four players a coloured edge says who played each card. */
+    .septica-table.many-players .septica-card.played-mint { box-shadow: inset 0 5px 0 var(--p1), 0 9px 16px rgba(0,0,0,.32); }
+    .septica-table.many-players .septica-card.played-coral { box-shadow: inset 0 5px 0 var(--p2), 0 9px 16px rgba(0,0,0,.32); }
+    .septica-table.many-players .septica-card.played-sky { box-shadow: inset 0 5px 0 #68dfff, 0 9px 16px rgba(0,0,0,.32); }
+    .septica-table.many-players .septica-card.played-gold { box-shadow: inset 0 5px 0 var(--gold), 0 9px 16px rgba(0,0,0,.32); }
+
+    /* The other players around the table when three or four play. */
+    .septica-seats { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+    .septica-seat {
+      display: grid;
+      gap: 2px;
+      min-width: 92px;
+      padding: 7px 12px;
+      border: 2px solid rgba(255,255,255,.14);
+      border-radius: 12px;
+      background: rgba(6, 18, 14, .72);
+      color: var(--ink);
+      font-size: .78rem;
+      text-align: center;
+    }
+    .septica-seat strong { font-size: .9rem; }
+    .septica-seat span { color: #cfd8e3; }
+    .septica-seat.coral { border-color: var(--p2); }
+    .septica-seat.sky { border-color: #68dfff; }
+    .septica-seat.gold { border-color: var(--gold); }
+    .septica-seat.active { box-shadow: 0 0 0 3px rgba(255,255,255,.55); }
 
     .septica-deck-readout {
       color: var(--muted);
@@ -7173,6 +7201,21 @@
     }
 
     .game-room-join input:focus { border-color: #55d9ff; }
+
+    /* Room size, for games that seat more than two online (Șeptică). */
+    .game-room-size { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: .8rem; font-weight: 850; }
+    .game-room-size select {
+      min-height: 38px;
+      padding: 0 8px;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 10px;
+      color: var(--ink);
+      background: #1a2536;
+      font-weight: 850;
+    }
+
+    /* The vs-bot player count means nothing while Online is picked. */
+    #septicaView:has([data-room-selected-mode="online"]) #septicaPlayersOption { display: none; }
 
     .game-room-code {
       padding: 8px 10px;
@@ -9014,9 +9057,9 @@
         </div>
       </div>
       <div class="paddle-scorebar">
-        <div class="paddle-score-player"><i class="paddle-score-swatch" aria-hidden="true"></i><div><span>Mint</span><b id="septicaMintPoints">0</b></div></div>
-        <div class="paddle-score-goal">Eight points in the deck</div>
-        <div class="paddle-score-player coral"><i class="paddle-score-swatch" aria-hidden="true"></i><div><span>Coral</span><b id="septicaCoralPoints">0</b></div></div>
+        <div class="paddle-score-player"><i class="paddle-score-swatch" aria-hidden="true"></i><div><span id="septicaMintLabel">Mint</span><b id="septicaMintPoints">0</b></div></div>
+        <div id="septicaGoal" class="paddle-score-goal">Eight points in the deck</div>
+        <div class="paddle-score-player coral"><i class="paddle-score-swatch" aria-hidden="true"></i><div><span id="septicaCoralLabel">Coral</span><b id="septicaCoralPoints">0</b></div></div>
       </div>
       <div class="septica-felt">
         <div id="septicaBotHand" class="septica-hand" aria-label="Coral's hidden cards"></div>
@@ -9025,6 +9068,9 @@
       </div>
       <div class="paddle-statusbar" aria-live="polite">
         <span id="septicaStatus">Your turn: lead a new trick.</span>
+        <label id="septicaPlayersOption" class="gameplay-option">Players
+          <select id="septicaPlayers" aria-label="Șeptică players"><option value="2">2</option><option value="3">3</option><option value="4">4 · teams</option></select>
+        </label>
         <button id="septicaRevealButton" class="paddle-serve" type="button" hidden>Reveal hand</button>
         <button id="septicaPassButton" class="paddle-serve" type="button" hidden>Concede trick</button>
       </div>

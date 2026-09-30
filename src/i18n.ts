@@ -400,6 +400,19 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Draw — each player captured four points.': 'Egalitate — fiecare a capturat patru puncte.',
   'The cards stay on the table for a moment…': 'Cărțile rămân o clipă pe masă…',
   'Coral is thinking…': 'Coral se gândește…',
+  'Sky is thinking…': 'Sky se gândește…',
+  'Gold is thinking…': 'Gold se gândește…',
+  'Șeptică players': 'Jucători Șeptică',
+  'Players': 'Jucători',
+  'Players online': 'Jucători online',
+  '4 · teams': '4 · echipe',
+  'Mint & Sky': 'Mint și Sky',
+  'Coral & Gold': 'Coral și Gold',
+  'Coral · Sky': 'Coral · Sky',
+  'Most points wins': 'Câștigă cine are cele mai multe puncte',
+  'Draw — both teams captured four points.': 'Egalitate — ambele echipe au capturat patru puncte.',
+  'Draw — the top score is shared.': 'Egalitate — scorul maxim este împărțit.',
+  'Change the number of players? The current Șeptică deal will be lost.': 'Schimbi numărul de jucători? Jocul curent de Șeptică se va pierde.',
   'You were cut. Continue with a 7 or the opening rank, or concede the trick.':
     'Ai fost tăiat. Continuă cu un 7 sau aceeași figură, ori cedează masa.',
   'Your turn: lead a new trick.': 'Rândul tău: deschide o mână nouă.',
@@ -692,9 +705,23 @@ function translateRomanianPattern(value: string): string | null {
   if (match) return `${match[1]} câștigă meciul!`;
   match = value.match(/^(Mint|Coral) wins!$/);
   if (match) return `${match[1]} câștigă!`;
+  // Online rooms for three or four
+  match = value.match(/^You are (Mint|Coral|Sky|Gold) · (\d+) of (\d+) players here\. (Finding more players…|Share the code with the others\.)$/);
+  if (match) return `Ești ${match[1]} · ${match[2]} din ${match[3]} jucători aici. ${match[4].startsWith('Finding') ? 'Căutăm alți jucători…' : 'Trimite codul celorlalți.'}`;
+  // Șeptică with three or four players
+  match = value.match(/^(Mint|Coral|Sky|Gold) takes (\d+) cards with the last cut · (?:no points|(\d+) points?)\.$/);
+  if (match) return `${match[1]} ia ${match[2]} cărți cu ultima tăietură · ${match[3] ? `${match[3]} ${match[3] === '1' ? 'punct' : 'puncte'}` : 'fără puncte'}.`;
+  match = value.match(/^(Mint|Coral|Sky|Gold) wins with (\d+) points!$/);
+  if (match) return `${match[1]} câștigă cu ${match[2]} puncte!`;
+  match = value.match(/^(Mint & Sky|Coral & Gold) win (\d+)-(\d+)!$/);
+  if (match) return `${match[1].replace(' & ', ' și ')} câștigă cu ${match[2]}-${match[3]}!`;
+  match = value.match(/^(Mint|Coral|Sky|Gold) · partner$/);
+  if (match) return `${match[1]} · partener`;
+  match = value.match(/^(\d+) cards · (\d+) pts$/);
+  if (match) return `${match[1]} cărți · ${match[2]} pct`;
   match = value.match(/^(Mint|Coral) wins the game!$/);
   if (match) return `${match[1]} câștigă partida!`;
-  match = value.match(/^(Mint|Coral) is choosing a card…$/);
+  match = value.match(/^(Mint|Coral|Sky|Gold) is choosing a card…$/);
   if (match) return `${match[1]} își alege cartea…`;
   match = value.match(/^Pass the device to (Mint|Coral), then reveal the hand\.$/);
   if (match) return `Dă dispozitivul lui ${match[1]}, apoi arată cărțile.`;
@@ -752,7 +779,7 @@ function translateRomanianPattern(value: string): string | null {
     const occupant = match[1] === 'Empty point' ? 'Punct liber' : match[1] === 'Mint piece' ? 'Piesă Mint' : 'Piesă Coral';
     return `${occupant}, poziția ${match[2]}`;
   }
-  match = value.match(/^Online match ready · You are (Mint|Coral)$/);
+  match = value.match(/^Online match ready · You are (Mint|Coral|Sky|Gold)$/);
   if (match) return `Meci online pregătit · Ești ${match[1]}`;
   match = value.match(/^Add (.+) to favorites$/);
   if (match) return `Adaugă ${match[1]} la favorite`;
