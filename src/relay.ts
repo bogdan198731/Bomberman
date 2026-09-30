@@ -33,6 +33,8 @@ export class InviteRoom {
   readonly game: OnlineGameId;
   readonly capacity: number;
   readonly connectedPlayers = new Set<RelaySeat>();
+  /** Seats the host handed to bots; the host's device plays them and no one can join them. */
+  readonly botSeats = new Set<RelaySeat>();
 
   constructor(code: string, game: OnlineGameId, capacity: number = 2) {
     this.code = code.toUpperCase();
@@ -43,7 +45,7 @@ export class InviteRoom {
   /** Takes the lowest free seat, so a player who drops can come back to theirs. */
   join(): RelaySeat | null {
     for (let seat = 1; seat <= this.capacity; seat++) {
-      if (!this.connectedPlayers.has(seat as RelaySeat)) {
+      if (!this.connectedPlayers.has(seat as RelaySeat) && !this.botSeats.has(seat as RelaySeat)) {
         this.connectedPlayers.add(seat as RelaySeat);
         return seat as RelaySeat;
       }
@@ -55,16 +57,30 @@ export class InviteRoom {
     this.connectedPlayers.delete(player);
   }
 
-  isFull(): boolean {
-    return this.connectedPlayers.size >= this.capacity;
+  /** Gives every empty seat to a bot; only rooms of three or four, since two is just vs-bot. */
+  fillWithBots(): RelaySeat[] {
+    if (this.capacity <= 2) return [];
+    const filled: RelaySeat[] = [];
+    for (let seat = 2; seat <= this.capacity; seat++) {
+      if (!this.connectedPlayers.has(seat as RelaySeat) && !this.botSeats.has(seat as RelaySeat)) {
+        this.botSeats.add(seat as RelaySeat);
+        filled.push(seat as RelaySeat);
+      }
+    }
+    return filled;
   }
 
-  snapshot(): { roomCode: string; game: OnlineGameId; connectedPlayers: RelaySeat[]; capacity: number } {
+  isFull(): boolean {
+    return this.connectedPlayers.size + this.botSeats.size >= this.capacity;
+  }
+
+  snapshot(): { roomCode: string; game: OnlineGameId; connectedPlayers: RelaySeat[]; capacity: number; botSeats: RelaySeat[] } {
     return {
       roomCode: this.code,
       game: this.game,
       connectedPlayers: [...this.connectedPlayers].sort(),
       capacity: this.capacity,
+      botSeats: [...this.botSeats].sort(),
     };
   }
 }

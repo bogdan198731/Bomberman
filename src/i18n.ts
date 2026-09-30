@@ -405,6 +405,7 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Șeptică players': 'Jucători Șeptică',
   'Players': 'Jucători',
   'Players online': 'Jucători online',
+  'Fill with bots': 'Completează cu boți',
   '4 · teams': '4 · echipe',
   'Mint & Sky': 'Mint și Sky',
   'Coral & Gold': 'Coral și Gold',
@@ -707,8 +708,8 @@ function translateRomanianPattern(value: string): string | null {
   match = value.match(/^(Mint|Coral) wins!$/);
   if (match) return `${match[1]} câștigă!`;
   // Online rooms for three or four
-  match = value.match(/^You are (Mint|Coral|Sky|Gold) · (\d+) of (\d+) players here\. (Finding more players…|Share the code with the others\.)$/);
-  if (match) return `Ești ${match[1]} · ${match[2]} din ${match[3]} jucători aici. ${match[4].startsWith('Finding') ? 'Căutăm alți jucători…' : 'Trimite codul celorlalți.'}`;
+  match = value.match(/^You are (Mint|Coral|Sky|Gold) · (\d+) of (\d+) players here\. (Finding more players…|Share the code with the others\.)( Or fill the empty seats with bots\.)?$/);
+  if (match) return `Ești ${match[1]} · ${match[2]} din ${match[3]} jucători aici. ${match[4].startsWith('Finding') ? 'Căutăm alți jucători…' : 'Trimite codul celorlalți.'}${match[5] ? ' Sau completează locurile goale cu boți.' : ''}`;
   // Șeptică with three or four players
   match = value.match(/^(Mint|Coral|Sky|Gold) takes (\d+) cards with the last cut · (?:no points|(\d+) points?)\.$/);
   if (match) return `${match[1]} ia ${match[2]} cărți cu ultima tăietură · ${match[3] ? `${match[3]} ${match[3] === '1' ? 'punct' : 'puncte'}` : 'fără puncte'}.`;
@@ -716,6 +717,10 @@ function translateRomanianPattern(value: string): string | null {
   if (match) return `${match[1]} câștigă cu ${match[2]} puncte!`;
   match = value.match(/^(Mint & Sky|Coral & Gold) win (\d+)-(\d+)!$/);
   if (match) return `${match[1].replace(' & ', ' și ')} câștigă cu ${match[2]}-${match[3]}!`;
+  match = value.match(/^(Mint|Coral|Sky|Gold) · partner · bot$/);
+  if (match) return `${match[1]} · partener · bot`;
+  match = value.match(/^(Mint|Coral|Sky|Gold) · bot$/);
+  if (match) return `${match[1]} · bot`;
   match = value.match(/^(Mint|Coral|Sky|Gold) · partner$/);
   if (match) return `${match[1]} · partener`;
   match = value.match(/^(\d+) cards · (\d+) pts$/);

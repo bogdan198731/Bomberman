@@ -376,7 +376,8 @@ export function initSeptica(): void {
       if (!game.settleTrick()) return;
       if (!room?.session().online && offlineMode === 'local') localHandVisible = false;
       render();
-      if (room?.session().online) broadcastState(); else scheduleBot();
+      if (room?.session().online) broadcastState();
+      scheduleBot();
     }, SEPTICA_TRICK_REVEAL_MS);
   }
 
@@ -385,7 +386,7 @@ export function initSeptica(): void {
     render();
     if (room?.session().online) broadcastState();
     scheduleSettlement();
-    if (!room?.session().online && offlineMode === 'bot' && game.phase !== 'settling') scheduleBot();
+    if (game.phase !== 'settling') scheduleBot();
   }
 
   function playLocalCard(index: number): void {
@@ -431,7 +432,10 @@ export function initSeptica(): void {
         const name = SEPTICA_PLAYER_NAMES[seat];
         chip.className = `septica-seat ${name.toLowerCase()}${seat === game.currentPlayer && game.phase !== 'finished' ? ' active' : ''}`;
         const title = document.createElement('strong');
-        title.textContent = game.teams && game.teamOf(seat) === game.teamOf(player) ? `${name} · partner` : name;
+        const labels = [name];
+        if (game.teams && game.teamOf(seat) === game.teamOf(player)) labels.push('partner');
+        if (room?.session().online && room.session().bots.includes(seat)) labels.push('bot');
+        title.textContent = labels.join(' · ');
         const detail = document.createElement('span');
         detail.textContent = `${game.hands[seat].length} cards · ${game.points[seat]} pts`;
         chip.append(title, detail);
@@ -480,8 +484,13 @@ export function initSeptica(): void {
 
   function scheduleBot(): void {
     window.clearTimeout(botTimer);
-    if (room?.session().online || offlineMode === 'local') return;
-    if (game.currentPlayer === 1 || game.phase === 'finished' || game.phase === 'settling') return;
+    if (game.phase === 'finished' || game.phase === 'settling') return;
+    // Offline the bots are every seat but Mint's; online the host plays whichever seats were filled with bots.
+    const session = room?.session();
+    const botTurn = session?.online
+      ? room!.isHost() && session.bots.includes(game.currentPlayer)
+      : offlineMode === 'bot' && game.currentPlayer !== 1;
+    if (!botTurn) return;
     botTimer = window.setTimeout(() => {
       if (isArcadeSessionPaused('septica')) { scheduleBot(); return; }
       if (game.botMove()) afterAuthoritativeMove();
@@ -525,7 +534,8 @@ export function initSeptica(): void {
     else if (game.pass(player)) {
       if (!room?.session().online && offlineMode === 'local') localHandVisible = game.phase === 'finished';
       render();
-      if (room?.session().online) broadcastState(); else scheduleBot();
+      if (room?.session().online) broadcastState();
+      scheduleBot();
     }
   });
   revealButton?.addEventListener('click', () => { localHandVisible = true; render(); });
@@ -545,7 +555,8 @@ export function initSeptica(): void {
       game.restart();
       localHandVisible = false;
       render();
-      if (room?.session().online) broadcastState(); else scheduleBot();
+      if (room?.session().online) broadcastState();
+      scheduleBot();
     }
   });
 
@@ -571,6 +582,7 @@ export function initSeptica(): void {
           localHandVisible = false;
           game.restart(session.capacity === 3 || session.capacity === 4 ? session.capacity : 2);
           broadcastState();
+          scheduleBot();
         }
         render();
       },

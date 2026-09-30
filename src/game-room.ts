@@ -16,6 +16,8 @@ export interface GameRoomSession {
   seat: RelaySeat | null;
   /** Seats in the room: 2 unless the game offers bigger rooms. */
   capacity: number;
+  /** Seats the host filled with bots; the host's device plays them. */
+  bots: RelaySeat[];
 }
 
 /** Seat names, in turn order round the table. */
@@ -52,7 +54,9 @@ export class GameRoomClient {
   private roomCode = '';
   private seat: RelaySeat | null = null;
   private capacity = 2;
+  private bots: RelaySeat[] = [];
   private ready = false;
+  private fillBotsButton: HTMLButtonElement | null = null;
   private sizeSelect: HTMLSelectElement | null;
   private quickMatching = false;
   private lastStateSentAt = 0;
@@ -108,6 +112,7 @@ export class GameRoomClient {
             <span class="game-room-code">Code <b data-room-code>-----</b></span>
             <button type="button" data-room-copy>Copy link</button>
             <button type="button" data-room-share>Share</button>
+            <button type="button" data-room-fill-bots hidden>Fill with bots</button>
             <button type="button" data-room-leave>Leave</button>
           </div>
         </div>
@@ -121,6 +126,7 @@ export class GameRoomClient {
     this.compactToggle = this.mount.querySelector<HTMLButtonElement>('[data-room-toggle]')!;
     this.summaryElement = this.mount.querySelector<HTMLElement>('[data-room-summary]')!;
     this.sizeSelect = this.mount.querySelector<HTMLSelectElement>('[data-room-size]');
+    this.fillBotsButton = this.mount.querySelector<HTMLButtonElement>('[data-room-fill-bots]');
     this.bindUi();
     this.selectMode(this.initialOfflineMode, false);
     window.setTimeout(() => this.offlineModes.find(mode => mode.id === this.initialOfflineMode)?.onSelect(), 0);
@@ -150,7 +156,7 @@ export class GameRoomClient {
   }
 
   session(): GameRoomSession {
-    return { online: Boolean(this.seat), ready: this.ready, roomCode: this.roomCode, playerId: this.playerId, seat: this.seat, capacity: this.capacity };
+    return { online: Boolean(this.seat), ready: this.ready, roomCode: this.roomCode, playerId: this.playerId, seat: this.seat, capacity: this.capacity, bots: [...this.bots] };
   }
 
   private get playerId(): RelayPlayerId | null {
@@ -227,6 +233,9 @@ export class GameRoomClient {
       void this.deliverInvite(event.currentTarget as HTMLButtonElement, true);
     });
     this.mount.querySelector('[data-room-leave]')?.addEventListener('click', () => this.leave());
+    this.fillBotsButton?.addEventListener('click', () => {
+      if (this.isHost() && this.socket?.readyState === WebSocket.OPEN) this.socket.send(JSON.stringify({ type: 'fillGameRoomWithBots' }));
+    });
   }
 
   private async copyText(text: string): Promise<void> {
@@ -286,6 +295,7 @@ export class GameRoomClient {
       this.roomCode = '';
       this.seat = null;
       this.capacity = 2;
+      this.bots = [];
       this.ready = false;
       this.quickMatching = false;
       this.onlineActions.hidden = false;
@@ -300,8 +310,9 @@ export class GameRoomClient {
     try { data = JSON.parse(String(raw)) as Record<string, unknown>; }
     catch { return; }
     if (data.type === 'gameRoomError' && typeof data.message === 'string') {
+      // Detach before closing, so the generic "Connection closed" does not replace the reason.
+      this.disconnect();
       this.statusElement.textContent = data.message;
-      this.socket?.close();
       return;
     }
     if (data.type === 'gameRoomJoined' && data.game === this.game && typeof data.roomCode === 'string' && isRelaySeat(data.playerId)) {
@@ -314,6 +325,8 @@ export class GameRoomClient {
       history.replaceState(history.state, '', arcadeInviteShareData(location.href, this.game, this.roomCode).url);
       this.onlineActions.hidden = true;
       this.joinedActions.hidden = false;
+      this.bots = [];
+      this.updateFillBots();
       this.statusElement.textContent = this.capacity > 2
         ? this.waitingText(1)
         : this.quickMatching
@@ -326,7 +339,11 @@ export class GameRoomClient {
       const wasReady = this.ready;
       if (typeof data.capacity === 'number') this.capacity = data.capacity;
       const connected = data.connectedPlayers.filter(isRelaySeat);
-      this.ready = Array.from({ length: this.capacity }, (_, index) => index + 1).every(seat => connected.includes(seat as RelaySeat));
+      this.bots = Array.isArray(data.botSeats) ? data.botSeats.filter(isRelaySeat) : [];
+      // A seat is taken by a person or, once the host fills the room, by a bot.
+      this.ready = Array.from({ length: this.capacity }, (_, index) => (index + 1) as RelaySeat)
+        .every(seat => connected.includes(seat) || this.bots.includes(seat));
+      this.updateFillBots();
       if (this.ready) {
         this.quickMatching = false;
         this.statusElement.textContent = `Online match ready · You are ${SEAT_NAMES[this.seat ?? 1]}`;
@@ -352,10 +369,16 @@ export class GameRoomClient {
     }
   }
 
+  /** The host of a room of three or four can stop waiting and let bots take the empty seats. */
+  private updateFillBots(): void {
+    if (this.fillBotsButton) this.fillBotsButton.hidden = !(this.isHost() && this.capacity > 2 && !this.ready);
+  }
+
   /** Status for a room of three or four while seats are still empty. */
   private waitingText(joined: number): string {
     const name = SEAT_NAMES[this.seat ?? 1];
-    return `You are ${name} · ${joined} of ${this.capacity} players here. ${this.quickMatching ? 'Finding more players…' : 'Share the code with the others.'}`;
+    const next = this.quickMatching ? 'Finding more players…' : 'Share the code with the others.';
+    return `You are ${name} · ${joined} of ${this.capacity} players here. ${next}${this.isHost() ? ' Or fill the empty seats with bots.' : ''}`;
   }
 
   private disconnect(): void {
@@ -365,6 +388,7 @@ export class GameRoomClient {
     this.roomCode = '';
     this.seat = null;
     this.capacity = 2;
+    this.bots = [];
     this.ready = false;
     this.quickMatching = false;
     this.onlineActions.hidden = false;
