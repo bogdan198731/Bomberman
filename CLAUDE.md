@@ -38,6 +38,10 @@ Safety rules the pipeline depends on — keep them when changing it:
 - Auto-merge is off unless `AUTO_MERGE=1`, requires every gate in `autoMergeChecks` (verified active tester, high-confidence triage, test-first commits, size and path limits, vision review, no side effects), and only asks GitHub to merge after CI — never merges directly.
 - Never link `node_modules` into a worktree: removing a worktree on Windows follows junctions and emptied the real folder once. Copy it.
 
+## The Everyone scoreboard
+
+Finished games post their score to `/api/scores` (`src/scoreboard.ts` holds the rules, `src/score-store.ts` the storage). Players show under the alias they type in Arcade Legends, or as "Unknown". Production keeps the boards in Upstash Redis via `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` on Render; without them the server writes `scores/` (or `SCORES_DIR`), which Render wipes on every deploy. Browser tests always use a throwaway folder.
+
 ## Local-only files
 
 `reports/`, `testers.json` and `test-results/` are git-ignored and exist only on the owner's PC; a cloud session will not have them. Tester codes are managed with `npm run testers -- add|revoke|list <name>`.

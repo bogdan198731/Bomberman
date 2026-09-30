@@ -254,6 +254,18 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Choose a game leaderboard': 'Alege clasamentul unui joc',
   'Local top five': 'Top cinci local',
   'Waiting for the first result · saved on this device': 'Se așteaptă primul rezultat · salvat pe acest dispozitiv',
+  'This device': 'Acest dispozitiv',
+  'Everyone': 'Toată lumea',
+  'Whose scores': 'Ale cui scoruri',
+  'Your name on the Everyone board': 'Numele tău în clasamentul tuturor',
+  'Leave it empty to stay Unknown.': 'Lasă gol ca să rămâi Necunoscut.',
+  'Unknown': 'Necunoscut',
+  'Everyone · top ten': 'Toată lumea · primii zece',
+  'Loading…': 'Se încarcă…',
+  'Offline': 'Offline',
+  'Loading the Everyone board…': 'Se încarcă clasamentul tuturor…',
+  'The Everyone board is offline right now. Your scores still count on this device.': 'Clasamentul tuturor nu e disponibil acum. Scorurile tale contează în continuare pe acest dispozitiv.',
+  'No scores yet · all players': 'Încă niciun scor · toți jucătorii',
   'Finish a match to claim the first spot.': 'Termină un meci pentru a ocupa primul loc.',
   'Game library': 'Bibliotecă de jocuri',
   'Choose your next round': 'Alege următoarea rundă',
@@ -707,6 +719,11 @@ function translateRomanianPattern(value: string): string | null {
   if (match) return `${match[1]} câștigă meciul!`;
   match = value.match(/^(Mint|Coral) wins!$/);
   if (match) return `${match[1]} câștigă!`;
+  // The Everyone scoreboard
+  match = value.match(/^Top (\d+) · all players$/);
+  if (match) return `Primii ${match[1]} · toți jucătorii`;
+  match = value.match(/^No scores yet\. Finish a (.+) game to take first place\.$/);
+  if (match) return `Încă niciun scor. Termină un joc de ${match[1]} ca să iei primul loc.`;
   // Online rooms for three or four
   match = value.match(/^You are (Mint|Coral|Sky|Gold) · (\d+) of (\d+) players here\. (Finding more players…|Share the code with the others\.)( Or fill the empty seats with bots\.)?$/);
   if (match) return `Ești ${match[1]} · ${match[2]} din ${match[3]} jucători aici. ${match[4].startsWith('Finding') ? 'Căutăm alți jucători…' : 'Trimite codul celorlalți.'}${match[5] ? ' Sau completează locurile goale cu boți.' : ''}`;

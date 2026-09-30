@@ -20,7 +20,8 @@ export default defineConfig({
   ],
   webServer: {
     command: 'node dist/server.js',
-    env: { PORT: String(port), HOST: '127.0.0.1' },
+    // Scores go to a fresh throwaway folder each run, never to Upstash, even if its settings are in the environment.
+    env: { PORT: String(port), HOST: '127.0.0.1', SCORES_DIR: `test-results/scores-${Date.now()}`, UPSTASH_REDIS_REST_URL: '', UPSTASH_REDIS_REST_TOKEN: '' },
     url: `http://127.0.0.1:${port}/`,
     reuseExistingServer: false,
     timeout: 30_000,
