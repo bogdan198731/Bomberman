@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import {
   GAME_SEO,
   HUB_SEO,
+  HUB_SEO_RO,
   OG_IMAGE_HEIGHT,
   OG_IMAGE_PATH,
   OG_IMAGE_WIDTH,
@@ -16,12 +17,16 @@ import {
   canonicalUrl,
   gameFromPath,
   injectSeoTags,
-  renderPageForView,
+  languageFromPath,
+  parseSeoPath,
+  routePath,
+  seoForView,
   renderSeoTags,
   structuredDataForView,
   viewElementId,
   type SeoView,
 } from './seo.js';
+import { renderPageForView } from './page-render.js';
 import { ARCADE_GAME_IDS, GAME_META } from './game-metadata.js';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
@@ -173,14 +178,14 @@ test('robots points at the sitemap and keeps private invite links out', () => {
   assert.match(robots, /Disallow: \/\*\?room=/);
 });
 
-test('sitemap lists the hub and all twelve games with a valid namespace', () => {
+test('sitemap lists the hub and every game, in English and Romanian, with a valid namespace', () => {
   const sitemap = buildSitemapXml('2026-09-24');
   assert.match(sitemap, /^<\?xml version="1\.0" encoding="UTF-8"\?>/);
   assert.ok(sitemap.includes('xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"'));
   const locations = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match => match[1]);
-  assert.deepEqual(locations, views.map(view => canonicalUrl(view)));
+  assert.deepEqual(locations, views.flatMap(view => [canonicalUrl(view), canonicalUrl(view, SITE_ORIGIN, 'ro')]));
   assert.equal(new Set(locations).size, locations.length, 'no duplicate sitemap entries');
-  assert.equal(sitemap.match(/<lastmod>2026-09-24<\/lastmod>/g)?.length, views.length);
+  assert.equal(sitemap.match(/<lastmod>2026-09-24<\/lastmod>/g)?.length, views.length * 2);
 });
 
 test('client-side navigation rewrites the document metadata it owns', () => {
@@ -236,4 +241,66 @@ test('the share image exists at the standard card size and stays light', () => {
   assert.deepEqual(size, [OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT], 'declared size matches the file');
   assert.deepEqual([OG_IMAGE_WIDTH, OG_IMAGE_HEIGHT], [1200, 630], 'the size social networks crop to');
   assert.ok(bytes.length < 400_000, `share image is ${Math.round(bytes.length / 1024)} KB; keep it small, it is also precached`);
+});
+
+test('Romanian pages have their own addresses, and unknown ones are not pages', () => {
+  assert.deepEqual(parseSeoPath('/'), { view: 'hub', language: 'en' });
+  assert.deepEqual(parseSeoPath('/ro/'), { view: 'hub', language: 'ro' });
+  assert.deepEqual(parseSeoPath('/ro'), { view: 'hub', language: 'ro' });
+  assert.deepEqual(parseSeoPath('/play/septica'), { view: 'septica', language: 'en' });
+  assert.deepEqual(parseSeoPath('/ro/joc/septica'), { view: 'septica', language: 'ro' });
+  assert.deepEqual(parseSeoPath('/ro/joc/septica/'), { view: 'septica', language: 'ro' });
+  for (const missing of ['/ro/joc/nope', '/ro/play/septica', '/play/nope', '/ro/x', '/rox']) {
+    assert.equal(parseSeoPath(missing), undefined, missing);
+  }
+  assert.equal(gameFromPath('/ro/joc/mines'), 'mines', 'bug reports from Romanian pages still name the game');
+  assert.equal(languageFromPath('/ro/joc/mines'), 'ro');
+  assert.equal(languageFromPath('/ro'), 'ro');
+  assert.equal(languageFromPath('/rox'), 'en');
+  assert.equal(languageFromPath('/play/mines'), 'en');
+  for (const view of views) {
+    for (const language of ['en', 'ro'] as const) {
+      assert.deepEqual(parseSeoPath(routePath(view, language)), { view, language }, `${view}/${language} round-trips`);
+    }
+  }
+});
+
+test('Romanian titles and descriptions are their own, unique and snippet-sized', () => {
+  const titles = new Set<string>();
+  for (const view of views) {
+    const { title, description } = seoForView(view, 'ro');
+    assert.notEqual(title, seoForView(view).title, `${view} has a Romanian title`);
+    assert.ok(title.length <= 65, `${view} Romanian title is ${title.length} chars`);
+    assert.ok(description.length >= 70 && description.length <= 170, `${view} Romanian description is ${description.length} chars`);
+    titles.add(title);
+  }
+  assert.equal(titles.size, views.length);
+  assert.equal(HUB_SEO_RO, seoForView('hub', 'ro'));
+});
+
+test('each page names both language versions and the Romanian one describes itself in Romanian', () => {
+  const tags = renderSeoTags('septica', SITE_ORIGIN, 'ro');
+  assert.ok(tags.includes(`<link rel="canonical" href="${SITE_ORIGIN}/ro/joc/septica">`));
+  assert.ok(tags.includes(`<link rel="alternate" hreflang="en" href="${SITE_ORIGIN}/play/septica">`));
+  assert.ok(tags.includes(`<link rel="alternate" hreflang="ro" href="${SITE_ORIGIN}/ro/joc/septica">`));
+  assert.ok(tags.includes(`<link rel="alternate" hreflang="x-default" href="${SITE_ORIGIN}/play/septica">`));
+  assert.ok(tags.includes('<meta property="og:locale" content="ro_RO">'));
+  assert.ok(tags.includes('<meta property="og:locale:alternate" content="en_US">'));
+  assert.ok(tags.includes(`<title>${seoForView('septica', 'ro').title}</title>`));
+  const english = renderSeoTags('hub');
+  assert.ok(english.includes(`<link rel="alternate" hreflang="ro" href="${SITE_ORIGIN}/ro/">`));
+  assert.ok(english.includes('<meta property="og:locale" content="en_US">'));
+  const data = structuredDataForView('mines', SITE_ORIGIN, 'ro') as { '@graph': Record<string, unknown>[] };
+  assert.equal(data['@graph'][0].url, `${SITE_ORIGIN}/ro/joc/mines`);
+  assert.equal(data['@graph'][0].inLanguage, 'ro');
+});
+
+test('the sitemap tells search engines which pages are translations of each other', () => {
+  const sitemap = buildSitemapXml('2026-10-01');
+  assert.ok(sitemap.includes('xmlns:xhtml="http://www.w3.org/1999/xhtml"'));
+  const entries = sitemap.split('<url>').slice(1);
+  assert.equal(entries.length, views.length * 2);
+  for (const entry of entries) {
+    assert.equal(entry.match(/<xhtml:link rel="alternate" hreflang="(en|ro|x-default)"/g)?.length, 3);
+  }
 });

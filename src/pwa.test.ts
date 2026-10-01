@@ -57,7 +57,7 @@ test('every browser module is precached, so a new one cannot be forgotten', () =
     .filter(name => name.endsWith('.ts') && !name.endsWith('.test.ts') && !name.endsWith('.d.ts'))
     .map(name => name.replace(/\.ts$/, '.js'))
     // Server-only modules never reach the browser, so they have no business in a cache.
-    .filter(name => !['server.js', 'report-intake.js', 'testers.js', 'testers-cli.js', 'triage.js', 'triage-agent.js', 'claude-cli.js', 'fix-policy.js', 'fix-agent.js', 'pr-policy.js', 'pr-agent.js', 'vision-review.js', 'png.js', 'side-effects.js', 'report-email.js', 'import-report.js', 'score-store.js'].includes(name));
+    .filter(name => !['server.js', 'report-intake.js', 'testers.js', 'testers-cli.js', 'triage.js', 'triage-agent.js', 'claude-cli.js', 'fix-policy.js', 'fix-agent.js', 'pr-policy.js', 'pr-agent.js', 'vision-review.js', 'png.js', 'side-effects.js', 'report-email.js', 'import-report.js', 'score-store.js', 'seo-content.js', 'page-render.js'].includes(name));
 
   const missing = modules.filter(name => !workerSource.includes(`/dist/${name}`));
   assert.deepEqual(missing, [], `add these to APP_SHELL: ${missing.join(', ')}`);

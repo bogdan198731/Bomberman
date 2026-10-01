@@ -1,6 +1,7 @@
 import { isArcadeGameId, type ArcadeGameId } from './game-metadata.js';
 import { clearArcadeInviteUrl, parseArcadeInvite } from './invite.js';
-import { applyRouteMeta, gameFromPath, gamePath } from './seo.js';
+import { currentArcadeLanguage, type ArcadeLanguage } from './i18n.js';
+import { applyRouteMeta, gameFromPath, routePath, SITE_ORIGIN } from './seo.js';
 
 export type HubSection = 'games' | 'challenges' | 'profile';
 export type ArcadeView = 'hub' | ArcadeGameId;
@@ -22,11 +23,21 @@ export function readArcadeRoute(href: string): ArcadeRoute {
     : hash === 'profile' || hash === 'profilePanel' || hash === 'leaderboardPanel' ? 'profile' : 'games' };
 }
 
-export function arcadeRouteUrl(href: string, route: ArcadeRoute): string {
+/** The address bar follows the language too: Romanian pages live under /ro. */
+export function arcadeRouteUrl(href: string, route: ArcadeRoute, language: ArcadeLanguage = 'en'): string {
   const url = new URL(clearArcadeInviteUrl(href));
-  url.pathname = route.view === 'hub' ? '/' : gamePath(route.view);
+  url.pathname = routePath(route.view, language);
   url.hash = route.view === 'hub' ? route.section : '';
   return url.toString();
+}
+
+/**
+ * The server renders a "how to play" article for the game a page was opened
+ * on, in that page's language. It only belongs under that game, in that language.
+ */
+function syncAboutArticle(): void {
+  const about = document.getElementById('gameAbout');
+  if (about) about.hidden = about.dataset.game !== document.body.dataset.view || about.dataset.lang !== currentArcadeLanguage();
 }
 
 export function createArcadeNavigation(showView: (view: ArcadeView) => void): {
@@ -52,7 +63,8 @@ export function createArcadeNavigation(showView: (view: ArcadeView) => void): {
     }
     route = next;
     showView(next.view);
-    applyRouteMeta(next.view, document);
+    applyRouteMeta(next.view, document, SITE_ORIGIN, currentArcadeLanguage());
+    syncAboutArticle();
     document.body.dataset.hubSection = next.section;
     window.dispatchEvent(new CustomEvent('arcade-hub-section', { detail: { section: next.section } }));
     const token = ++restoreToken;
@@ -71,7 +83,7 @@ export function createArcadeNavigation(showView: (view: ArcadeView) => void): {
     if (route.view === 'hub') { hub = snapshot(); history.replaceState(state(), '', location.href); }
     if (view === 'hub' && section !== hub.section) hub = { ...hub, section, scroll: 0 };
     const next: ArcadeRoute = { view, section };
-    history.pushState({ arcade: next, hub }, '', arcadeRouteUrl(location.href, next));
+    history.pushState({ arcade: next, hub }, '', arcadeRouteUrl(location.href, next, currentArcadeLanguage()));
     apply(next);
   };
   const saveHub = (): void => {
@@ -90,6 +102,13 @@ export function createArcadeNavigation(showView: (view: ArcadeView) => void): {
     else if (next.view === 'hub') hub = { ...hub, section: next.section, scroll: 0 };
     apply(next);
   });
+  // Switching language moves to that language's address for the same page.
+  window.addEventListener('arcade-language-change', () => {
+    if (!started) return;
+    if (!parseArcadeInvite(location.search)) history.replaceState(history.state, '', arcadeRouteUrl(location.href, route, currentArcadeLanguage()));
+    applyRouteMeta(route.view, document, SITE_ORIGIN, currentArcadeLanguage());
+    syncAboutArticle();
+  });
   window.addEventListener('arcade-navigate-hub', event => {
     open('hub', (event as CustomEvent<{ section: HubSection }>).detail.section);
   });
@@ -99,7 +118,7 @@ export function createArcadeNavigation(showView: (view: ArcadeView) => void): {
       const saved = history.state as NavigationState | null;
       if (saved?.hub) hub = saved.hub;
       route = readArcadeRoute(location.href);
-      history.replaceState(state(), '', parseArcadeInvite(location.search) ? location.href : arcadeRouteUrl(location.href, route));
+      history.replaceState(state(), '', parseArcadeInvite(location.search) ? location.href : arcadeRouteUrl(location.href, route, currentArcadeLanguage()));
       apply(route);
     },
     open,

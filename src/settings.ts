@@ -1,6 +1,7 @@
 import { closeArcadeDialog, openArcadeDialog, registerArcadeDialog } from './dialogs.js';
 import type { ArcadeResult } from './stats.js';
 import { setArcadeLanguage, type ArcadeLanguage } from './i18n.js';
+import { languageFromPath } from './seo.js';
 
 export const SETTINGS_STORAGE_KEY = 'blast-arcade-settings-v1';
 
@@ -150,6 +151,8 @@ export function initArcadeSettings(): void {
 
   const soundPlayer = new ArcadeSoundPlayer();
   let settings = loadSettings();
+  // A Romanian address (/ro/...) opens in Romanian, whatever was chosen before.
+  if (languageFromPath(location.pathname) === 'ro') settings.language = 'ro';
 
   function applySettings(save = true): void {
     settings = save ? saveSettings(settings) : normalizeSettings(settings);

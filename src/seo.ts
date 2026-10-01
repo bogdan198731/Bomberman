@@ -1,4 +1,5 @@
 import { ARCADE_GAME_IDS, GAME_META, isArcadeGameId, type ArcadeGameId } from './game-metadata.js';
+import type { ArcadeLanguage } from './i18n.js';
 
 export const SITE_ORIGIN = 'https://blastarcade.ro';
 export const SITE_NAME = 'Blast Arcade';
@@ -7,6 +8,10 @@ export const OG_IMAGE_PATH = '/public/og-v4.jpg';
 export const OG_IMAGE_WIDTH = 1200;
 export const OG_IMAGE_HEIGHT = 630;
 export const GAME_PATH_PREFIX = '/play/';
+/** Romanian pages live under their own URLs so search engines can index them. */
+export const ROMANIAN_HUB_PATH = '/ro/';
+export const ROMANIAN_GAME_PATH_PREFIX = '/ro/joc/';
+export const SEO_LANGUAGES: readonly ArcadeLanguage[] = ['en', 'ro'];
 
 /** Marks the block in index.html that the server rewrites per route. */
 export const SEO_BLOCK_START = '<!--seo:start-->';
@@ -30,6 +35,12 @@ export const HUB_SEO: PageSeo = {
   title: `Blast Arcade — ${ARCADE_GAME_IDS.length} Free Browser Games, No Download`,
   description:
     `Play ${gameCountWord()} free browser games instantly — Bomberman, Snake, Minesweeper, Air Hockey and more. Solo vs bots, same-device play, or online with friends.`,
+};
+
+export const HUB_SEO_RO: PageSeo = {
+  title: `Blast Arcade — ${ARCADE_GAME_IDS.length} jocuri online gratuite, fără descărcare`,
+  description:
+    `Joacă ${ARCADE_GAME_IDS.length} jocuri gratuite direct în browser — Șeptică, Țintar, Bomberman, Snake, 2048 și altele. Singur cu boți, doi pe același dispozitiv sau online cu prietenii.`,
 };
 
 export const GAME_SEO: Record<ArcadeGameId, PageSeo> = {
@@ -135,33 +146,157 @@ export const GAME_SEO: Record<ArcadeGameId, PageSeo> = {
   },
 };
 
-/** Every route the crawler should know about: the hub plus one page per game. */
+export const GAME_SEO_RO: Record<ArcadeGameId, PageSeo> = {
+  bomberman: {
+    title: 'Blast Buddies — Joc Bomberman online gratuit',
+    description:
+      'Joacă Blast Buddies gratuit în browser. Păcălește boții sau invită un prieten într-o luptă explozivă prin labirint — singur, pe același dispozitiv sau online.',
+  },
+  tintar: {
+    title: 'Țintar online — Joacă moara gratuit cu botul sau un prieten',
+    description:
+      'Joacă Țintar gratuit în browser. Formează mori, capturează piesele adversarului și stăpânește jocul clasic românesc de strategie, cu botul sau cu un prieten.',
+  },
+  paddle: {
+    title: 'Paddle Clash — Joc Pong online gratuit',
+    description:
+      'Joacă Paddle Clash gratuit în browser: un duel rapid cu palete, schimburi tot mai iuți și unghiuri ascuțite, cu botul, pe același ecran sau online.',
+  },
+  snake: {
+    title: 'Neon Snake Arena — Jocul Șarpele online gratuit',
+    description:
+      'Joacă Snake gratuit în browser. Adună celulele luminoase pentru un scor record sau supraviețuiește unui duel cu doi șerpi, pe același dispozitiv sau online.',
+  },
+  tanks: {
+    title: 'Mini Tanks — Joc cu tancuri pentru 2 jucători, gratuit',
+    description:
+      'Joacă Mini Tanks gratuit în browser. Distruge adăposturile, trage cu ricoșeu și înfruntă botul sau un prieten pe cinci runde, local sau online.',
+  },
+  septica: {
+    title: 'Șeptică online — Joacă jocul de cărți românesc gratuit',
+    description:
+      'Joacă Șeptică gratuit în browser. Taie cu șeptari, adună ași și zeci și învinge botul, un prieten de lângă tine sau un adversar online.',
+  },
+  survival: {
+    title: 'Survival Arena — Joc shooter online cu valuri de inamici',
+    description:
+      'Joacă Survival Arena gratuit în browser. Apără centrul, țintește automat creaturile neon și devino tot mai puternic prin valuri nesfârșite, singur sau în echipă.',
+  },
+  star: {
+    title: 'Star Defender — Joc Space Invaders online gratuit',
+    description:
+      'Joacă Star Defender gratuit în browser. Sparge formațiile de invadatori, adună arme noi și înfruntă o navă-comandă la fiecare al cincilea val.',
+  },
+  racing: {
+    title: 'Micro Racers — Joc de curse online gratuit',
+    description:
+      'Joacă Micro Racers gratuit în browser. Driftează pe un circuit neon, adună turbo și întrece botul sau un prieten în trei ture.',
+  },
+  blocks: {
+    title: 'Block Drop Duel — Joc cu blocuri online gratuit',
+    description:
+      'Joacă Block Drop Duel gratuit în browser. Construiește stive curate, elimină linii și îngroapă botul sau un prieten sub blocuri.',
+  },
+  twenty48: {
+    title: '2048 online — Jocul puzzle cu numere, gratuit',
+    description:
+      'Joacă 2048 gratuit în browser. Glisează numerele egale, combină-le inteligent și formează piesa 2048 — sau încearcă puterile lui 3, 5 și 7. Fără descărcare.',
+  },
+  sudoku: {
+    title: 'Sudoku online gratuit — Trei niveluri de dificultate',
+    description:
+      'Joacă Sudoku gratuit în browser. Completează fiecare rând, coloană și careu 3×3 pe trei niveluri de dificultate, cu indicii când ai nevoie.',
+  },
+  cycles: {
+    title: 'Light Cycles — Duel neon cu dâre de lumină, online',
+    description:
+      'Joacă Light Cycles gratuit în browser. Gonește pe o grilă neon, lasă în urmă un zid de lumină și închide-l primul pe bot sau pe prieten, local ori online.',
+  },
+  fourrow: {
+    title: 'Patru în linie online — Joacă gratuit cu botul sau un prieten',
+    description:
+      'Joacă Four in a Row (Patru în linie) gratuit în browser. Aliniază patru piese înaintea adversarului: un bot cu trei niveluri, un prieten lângă tine sau online.',
+  },
+  bricks: {
+    title: 'Brick Breaker — Joc de spart cărămizi online gratuit',
+    description:
+      'Joacă Brick Breaker gratuit în browser. Condu paleta, ține mingea în joc și sparge cinci ziduri construite manual, cu cărămizi dure și de oțel.',
+  },
+  mines: {
+    title: 'Minesweeper online — Jocul cu mine, gratuit',
+    description:
+      'Joacă Minesweeper gratuit în browser. Curăță câmpul pe trei table potrivite pentru telefon, marchează minele cu o apăsare lungă și bate-ți recordul.',
+  },
+  hockey: {
+    title: 'Air Hockey online — Joacă gratuit cu botul sau un prieten',
+    description:
+      'Joacă Air Hockey gratuit în browser. Apără-ți poarta, trage din mantinelă și ajungi primul la șapte goluri, cu botul, cu un prieten pe același ecran sau online.',
+  },
+  reversi: {
+    title: 'Reversi online — Joacă gratuit cu botul sau un prieten',
+    description:
+      'Joacă Reversi gratuit în browser. Încercuiește și întoarce piesele adversarului, ocupă colțurile și termină în avantaj, cu botul, cu un prieten sau online.',
+  },
+  solitaire: {
+    title: 'Solitaire Klondike online — Pasiențe gratuite, fără descărcare',
+    description:
+      'Joacă Solitaire Klondike gratuit în browser. Trage câte una sau câte trei cărți, anulează orice mutare și continuă de unde ai rămas, pe telefon sau calculator.',
+  },
+  hangman: {
+    title: 'Spânzurătoarea online — Joc de ghicit cuvinte gratuit',
+    description:
+      'Joacă Spânzurătoarea (Hangman) gratuit în browser. Ghicește cuvântul ascuns literă cu literă, în română sau engleză, înainte să fie desenat omulețul.',
+  },
+};
+
+/** Every route the crawler should know about: the hub plus one page per game, in each language. */
 export type SeoView = 'hub' | ArcadeGameId;
+export interface SeoRoute { view: SeoView; language: ArcadeLanguage }
 
-export function gamePath(gameId: ArcadeGameId): string {
-  return `${GAME_PATH_PREFIX}${gameId}`;
+export function gamePath(gameId: ArcadeGameId, language: ArcadeLanguage = 'en'): string {
+  return `${language === 'ro' ? ROMANIAN_GAME_PATH_PREFIX : GAME_PATH_PREFIX}${gameId}`;
 }
 
-export function routePath(view: SeoView): string {
-  return view === 'hub' ? '/' : gamePath(view);
+export function routePath(view: SeoView, language: ArcadeLanguage = 'en'): string {
+  if (view === 'hub') return language === 'ro' ? ROMANIAN_HUB_PATH : '/';
+  return gamePath(view, language);
 }
 
-/** Reads a game id out of a `/play/<id>` pathname; undefined for anything else. */
+/** The page a pathname names, or undefined when it is not one of ours (a 404). */
+export function parseSeoPath(pathname: string): SeoRoute | undefined {
+  if (pathname === '/' || pathname === '/index.html') return { view: 'hub', language: 'en' };
+  if (pathname === '/ro' || pathname === ROMANIAN_HUB_PATH) return { view: 'hub', language: 'ro' };
+  for (const [prefix, language] of [[GAME_PATH_PREFIX, 'en'], [ROMANIAN_GAME_PATH_PREFIX, 'ro']] as const) {
+    if (!pathname.startsWith(prefix)) continue;
+    const id = pathname.slice(prefix.length).replace(/\/$/, '');
+    return isArcadeGameId(id) ? { view: id, language } : undefined;
+  }
+  return undefined;
+}
+
+/** Reads a game id out of a `/play/<id>` or `/ro/joc/<id>` pathname; undefined for anything else. */
 export function gameFromPath(pathname: string): ArcadeGameId | undefined {
-  if (!pathname.startsWith(GAME_PATH_PREFIX)) return undefined;
-  const id = pathname.slice(GAME_PATH_PREFIX.length).replace(/\/$/, '');
-  return isArcadeGameId(id) ? id : undefined;
+  const route = parseSeoPath(pathname);
+  return route && route.view !== 'hub' ? route.view : undefined;
 }
 
-export function canonicalUrl(view: SeoView, origin: string = SITE_ORIGIN): string {
-  return `${origin}${routePath(view)}`;
+/** Romanian for anything under /ro, English everywhere else. */
+export function languageFromPath(pathname: string): ArcadeLanguage {
+  return pathname === '/ro' || pathname.startsWith(ROMANIAN_HUB_PATH) ? 'ro' : 'en';
 }
 
-export function seoForView(view: SeoView): PageSeo {
+export function canonicalUrl(view: SeoView, origin: string = SITE_ORIGIN, language: ArcadeLanguage = 'en'): string {
+  return `${origin}${routePath(view, language)}`;
+}
+
+export function seoForView(view: SeoView, language: ArcadeLanguage = 'en'): PageSeo {
+  if (language === 'ro') return view === 'hub' ? HUB_SEO_RO : GAME_SEO_RO[view];
   return view === 'hub' ? HUB_SEO : GAME_SEO[view];
 }
 
-function escapeHtml(value: string): string {
+const OPEN_GRAPH_LOCALES: Record<ArcadeLanguage, string> = { en: 'en_US', ro: 'ro_RO' };
+
+export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -169,13 +304,14 @@ function escapeHtml(value: string): string {
     .replace(/"/g, '&quot;');
 }
 
-function videoGameSchema(gameId: ArcadeGameId, origin: string): Record<string, unknown> {
+function videoGameSchema(gameId: ArcadeGameId, origin: string, language: ArcadeLanguage): Record<string, unknown> {
   const meta = GAME_META[gameId];
   return {
     '@type': 'VideoGame',
     name: meta.name,
-    url: canonicalUrl(gameId, origin),
-    description: GAME_SEO[gameId].description,
+    url: canonicalUrl(gameId, origin, language),
+    description: seoForView(gameId, language).description,
+    inLanguage: language,
     applicationCategory: 'GameApplication',
     operatingSystem: 'Any modern web browser',
     gamePlatform: 'Web browser',
@@ -187,7 +323,7 @@ function videoGameSchema(gameId: ArcadeGameId, origin: string): Record<string, u
 }
 
 /** JSON-LD describing the whole arcade, used on the hub page. */
-export function hubStructuredData(origin: string = SITE_ORIGIN): unknown {
+export function hubStructuredData(origin: string = SITE_ORIGIN, language: ArcadeLanguage = 'en'): unknown {
   return {
     '@context': 'https://schema.org',
     '@graph': [
@@ -201,12 +337,12 @@ export function hubStructuredData(origin: string = SITE_ORIGIN): unknown {
       },
       {
         '@type': 'ItemList',
-        name: 'Blast Arcade games',
+        name: language === 'ro' ? 'Jocuri Blast Arcade' : 'Blast Arcade games',
         numberOfItems: ARCADE_GAME_IDS.length,
         itemListElement: ARCADE_GAME_IDS.map((gameId, index) => ({
           '@type': 'ListItem',
           position: index + 1,
-          item: videoGameSchema(gameId, origin),
+          item: videoGameSchema(gameId, origin, language),
         })),
       },
     ],
@@ -214,45 +350,51 @@ export function hubStructuredData(origin: string = SITE_ORIGIN): unknown {
 }
 
 /** JSON-LD for a single game page, with a breadcrumb back to the hub. */
-export function gameStructuredData(gameId: ArcadeGameId, origin: string = SITE_ORIGIN): unknown {
+export function gameStructuredData(gameId: ArcadeGameId, origin: string = SITE_ORIGIN, language: ArcadeLanguage = 'en'): unknown {
+  const url = canonicalUrl(gameId, origin, language);
   return {
     '@context': 'https://schema.org',
     '@graph': [
-      { ...videoGameSchema(gameId, origin), '@id': `${canonicalUrl(gameId, origin)}#game`, isPartOf: { '@id': `${origin}/#website` } },
+      { ...videoGameSchema(gameId, origin, language), '@id': `${url}#game`, isPartOf: { '@id': `${origin}/#website` } },
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: SITE_NAME, item: `${origin}/` },
-          { '@type': 'ListItem', position: 2, name: GAME_META[gameId].name, item: canonicalUrl(gameId, origin) },
+          { '@type': 'ListItem', position: 1, name: SITE_NAME, item: canonicalUrl('hub', origin, language) },
+          { '@type': 'ListItem', position: 2, name: GAME_META[gameId].name, item: url },
         ],
       },
     ],
   };
 }
 
-export function structuredDataForView(view: SeoView, origin: string = SITE_ORIGIN): unknown {
-  return view === 'hub' ? hubStructuredData(origin) : gameStructuredData(view, origin);
+export function structuredDataForView(view: SeoView, origin: string = SITE_ORIGIN, language: ArcadeLanguage = 'en'): unknown {
+  return view === 'hub' ? hubStructuredData(origin, language) : gameStructuredData(view, origin, language);
 }
 
 /**
  * The full <head> metadata block for a route. The server swaps this into
  * index.html so crawlers see per-game tags without executing JavaScript.
  */
-export function renderSeoTags(view: SeoView, origin: string = SITE_ORIGIN): string {
-  const { title, description } = seoForView(view);
-  const canonical = canonicalUrl(view, origin);
+export function renderSeoTags(view: SeoView, origin: string = SITE_ORIGIN, language: ArcadeLanguage = 'en'): string {
+  const { title, description } = seoForView(view, language);
+  const canonical = canonicalUrl(view, origin, language);
   const image = `${origin}${OG_IMAGE_PATH}`;
-  const json = JSON.stringify(structuredDataForView(view, origin)).replace(/</g, '\\u003c');
+  const json = JSON.stringify(structuredDataForView(view, origin, language)).replace(/</g, '\\u003c');
+  const other: ArcadeLanguage = language === 'ro' ? 'en' : 'ro';
   return [
     `<title>${escapeHtml(title)}</title>`,
     `<meta name="description" content="${escapeHtml(description)}">`,
     `<link rel="canonical" href="${canonical}">`,
+    // Each page names both language versions; English is the default for everyone else.
+    ...SEO_LANGUAGES.map(code => `<link rel="alternate" hreflang="${code}" href="${canonicalUrl(view, origin, code)}">`),
+    `<link rel="alternate" hreflang="x-default" href="${canonicalUrl(view, origin, 'en')}">`,
     `<meta property="og:site_name" content="${SITE_NAME}">`,
     `<meta property="og:title" content="${escapeHtml(title)}">`,
     `<meta property="og:description" content="${escapeHtml(description)}">`,
     `<meta property="og:url" content="${canonical}">`,
     `<meta property="og:type" content="website">`,
-    `<meta property="og:locale" content="en">`,
+    `<meta property="og:locale" content="${OPEN_GRAPH_LOCALES[language]}">`,
+    `<meta property="og:locale:alternate" content="${OPEN_GRAPH_LOCALES[other]}">`,
     `<meta property="og:image" content="${image}">`,
     `<meta property="og:image:width" content="${OG_IMAGE_WIDTH}">`,
     `<meta property="og:image:height" content="${OG_IMAGE_HEIGHT}">`,
@@ -267,14 +409,14 @@ export function renderSeoTags(view: SeoView, origin: string = SITE_ORIGIN): stri
 }
 
 /** Replaces the marked SEO block in index.html with this route's tags. */
-export function injectSeoTags(html: string, view: SeoView, origin: string = SITE_ORIGIN): string {
+export function injectSeoTags(html: string, view: SeoView, origin: string = SITE_ORIGIN, language: ArcadeLanguage = 'en'): string {
   const start = html.indexOf(SEO_BLOCK_START);
   const end = html.indexOf(SEO_BLOCK_END);
   if (start === -1 || end === -1 || end < start) return html;
   return (
     html.slice(0, start + SEO_BLOCK_START.length) +
     '\n  ' +
-    renderSeoTags(view, origin) +
+    renderSeoTags(view, origin, language) +
     '\n  ' +
     html.slice(end)
   );
@@ -309,11 +451,6 @@ export function applyInitialView(html: string, view: SeoView): string {
   );
 }
 
-/** Everything the server changes about index.html for a given route. */
-export function renderPageForView(html: string, view: SeoView, origin: string = SITE_ORIGIN): string {
-  return applyInitialView(injectSeoTags(html, view, origin), view);
-}
-
 export function buildRobotsTxt(origin: string = SITE_ORIGIN): string {
   return [
     'User-agent: *',
@@ -328,23 +465,24 @@ export function buildRobotsTxt(origin: string = SITE_ORIGIN): string {
 }
 
 export function buildSitemapXml(lastModified: string, origin: string = SITE_ORIGIN): string {
-  const entries: { view: SeoView; priority: string }[] = [
-    { view: 'hub', priority: '1.0' },
-    ...ARCADE_GAME_IDS.map(gameId => ({ view: gameId as SeoView, priority: '0.8' })),
-  ];
-  const urls = entries
-    .map(({ view, priority }) =>
+  const views: SeoView[] = ['hub', ...ARCADE_GAME_IDS];
+  const urls = views
+    .flatMap(view => SEO_LANGUAGES.map(language => ({ view, language })))
+    .map(({ view, language }) =>
       [
         '  <url>',
-        `    <loc>${canonicalUrl(view, origin)}</loc>`,
+        `    <loc>${canonicalUrl(view, origin, language)}</loc>`,
+        // Google wants every entry to list all of its language versions, itself included.
+        ...SEO_LANGUAGES.map(code => `    <xhtml:link rel="alternate" hreflang="${code}" href="${canonicalUrl(view, origin, code)}"/>`),
+        `    <xhtml:link rel="alternate" hreflang="x-default" href="${canonicalUrl(view, origin, 'en')}"/>`,
         `    <lastmod>${lastModified}</lastmod>`,
         '    <changefreq>weekly</changefreq>',
-        `    <priority>${priority}</priority>`,
+        `    <priority>${view === 'hub' ? '1.0' : '0.8'}</priority>`,
         '  </url>',
       ].join('\n'),
     )
     .join('\n');
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${urls}\n</urlset>\n`;
 }
 
 interface MetaElement {
@@ -361,9 +499,9 @@ interface MetaDocument {
  * Keeps the document's metadata honest during client-side navigation, so an
  * in-app move to another game updates the tab title, canonical, and share tags.
  */
-export function applyRouteMeta(view: SeoView, doc: MetaDocument, origin: string = SITE_ORIGIN): void {
-  const { title, description } = seoForView(view);
-  const canonical = canonicalUrl(view, origin);
+export function applyRouteMeta(view: SeoView, doc: MetaDocument, origin: string = SITE_ORIGIN, language: ArcadeLanguage = 'en'): void {
+  const { title, description } = seoForView(view, language);
+  const canonical = canonicalUrl(view, origin, language);
   doc.title = title;
   const set = (selector: string, attribute: string, value: string): void => {
     doc.querySelector(selector)?.setAttribute(attribute, value);
@@ -375,6 +513,10 @@ export function applyRouteMeta(view: SeoView, doc: MetaDocument, origin: string 
   set('meta[property="og:url"]', 'content', canonical);
   set('meta[name="twitter:title"]', 'content', title);
   set('meta[name="twitter:description"]', 'content', description);
+  set('meta[property="og:locale"]', 'content', OPEN_GRAPH_LOCALES[language]);
+  set('meta[property="og:locale:alternate"]', 'content', OPEN_GRAPH_LOCALES[language === 'ro' ? 'en' : 'ro']);
+  SEO_LANGUAGES.forEach(code => set(`link[rel="alternate"][hreflang="${code}"]`, 'href', canonicalUrl(view, origin, code)));
+  set('link[rel="alternate"][hreflang="x-default"]', 'href', canonicalUrl(view, origin, 'en'));
   const script = doc.querySelector('script[type="application/ld+json"]');
-  if (script) script.textContent = JSON.stringify(structuredDataForView(view, origin));
+  if (script) script.textContent = JSON.stringify(structuredDataForView(view, origin, language));
 }
