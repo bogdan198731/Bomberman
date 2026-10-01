@@ -298,7 +298,13 @@ export function initGameExperience(): void {
     document.querySelector<HTMLElement>(REPLAY_SELECTORS[resultGame])?.click();
     if (resultGame === 'paddle') document.getElementById('paddleServeButton')?.click();
   });
-  resultOverlay.querySelector('[data-result-continue]')?.addEventListener('click', () => { closeResult(); clearArcadePause(); document.getElementById('twenty48ContinueButton')?.click(); });
+  resultOverlay.querySelector('[data-result-continue]')?.addEventListener('click', () => {
+    // Tells the scoreboard the run goes on, so the score is offered when it really ends.
+    window.dispatchEvent(new CustomEvent('arcade-result-continued', { detail: { gameId: resultGame } }));
+    closeResult();
+    clearArcadePause();
+    document.getElementById('twenty48ContinueButton')?.click();
+  });
   resultOverlay.querySelector('[data-result-next]')?.addEventListener('click', () => {
     const circuit = loadCircuitProgress().current;
     const next = circuit && !circuitIsComplete(circuit) ? circuitCurrentGame(circuit) : null;

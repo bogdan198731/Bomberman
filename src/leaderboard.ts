@@ -443,6 +443,13 @@ export function initArcadeLeaderboard(): void {
     // The usual buttons come back; keep the keyboard on the card.
     document.querySelector<HTMLElement>('.arcade-result-overlay [data-result-replay]')?.focus({ preventScroll: true });
   });
+  // Continuing a 2048 run drops the offer; the final score gets its own when the run ends.
+  window.addEventListener('arcade-result-continued', () => {
+    offerId += 1;
+    pending = null;
+    const form = claimForm();
+    if (form) { form.hidden = true; form.classList.remove('asking'); }
+  });
   // Leaving the result card without choosing keeps the saved name (Unknown if none).
   window.addEventListener('arcade-dialog-change', event => {
     const detail = (event as CustomEvent<{ active: string | null; previous: string | null }>).detail;

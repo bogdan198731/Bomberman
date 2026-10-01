@@ -432,10 +432,6 @@ export function initTwenty48(): void {
     }
 
     const finished = game.phase === 'won' || game.phase === 'over';
-    if (finished && !resultReported) {
-      resultReporter.report(true, { outcome: 'complete', score: game.score });
-      resultReported = true;
-    }
     overlay?.toggleAttribute('hidden', !finished);
     if (finished) {
       const won = game.phase === 'won';
@@ -444,6 +440,11 @@ export function initTwenty48(): void {
         ? `Brilliant run — ${game.score.toLocaleString()} points. Keep going or start fresh.`
         : `Final score: ${game.score.toLocaleString()} points.`;
       if (continueButton) continueButton.hidden = !won;
+    }
+    // Reported after the overlay is set, since the result card reads whether Continue is still offered.
+    if (finished && !resultReported) {
+      resultReporter.report(true, { outcome: 'complete', score: game.score });
+      resultReported = true;
     }
   }
 
@@ -535,6 +536,9 @@ export function initTwenty48(): void {
   });
   continueButton?.addEventListener('click', () => {
     game.continueAfterWin();
+    // The 2048 card was not the end of the run: re-arm the reporter so running out of moves shows the final score.
+    resultReporter.report(false);
+    resultReported = false;
     status = game.phase === 'over'
       ? `No moves left. Final score: ${game.score.toLocaleString()}.`
       : `${goalText()} reached — keep building your high score!`;
