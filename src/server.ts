@@ -10,7 +10,7 @@ import {
   type BotDifficulty,
   type PlayerId,
 } from './multiplayer.js';
-import { InviteRoom, isOnlineGameId, isRelayPayload, type OnlineGameId, type RelayPlayerId } from './relay.js';
+import { InviteRoom, isOnlineGameId, isRelayPayload, isRelaySeat, roomSize, type OnlineGameId, type RelaySeat } from './relay.js';
 import { MatchmakingQueue } from './matchmaking.js';
 import { buildRobotsTxt, buildSitemapXml, gameFromPath, renderPageForView, type SeoView } from './seo.js';
 import { BUG_REPORT_ENDPOINT, BUG_REPORT_LIMITS, validateBugReport } from './bug-report.js';
@@ -23,10 +23,11 @@ const HOST = process.env.HOST || '0.0.0.0';
 const root = process.cwd();
 const rooms = new Map<string, OnlineRoom>();
 const inviteRooms = new Map<string, InviteRoom>();
-const matchmaking = new MatchmakingQueue<'bomberman' | OnlineGameId>();
+// Invite games queue by size too ("septica:4"), so a Quick Match only pairs rooms of the same size.
+const matchmaking = new MatchmakingQueue<string>();
 type ClientSession =
   | { kind: 'bomberman'; roomCode: string; playerId: PlayerId }
-  | { kind: 'invite'; roomCode: string; playerId: RelayPlayerId; game: OnlineGameId };
+  | { kind: 'invite'; roomCode: string; playerId: RelaySeat; game: OnlineGameId };
 const clients = new Map<WebSocket, ClientSession>();
 
 const mimeTypes: Record<string, string> = {
@@ -321,6 +322,13 @@ function sendToInviteRoom(roomCode: string, message: unknown, exclude?: WebSocke
   }
 }
 
+function sendToInviteSeat(roomCode: string, seat: RelaySeat, message: unknown): void {
+  const payload = JSON.stringify(message);
+  for (const [socket, client] of clients) {
+    if (client.kind === 'invite' && client.roomCode === roomCode && client.playerId === seat && socket.readyState === socket.OPEN) socket.send(payload);
+  }
+}
+
 function joinInviteRoom(socket: WebSocket, roomCode: string, game: OnlineGameId, created: boolean, quickMatch: boolean = false): void {
   const code = roomCode.toUpperCase();
   const room = inviteRooms.get(code);
@@ -334,8 +342,8 @@ function joinInviteRoom(socket: WebSocket, roomCode: string, game: OnlineGameId,
     return;
   }
   clients.set(socket, { kind: 'invite', roomCode: code, playerId, game });
-  if (room.connectedPlayers.size === 2) matchmaking.remove(code);
-  send(socket, { type: 'gameRoomJoined', roomCode: code, game, playerId, created, quickMatch });
+  if (room.isFull()) matchmaking.remove(code);
+  send(socket, { type: 'gameRoomJoined', roomCode: code, game, playerId, created, quickMatch, capacity: room.capacity });
   broadcastInviteStatus(code);
 }
 
@@ -399,23 +407,27 @@ webSocketServer.on('connection', socket => {
     if (data.type === 'createGameRoom' && isOnlineGameId(data.game)) {
       if (clients.has(socket)) return;
       const code = createRoomCode();
-      inviteRooms.set(code, new InviteRoom(code, data.game));
+      inviteRooms.set(code, new InviteRoom(code, data.game, roomSize(data.game, data.players)));
       joinInviteRoom(socket, code, data.game, true);
       return;
     }
     if (data.type === 'quickMatchGameRoom' && isOnlineGameId(data.game)) {
       if (clients.has(socket)) return;
       const game = data.game;
-      const waitingCode = matchmaking.claim(game, code => {
+      const capacity = roomSize(game, data.players);
+      const queue = `${game}:${capacity}`;
+      const waitingCode = matchmaking.claim(queue, code => {
         const room = inviteRooms.get(code);
-        return Boolean(room && room.game === game && room.connectedPlayers.size === 1);
+        return Boolean(room && room.game === game && room.capacity === capacity && room.connectedPlayers.size > 0 && !room.isFull());
       });
       if (waitingCode) {
         joinInviteRoom(socket, waitingCode, game, false, true);
+        // A bigger room keeps looking until every seat is taken.
+        if (!inviteRooms.get(waitingCode)?.isFull()) matchmaking.enqueue(queue, waitingCode);
       } else {
         const code = createRoomCode();
-        inviteRooms.set(code, new InviteRoom(code, game));
-        matchmaking.enqueue(game, code);
+        inviteRooms.set(code, new InviteRoom(code, game, capacity));
+        matchmaking.enqueue(queue, code);
         joinInviteRoom(socket, code, game, true, true);
       }
       return;
@@ -423,6 +435,16 @@ webSocketServer.on('connection', socket => {
     if (data.type === 'joinGameRoom' && isOnlineGameId(data.game) && typeof data.roomCode === 'string') {
       if (clients.has(socket)) return;
       joinInviteRoom(socket, data.roomCode.trim(), data.game, false);
+      return;
+    }
+    if (data.type === 'fillGameRoomWithBots') {
+      const client = clients.get(socket);
+      // Only the host decides, since the host's device plays the bots.
+      if (!client || client.kind !== 'invite' || client.playerId !== 1) return;
+      const room = inviteRooms.get(client.roomCode);
+      if (!room || !room.fillWithBots().length) return;
+      matchmaking.remove(client.roomCode);
+      broadcastInviteStatus(client.roomCode);
       return;
     }
     if (data.type === 'gameAction' && isRelayPayload(data.action, 16_384)) {
@@ -436,9 +458,10 @@ webSocketServer.on('connection', socket => {
     if (data.type === 'gameState' && isRelayPayload(data.state)) {
       const client = clients.get(socket);
       if (!client || client.kind !== 'invite' || client.playerId !== 1) return;
-      sendToInviteRoom(client.roomCode, {
-        type: 'gameState', game: client.game, roomCode: client.roomCode, state: data.state,
-      }, socket);
+      const message = { type: 'gameState', game: client.game, roomCode: client.roomCode, state: data.state };
+      // Card games send each seat its own view, so no one receives another player's hand.
+      if (isRelaySeat(data.to)) sendToInviteSeat(client.roomCode, data.to, message);
+      else sendToInviteRoom(client.roomCode, message, socket);
       return;
     }
     if (data.type === 'action' && isPlayerAction(data.action)) {

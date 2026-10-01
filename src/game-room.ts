@@ -1,5 +1,5 @@
 import { supportedLaunchMode } from './game-metadata.js';
-import type { OnlineGameId, RelayPlayerId } from './relay.js';
+import { ROOM_SIZES, isRelaySeat, type OnlineGameId, type RelayPlayerId, type RelaySeat } from './relay.js';
 import {
   arcadeInviteShareData,
   clearArcadeInviteUrl,
@@ -11,8 +11,17 @@ export interface GameRoomSession {
   online: boolean;
   ready: boolean;
   roomCode: string;
+  /** Seat 1 or 2; null in seats 3-4 of a bigger room, which only games reading `seat` offer. */
   playerId: RelayPlayerId | null;
+  seat: RelaySeat | null;
+  /** Seats in the room: 2 unless the game offers bigger rooms. */
+  capacity: number;
+  /** Seats the host filled with bots; the host's device plays them. */
+  bots: RelaySeat[];
 }
+
+/** Seat names, in turn order round the table. */
+const SEAT_NAMES: Record<RelaySeat, string> = { 1: 'Mint', 2: 'Coral', 3: 'Sky', 4: 'Gold' };
 
 export type GameRoomOfflineModeId = 'local' | 'solo' | 'bot';
 export const GAME_ROOM_PREFERENCE_STORAGE_KEY = 'blast-arcade-room-preferences-v1';
@@ -32,6 +41,8 @@ interface GameRoomClientOptions {
   initialOfflineMode?: GameRoomOfflineModeId;
   onSessionChange: (session: GameRoomSession) => void;
   onRemoteAction: (action: Record<string, unknown>, from: RelayPlayerId) => void;
+  /** Games with bigger rooms take actions from any seat here instead of onRemoteAction. */
+  onSeatAction?: (action: Record<string, unknown>, from: RelaySeat) => void;
   onState: (state: Record<string, unknown>) => void;
 }
 
@@ -41,8 +52,12 @@ export class GameRoomClient {
   private options: GameRoomClientOptions;
   private socket: WebSocket | null = null;
   private roomCode = '';
-  private playerId: RelayPlayerId | null = null;
+  private seat: RelaySeat | null = null;
+  private capacity = 2;
+  private bots: RelaySeat[] = [];
   private ready = false;
+  private fillBotsButton: HTMLButtonElement | null = null;
+  private sizeSelect: HTMLSelectElement | null;
   private quickMatching = false;
   private lastStateSentAt = 0;
   private offlineModes: readonly GameRoomOfflineMode[];
@@ -88,6 +103,7 @@ export class GameRoomClient {
         </div>
         <div class="game-room-online" data-room-online hidden>
           <div class="game-room-actions" data-room-local>
+            ${ROOM_SIZES[this.game] ? `<label class="game-room-size">Players <select data-room-size aria-label="Players online">${ROOM_SIZES[this.game]!.map(size => `<option value="${size}">${size}</option>`).join('')}</select></label>` : ''}
             <button class="game-room-matchmake" type="button" data-room-matchmake>Quick Match</button>
             <button type="button" data-room-create>Create code</button>
             <label class="game-room-join"><span class="sr-only">Room code</span><input type="text" inputmode="text" maxlength="5" placeholder="CODE" autocomplete="off" data-room-input><button type="button" data-room-join>Join</button></label>
@@ -96,6 +112,7 @@ export class GameRoomClient {
             <span class="game-room-code">Code <b data-room-code>-----</b></span>
             <button type="button" data-room-copy>Copy link</button>
             <button type="button" data-room-share>Share</button>
+            <button type="button" data-room-fill-bots hidden>Fill with bots</button>
             <button type="button" data-room-leave>Leave</button>
           </div>
         </div>
@@ -108,6 +125,8 @@ export class GameRoomClient {
     this.codeElement = this.mount.querySelector<HTMLElement>('[data-room-code]')!;
     this.compactToggle = this.mount.querySelector<HTMLButtonElement>('[data-room-toggle]')!;
     this.summaryElement = this.mount.querySelector<HTMLElement>('[data-room-summary]')!;
+    this.sizeSelect = this.mount.querySelector<HTMLSelectElement>('[data-room-size]');
+    this.fillBotsButton = this.mount.querySelector<HTMLButtonElement>('[data-room-fill-bots]');
     this.bindUi();
     this.selectMode(this.initialOfflineMode, false);
     window.setTimeout(() => this.offlineModes.find(mode => mode.id === this.initialOfflineMode)?.onSelect(), 0);
@@ -137,14 +156,18 @@ export class GameRoomClient {
   }
 
   session(): GameRoomSession {
-    return { online: Boolean(this.playerId), ready: this.ready, roomCode: this.roomCode, playerId: this.playerId };
+    return { online: Boolean(this.seat), ready: this.ready, roomCode: this.roomCode, playerId: this.playerId, seat: this.seat, capacity: this.capacity, bots: [...this.bots] };
   }
 
-  isHost(): boolean { return this.playerId === 1; }
-  isGuest(): boolean { return this.playerId === 2; }
+  private get playerId(): RelayPlayerId | null {
+    return this.seat === 1 || this.seat === 2 ? this.seat : null;
+  }
+
+  isHost(): boolean { return this.seat === 1; }
+  isGuest(): boolean { return this.seat !== null && this.seat !== 1; }
 
   canControl(player: RelayPlayerId): boolean {
-    return !this.playerId || (this.ready && this.playerId === player);
+    return !this.seat || (this.ready && this.seat === player);
   }
 
   sendAction(action: Record<string, unknown>): boolean {
@@ -159,6 +182,13 @@ export class GameRoomClient {
     if (!force && now - this.lastStateSentAt < 33) return false;
     this.lastStateSentAt = now;
     this.socket.send(JSON.stringify({ type: 'gameState', state }));
+    return true;
+  }
+
+  /** Sends state to one seat only, e.g. that player's own hand of cards. */
+  sendStateTo(seat: RelaySeat, state: Record<string, unknown>): boolean {
+    if (!this.isHost() || !this.ready || !this.socket || this.socket.readyState !== WebSocket.OPEN) return false;
+    this.socket.send(JSON.stringify({ type: 'gameState', state, to: seat }));
     return true;
   }
 
@@ -190,8 +220,9 @@ export class GameRoomClient {
         offlineMode.onSelect();
       });
     });
-    this.mount.querySelector('[data-room-matchmake]')?.addEventListener('click', () => this.connect({ type: 'quickMatchGameRoom', game: this.game }));
-    this.mount.querySelector('[data-room-create]')?.addEventListener('click', () => this.connect({ type: 'createGameRoom', game: this.game }));
+    const size = (): Record<string, number> => (this.sizeSelect ? { players: Number(this.sizeSelect.value) } : {});
+    this.mount.querySelector('[data-room-matchmake]')?.addEventListener('click', () => this.connect({ type: 'quickMatchGameRoom', game: this.game, ...size() }));
+    this.mount.querySelector('[data-room-create]')?.addEventListener('click', () => this.connect({ type: 'createGameRoom', game: this.game, ...size() }));
     this.mount.querySelector('[data-room-join]')?.addEventListener('click', () => this.joinFromInput());
     this.input.addEventListener('input', () => { this.input.value = this.input.value.toUpperCase().replace(/[^A-Z2-9]/g, ''); });
     this.input.addEventListener('keydown', event => { if (event.key === 'Enter') this.joinFromInput(); });
@@ -202,6 +233,9 @@ export class GameRoomClient {
       void this.deliverInvite(event.currentTarget as HTMLButtonElement, true);
     });
     this.mount.querySelector('[data-room-leave]')?.addEventListener('click', () => this.leave());
+    this.fillBotsButton?.addEventListener('click', () => {
+      if (this.isHost() && this.socket?.readyState === WebSocket.OPEN) this.socket.send(JSON.stringify({ type: 'fillGameRoomWithBots' }));
+    });
   }
 
   private async copyText(text: string): Promise<void> {
@@ -257,9 +291,11 @@ export class GameRoomClient {
     socket.addEventListener('close', () => {
       if (this.socket !== socket) return;
       this.socket = null;
-      const wasOnline = Boolean(this.playerId);
+      const wasOnline = Boolean(this.seat);
       this.roomCode = '';
-      this.playerId = null;
+      this.seat = null;
+      this.capacity = 2;
+      this.bots = [];
       this.ready = false;
       this.quickMatching = false;
       this.onlineActions.hidden = false;
@@ -274,42 +310,58 @@ export class GameRoomClient {
     try { data = JSON.parse(String(raw)) as Record<string, unknown>; }
     catch { return; }
     if (data.type === 'gameRoomError' && typeof data.message === 'string') {
+      // Detach before closing, so the generic "Connection closed" does not replace the reason.
+      this.disconnect();
       this.statusElement.textContent = data.message;
-      this.socket?.close();
       return;
     }
-    if (data.type === 'gameRoomJoined' && data.game === this.game && typeof data.roomCode === 'string' && (data.playerId === 1 || data.playerId === 2)) {
+    if (data.type === 'gameRoomJoined' && data.game === this.game && typeof data.roomCode === 'string' && isRelaySeat(data.playerId)) {
       this.roomCode = data.roomCode;
-      this.playerId = data.playerId;
+      this.seat = data.playerId;
+      this.capacity = typeof data.capacity === 'number' ? data.capacity : 2;
       this.ready = false;
       this.quickMatching = data.quickMatch === true;
       this.codeElement.textContent = this.roomCode;
       history.replaceState(history.state, '', arcadeInviteShareData(location.href, this.game, this.roomCode).url);
       this.onlineActions.hidden = true;
       this.joinedActions.hidden = false;
-      this.statusElement.textContent = this.quickMatching
-        ? this.playerId === 1 ? 'Searching for a Quick Match opponent…' : 'Opponent found. Preparing the match…'
-        : this.playerId === 1 ? 'Invite Coral with this code.' : 'Joined as Coral. Waiting for Mint…';
+      this.bots = [];
+      this.updateFillBots();
+      this.statusElement.textContent = this.capacity > 2
+        ? this.waitingText(1)
+        : this.quickMatching
+          ? this.seat === 1 ? 'Searching for a Quick Match opponent…' : 'Opponent found. Preparing the match…'
+          : this.seat === 1 ? 'Invite Coral with this code.' : 'Joined as Coral. Waiting for Mint…';
       this.options.onSessionChange(this.session());
       return;
     }
     if (data.type === 'gameRoomStatus' && data.game === this.game && Array.isArray(data.connectedPlayers)) {
       const wasReady = this.ready;
-      this.ready = data.connectedPlayers.includes(1) && data.connectedPlayers.includes(2);
+      if (typeof data.capacity === 'number') this.capacity = data.capacity;
+      const connected = data.connectedPlayers.filter(isRelaySeat);
+      this.bots = Array.isArray(data.botSeats) ? data.botSeats.filter(isRelaySeat) : [];
+      // A seat is taken by a person or, once the host fills the room, by a bot.
+      this.ready = Array.from({ length: this.capacity }, (_, index) => (index + 1) as RelaySeat)
+        .every(seat => connected.includes(seat) || this.bots.includes(seat));
+      this.updateFillBots();
       if (this.ready) {
         this.quickMatching = false;
-        this.statusElement.textContent = `Online match ready · You are ${this.playerId === 1 ? 'Mint' : 'Coral'}`;
+        this.statusElement.textContent = `Online match ready · You are ${SEAT_NAMES[this.seat ?? 1]}`;
+      } else if (this.capacity > 2) {
+        this.statusElement.textContent = this.waitingText(connected.length);
       } else {
         this.statusElement.textContent = this.quickMatching
           ? 'Searching for a Quick Match opponent…'
-          : this.playerId === 1 ? 'Invite Coral with this code.' : 'Waiting for Mint to reconnect…';
+          : this.seat === 1 ? 'Invite Coral with this code.' : 'Waiting for Mint to reconnect…';
       }
       this.options.onSessionChange(this.session());
       if (!wasReady && this.ready && this.isHost()) this.lastStateSentAt = 0;
       return;
     }
-    if (data.type === 'gameAction' && data.game === this.game && (data.from === 1 || data.from === 2) && data.action && typeof data.action === 'object') {
-      this.options.onRemoteAction(data.action as Record<string, unknown>, data.from);
+    if (data.type === 'gameAction' && data.game === this.game && isRelaySeat(data.from) && data.action && typeof data.action === 'object') {
+      const action = data.action as Record<string, unknown>;
+      if (this.options.onSeatAction) this.options.onSeatAction(action, data.from);
+      else if (data.from === 1 || data.from === 2) this.options.onRemoteAction(action, data.from);
       return;
     }
     if (data.type === 'gameState' && data.game === this.game && data.state && typeof data.state === 'object') {
@@ -317,12 +369,26 @@ export class GameRoomClient {
     }
   }
 
+  /** The host of a room of three or four can stop waiting and let bots take the empty seats. */
+  private updateFillBots(): void {
+    if (this.fillBotsButton) this.fillBotsButton.hidden = !(this.isHost() && this.capacity > 2 && !this.ready);
+  }
+
+  /** Status for a room of three or four while seats are still empty. */
+  private waitingText(joined: number): string {
+    const name = SEAT_NAMES[this.seat ?? 1];
+    const next = this.quickMatching ? 'Finding more players…' : 'Share the code with the others.';
+    return `You are ${name} · ${joined} of ${this.capacity} players here. ${next}${this.isHost() ? ' Or fill the empty seats with bots.' : ''}`;
+  }
+
   private disconnect(): void {
     const socket = this.socket;
     this.socket = null;
     socket?.close();
     this.roomCode = '';
-    this.playerId = null;
+    this.seat = null;
+    this.capacity = 2;
+    this.bots = [];
     this.ready = false;
     this.quickMatching = false;
     this.onlineActions.hidden = false;
