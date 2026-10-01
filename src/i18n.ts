@@ -784,6 +784,9 @@ function translateRomanianPattern(value: string): string | null {
   if (match) return `${match[1]} câștigă meciul!`;
   match = value.match(/^(Mint|Coral) wins!$/);
   if (match) return `${match[1]} câștigă!`;
+  // A duel bonus notice names who caught it.
+  match = value.match(/^(Mint|Coral): (.+)$/);
+  if (match && UX_TRANSLATIONS[match[2]]) return `${match[1]}: ${UX_TRANSLATIONS[match[2]]}`;
   // The Everyone scoreboard
   match = value.match(/^Top (\d+) · all players$/);
   if (match) return `Primii ${match[1]} · toți jucătorii`;
@@ -950,6 +953,10 @@ const UX_TRANSLATIONS: Record<string, string> = {
   'Extra life': 'Viață în plus', 'Power ball': 'Minge de foc', 'Wide paddle': 'Paletă lată', 'Multi-ball': 'Mai multe mingi', 'Slow ball': 'Minge lentă',
   'Extra life!': 'Viață în plus!', 'Power ball - smash straight through!': 'Minge de foc - trece prin cărămizi!', 'Wide paddle!': 'Paletă lată!',
   'Multi-ball!': 'Mai multe mingi!', 'Slow ball!': 'Minge lentă!', 'Balls full - 500 bonus points!': 'Mingi la maximum - 500 de puncte bonus!',
+  // Neon Snake bonuses
+  'Star fruit': 'Fruct stea', 'Shrink': 'Micșorare', 'Slow time': 'Timp lent', 'Ghost': 'Fantomă',
+  'Star fruit - 5 points!': 'Fruct stea - 5 puncte!', 'Shrink - tail trimmed!': 'Micșorare - coada s-a scurtat!',
+  'Slow time!': 'Timp lent!', 'Ghost - slip through snakes!': 'Fantomă - treci prin șerpi!',
   'Point at the problem': 'Arată problema', 'Include this screenshot': 'Include această captură de ecran',
   'Tap the part that looks wrong': 'Atinge partea care arată greșit', 'Cancel': 'Anulează',
   'Screenshot of the game that will be sent with the report': 'Captura de ecran a jocului care va fi trimisă cu raportul',

@@ -36,7 +36,7 @@ export const GAME_GUIDES: Record<ArcadeGameId, GuideCopy> = {
   snake: {
     objective: copy('Collect fruit, grow, and avoid walls, trails, and the rival snake.', 'Colectează fructe, crește și evită pereții, urmele și șarpele rival.'),
     controls: copy('Swipe the arena, use the direction pad/joystick, or press WASD and arrows.', 'Glisează pe arenă, folosește padul/joystickul sau tastele WASD și săgețile.'),
-    rules: [copy('You cannot reverse directly into your own body.', 'Nu poți întoarce direct în propriul corp.'), copy('Start on Chill speed while learning the turn rhythm.', 'Începe pe viteza Calm pentru a învăța ritmul virajelor.')],
+    rules: [copy('You cannot reverse directly into your own body.', 'Nu poți întoarce direct în propriul corp.'), copy('Start on Chill speed while learning the turn rhythm.', 'Începe pe viteza Calm pentru a învăța ritmul virajelor.'), copy('Fruit sometimes brings out a bonus for a few seconds - a star for 5 points, a shrink that trims your tail, slow time, or a ghost that slips through snakes.', 'Fructele scot uneori un bonus pentru câteva secunde - o stea pentru 5 puncte, o micșorare care îți scurtează coada, timp lent sau o fantomă care trece prin șerpi.')],
     tip: copy('Leave yourself an exit before circling a fruit.', 'Lasă-ți o ieșire înainte să înconjori un fruct.'),
   },
   tanks: {
