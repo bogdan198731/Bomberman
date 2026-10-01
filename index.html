@@ -1557,6 +1557,16 @@
 
     .leaderboard-tabs::-webkit-scrollbar { display: none; }
 
+    /* This device / Everyone switch, and the alias shown on the Everyone board. */
+    .leaderboard-scopes { display: inline-flex; gap: 4px; margin: 0 0 12px; padding: 4px; border: 1px solid rgba(255,255,255,.1); border-radius: 12px; background: rgba(0,0,0,.18); }
+    .leaderboard-scope { min-height: 40px; padding: 0 16px; border: 0; border-radius: 9px; color: #cfd8e3; background: transparent; font-weight: 850; cursor: pointer; }
+    .leaderboard-scope.active { color: #07140d; background: var(--p1); }
+    .leaderboard-alias { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0 0 12px; color: #cfd8e3; font-size: .85rem; font-weight: 750; }
+    .leaderboard-alias[hidden] { display: none; }
+    .leaderboard-alias input { min-height: 40px; width: min(220px, 100%); padding: 0 12px; border: 1px solid rgba(255,255,255,.16); border-radius: 10px; color: var(--ink); background: #1a2536; font: inherit; }
+    .leaderboard-alias input:focus { border-color: #55d9ff; outline: none; }
+    .leaderboard-alias span { color: var(--muted); font-weight: 650; }
+
     .leaderboard-tab {
       display: flex;
       min-height: 39px;
@@ -8166,9 +8176,18 @@
         </div>
         <p>Each player name keeps its best result. Switch the profile name above when friends take a turn.</p>
       </div>
+      <div class="leaderboard-scopes" role="group" aria-label="Whose scores">
+        <button type="button" class="leaderboard-scope active" data-leaderboard-scope="device" aria-pressed="true">This device</button>
+        <button type="button" class="leaderboard-scope" data-leaderboard-scope="everyone" aria-pressed="false">Everyone</button>
+      </div>
+      <div id="leaderboardAliasRow" class="leaderboard-alias" hidden>
+        <label for="leaderboardAlias">Your name on the Everyone board</label>
+        <input id="leaderboardAlias" type="text" maxlength="20" placeholder="Unknown" autocomplete="off" spellcheck="false">
+        <span>Leave it empty to stay Unknown.</span>
+      </div>
       <div id="leaderboardGameTabs" class="leaderboard-tabs" role="tablist" aria-label="Choose a game leaderboard"></div>
       <div class="leaderboard-board">
-        <div class="leaderboard-board-heading"><span>Local top five</span><span id="leaderboardCaption">Waiting for the first result · saved on this device</span></div>
+        <div class="leaderboard-board-heading"><span id="leaderboardBoardTitle">Local top five</span><span id="leaderboardCaption">Waiting for the first result · saved on this device</span></div>
         <div id="leaderboardList" class="leaderboard-list" role="list" aria-live="polite">
           <div class="leaderboard-empty">Finish a match to claim the first spot.</div>
         </div>

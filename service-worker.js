@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blast-arcade-septica-online-bots-2026-09-30';
+const CACHE_NAME = 'blast-arcade-everyone-scores-2026-09-30';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -17,6 +17,7 @@ const APP_SHELL = [
   '/dist/game-previews.js',
   '/dist/invite.js',
   '/dist/leaderboard.js',
+  '/dist/scoreboard.js',
   '/dist/matchmaking.js',
   '/dist/blocks.js',
   '/dist/twenty48.js',

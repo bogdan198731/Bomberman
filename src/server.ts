@@ -16,6 +16,9 @@ import { buildRobotsTxt, buildSitemapXml, gameFromPath, renderPageForView, type 
 import { BUG_REPORT_ENDPOINT, BUG_REPORT_LIMITS, validateBugReport } from './bug-report.js';
 import { ReportRateLimiter, createReportId, forwardReport, storeReport, storeScreenshot, type StoredReport } from './report-intake.js';
 import { TesterRegistry } from './testers.js';
+import { SCOREBOARD_ENDPOINT, validateScoreSubmission } from './scoreboard.js';
+import { Scoreboard, createScoreStore } from './score-store.js';
+import { isArcadeGameId } from './game-metadata.js';
 import { DEFAULT_REPORT_SENDER, buildReportEmail, sendReportEmail } from './report-email.js';
 
 const PORT = Number(process.env.PORT || 4173);
@@ -72,6 +75,11 @@ const TRUST_PROXY = process.env.TRUST_PROXY === '1';
 const reportsPerClient = new ReportRateLimiter(5, 10 * 60_000);
 const reportsOverall = new ReportRateLimiter(100, 60 * 60_000);
 const reportsPerTester = new ReportRateLimiter(5, 24 * 60 * 60_000);
+const scoreStore = createScoreStore(process.env, join(root, 'scores'));
+const scoreboard = new Scoreboard(scoreStore);
+// A finished game sends one score; this is generous for real play and stops floods.
+const scoresPerClient = new ReportRateLimiter(30, 10 * 60_000);
+const scoresOverall = new ReportRateLimiter(600, 60 * 60_000);
 const testers = new TesterRegistry(process.env.TESTERS_FILE || join(root, 'testers.json'));
 const deployedCommit = (() => {
   if (process.env.COMMIT_SHA) return process.env.COMMIT_SHA;
@@ -181,6 +189,63 @@ function handleBugReport(request: IncomingMessage, response: ServerResponse): vo
   });
 }
 
+/** GET /api/scores?game=snake reads one board; POST adds a finished game's score. */
+function handleScores(request: IncomingMessage, response: ServerResponse): void {
+  if (request.method === 'GET') {
+    const game = new URL(request.url || '/', 'http://local').searchParams.get('game');
+    if (!isArcadeGameId(game)) { sendJson(response, 400, { error: 'Unknown game.' }); return; }
+    scoreboard.top(game)
+      .then(entries => sendJson(response, 200, { game, entries }))
+      .catch(error => {
+        console.error(`Scoreboard read failed: ${(error as Error).message}`);
+        sendJson(response, 503, { error: 'The scoreboard is unavailable right now.' });
+      });
+    return;
+  }
+  if (request.method !== 'POST') {
+    response.setHeader('Allow', 'GET, POST');
+    sendJson(response, 405, { error: 'Use GET or POST.' });
+    return;
+  }
+  if (!String(request.headers['content-type']).startsWith('application/json')) {
+    sendJson(response, 415, { error: 'Send JSON.' });
+    return;
+  }
+  const chunks: Buffer[] = [];
+  let size = 0;
+  let aborted = false;
+  request.on('data', (chunk: Buffer) => {
+    if (aborted) return;
+    size += chunk.length;
+    if (size > 1_024) {
+      aborted = true;
+      sendJson(response, 413, { error: 'Too large.' });
+      request.resume();
+      return;
+    }
+    chunks.push(chunk);
+  });
+  request.on('end', () => {
+    if (aborted) return;
+    let body: unknown;
+    try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); }
+    catch { sendJson(response, 400, { error: 'Invalid score.' }); return; }
+    const checked = validateScoreSubmission(body);
+    if (!checked.ok) { sendJson(response, 400, { error: checked.error }); return; }
+    if (!scoresPerClient.allow(clientAddress(request)) || !scoresOverall.allow('all')) {
+      sendJson(response, 429, { error: 'Too many scores right now. Please try again later.' });
+      return;
+    }
+    const { game, alias, score, outcome } = checked;
+    scoreboard.submit(game, { alias, score, outcome, playedAt: Date.now() })
+      .then(({ entries, rank }) => sendJson(response, 201, { game, rank, entries }))
+      .catch(error => {
+        console.error(`Scoreboard write failed: ${(error as Error).message}`);
+        sendJson(response, 503, { error: 'The scoreboard is unavailable right now.' });
+      });
+  });
+}
+
 function sitemapLastModified(): string {
   return new Date(statSync(indexPath).mtimeMs).toISOString().slice(0, 10);
 }
@@ -205,6 +270,10 @@ function cacheControlFor(publicPath: string): string {
 const server = createServer((request, response) => {
   const requestPath = new URL(request.url || '/', `http://${request.headers.host}`).pathname;
 
+  if (requestPath === SCOREBOARD_ENDPOINT) {
+    handleScores(request, response);
+    return;
+  }
   if (requestPath === BUG_REPORT_ENDPOINT) {
     handleBugReport(request, response);
     return;
@@ -499,6 +568,8 @@ webSocketServer.on('connection', socket => {
 
 setInterval(() => {
   reportsPerClient.prune();
+  scoresPerClient.prune();
+  scoresOverall.prune();
   reportsPerTester.prune();
   reportsOverall.prune();
 }, 10 * 60_000).unref();
@@ -512,6 +583,7 @@ setInterval(() => {
 
 server.listen(PORT, HOST, () => {
   console.log(`Blast Arcade online server: http://localhost:${PORT}`);
+  console.log(`Scoreboard storage: ${scoreStore.kind === 'upstash' ? 'Upstash Redis' : 'files (reset on each deploy unless on a persistent disk)'}`);
   for (const addresses of Object.values(networkInterfaces())) {
     for (const address of addresses || []) {
       if (address.family === 'IPv4' && !address.internal) {
