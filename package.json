@@ -15,7 +15,8 @@
     "triage": "npm run build --silent && node dist/triage-agent.js",
     "fix": "npm run build --silent && node dist/fix-agent.js",
     "prs": "npm run build --silent && node dist/pr-agent.js",
-    "import-report": "npm run build --silent && node dist/import-report.js"
+    "import-report": "npm run build --silent && node dist/import-report.js",
+    "share-images": "npm run build --silent && playwright test tests/share-images --project=desktop"
   },
   "keywords": [
     "game",

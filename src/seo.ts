@@ -5,6 +5,8 @@ export const SITE_ORIGIN = 'https://blastarcade.ro';
 export const SITE_NAME = 'Blast Arcade';
 // Tagline carries no game count, so it cannot go stale as games are added.
 export const OG_IMAGE_PATH = '/public/og-v4.jpg';
+/** Each game's own share card, made by `npm run share-images`. */
+export const GAME_OG_IMAGE_DIR = '/public/og/';
 export const OG_IMAGE_WIDTH = 1200;
 export const OG_IMAGE_HEIGHT = 630;
 export const GAME_PATH_PREFIX = '/play/';
@@ -296,6 +298,16 @@ export function seoForView(view: SeoView, language: ArcadeLanguage = 'en'): Page
 
 const OPEN_GRAPH_LOCALES: Record<ArcadeLanguage, string> = { en: 'en_US', ro: 'ro_RO' };
 
+/** A shared game link shows that game; the hub shows the whole arcade. */
+export function shareImagePath(view: SeoView): string {
+  return view === 'hub' ? OG_IMAGE_PATH : `${GAME_OG_IMAGE_DIR}${view}.jpg`;
+}
+
+export function shareImageAlt(view: SeoView, language: ArcadeLanguage = 'en'): string {
+  if (view !== 'hub') return `${GAME_META[view].name} — ${SITE_NAME}`;
+  return language === 'ro' ? `${SITE_NAME} — ${ARCADE_GAME_IDS.length} jocuri într-un singur loc` : `${SITE_NAME} — ${gameCountWord()} browser games in one hub`;
+}
+
 export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
@@ -378,7 +390,8 @@ export function structuredDataForView(view: SeoView, origin: string = SITE_ORIGI
 export function renderSeoTags(view: SeoView, origin: string = SITE_ORIGIN, language: ArcadeLanguage = 'en'): string {
   const { title, description } = seoForView(view, language);
   const canonical = canonicalUrl(view, origin, language);
-  const image = `${origin}${OG_IMAGE_PATH}`;
+  const image = `${origin}${shareImagePath(view)}`;
+  const imageAlt = escapeHtml(shareImageAlt(view, language));
   const json = JSON.stringify(structuredDataForView(view, origin, language)).replace(/</g, '\\u003c');
   const other: ArcadeLanguage = language === 'ro' ? 'en' : 'ro';
   return [
@@ -398,12 +411,12 @@ export function renderSeoTags(view: SeoView, origin: string = SITE_ORIGIN, langu
     `<meta property="og:image" content="${image}">`,
     `<meta property="og:image:width" content="${OG_IMAGE_WIDTH}">`,
     `<meta property="og:image:height" content="${OG_IMAGE_HEIGHT}">`,
-    `<meta property="og:image:alt" content="${SITE_NAME} — ${gameCountWord()} browser games in one hub">`,
+    `<meta property="og:image:alt" content="${imageAlt}">`,
     `<meta name="twitter:card" content="summary_large_image">`,
     `<meta name="twitter:title" content="${escapeHtml(title)}">`,
     `<meta name="twitter:description" content="${escapeHtml(description)}">`,
     `<meta name="twitter:image" content="${image}">`,
-    `<meta name="twitter:image:alt" content="${SITE_NAME} — ${gameCountWord()} browser games in one hub">`,
+    `<meta name="twitter:image:alt" content="${imageAlt}">`,
     `<script type="application/ld+json">${json}</script>`,
   ].join('\n  ');
 }
@@ -464,8 +477,10 @@ export function buildRobotsTxt(origin: string = SITE_ORIGIN): string {
   ].join('\n');
 }
 
-export function buildSitemapXml(lastModified: string, origin: string = SITE_ORIGIN): string {
+/** `lastModified` is one date for every page, or the date of each page. */
+export function buildSitemapXml(lastModified: string | Record<SeoView, string>, origin: string = SITE_ORIGIN): string {
   const views: SeoView[] = ['hub', ...ARCADE_GAME_IDS];
+  const dateOf = (view: SeoView): string => typeof lastModified === 'string' ? lastModified : lastModified[view];
   const urls = views
     .flatMap(view => SEO_LANGUAGES.map(language => ({ view, language })))
     .map(({ view, language }) =>
@@ -475,7 +490,7 @@ export function buildSitemapXml(lastModified: string, origin: string = SITE_ORIG
         // Google wants every entry to list all of its language versions, itself included.
         ...SEO_LANGUAGES.map(code => `    <xhtml:link rel="alternate" hreflang="${code}" href="${canonicalUrl(view, origin, code)}"/>`),
         `    <xhtml:link rel="alternate" hreflang="x-default" href="${canonicalUrl(view, origin, 'en')}"/>`,
-        `    <lastmod>${lastModified}</lastmod>`,
+        `    <lastmod>${dateOf(view)}</lastmod>`,
         '    <changefreq>weekly</changefreq>',
         `    <priority>${view === 'hub' ? '1.0' : '0.8'}</priority>`,
         '  </url>',
@@ -514,6 +529,10 @@ export function applyRouteMeta(view: SeoView, doc: MetaDocument, origin: string 
   set('meta[name="twitter:title"]', 'content', title);
   set('meta[name="twitter:description"]', 'content', description);
   set('meta[property="og:locale"]', 'content', OPEN_GRAPH_LOCALES[language]);
+  set('meta[property="og:image"]', 'content', `${origin}${shareImagePath(view)}`);
+  set('meta[name="twitter:image"]', 'content', `${origin}${shareImagePath(view)}`);
+  set('meta[property="og:image:alt"]', 'content', shareImageAlt(view, language));
+  set('meta[name="twitter:image:alt"]', 'content', shareImageAlt(view, language));
   set('meta[property="og:locale:alternate"]', 'content', OPEN_GRAPH_LOCALES[language === 'ro' ? 'en' : 'ro']);
   SEO_LANGUAGES.forEach(code => set(`link[rel="alternate"][hreflang="${code}"]`, 'href', canonicalUrl(view, origin, code)));
   set('link[rel="alternate"][hreflang="x-default"]', 'href', canonicalUrl(view, origin, 'en'));
