@@ -1,5 +1,6 @@
 import { ArcadeResultReporter } from './stats.js';
 import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
+import { ARCADE_TOUCH_LAYOUT_CHANGE_EVENT, loadArcadeTouchLayout, normalizeArcadeTouchLayout, type ArcadeTouchLayout } from './touch-controls.js';
 
 /** Suits in order spades, hearts, diamonds, clubs; hearts and diamonds are red. */
 export type Suit = 0 | 1 | 2 | 3;
@@ -411,6 +412,25 @@ const UP_STEP = 30;
 
 export const columnX = (column: number): number => GAP + column * (CARD_W + GAP);
 
+/** Where the stock, waste and foundations sit across the top row. */
+export interface TopRow { stockX: number; wasteX: number; foundationX: readonly number[]; deckSide: 'left' | 'right' }
+
+/**
+ * Desktop keeps the classic stock-left row. On a phone the stock follows the
+ * joystick side from Settings, so the thumb that draws is the one the player chose.
+ */
+export function topRowLayout(mobile: boolean, layout: ArcadeTouchLayout): TopRow {
+  if (mobile && layout === 'joystick-right') {
+    return { stockX: columnX(6), wasteX: columnX(5), foundationX: [0, 1, 2, 3].map(columnX), deckSide: 'right' };
+  }
+  return { stockX: columnX(0), wasteX: columnX(1), foundationX: [3, 4, 5, 6].map(columnX), deckSide: 'left' };
+}
+
+/** Draw-three fans away from the stock, so the playable top card always sits on the waste spot or beyond it. */
+export function wasteFanX(row: TopRow, index: number, count: number): number {
+  return row.deckSide === 'left' ? row.wasteX + index * 18 : row.wasteX - (count - 1 - index) * 18;
+}
+
 export interface CardSpot { x: number; y: number; source: Source; card: Card }
 
 /**
@@ -457,6 +477,15 @@ export function initSolitaire(): void {
   const resultReporter = new ArcadeResultReporter('solitaire');
   let selected: Source | null = null;
   let resumed = false;
+  const mobileQuery = window.matchMedia('(max-width: 760px), (pointer: coarse)');
+  let touchLayout = loadArcadeTouchLayout();
+  let row = topRowLayout(mobileQuery.matches, touchLayout);
+  const relayout = (): void => { row = topRowLayout(mobileQuery.matches, touchLayout); };
+  mobileQuery.addEventListener?.('change', relayout);
+  window.addEventListener(ARCADE_TOUCH_LAYOUT_CHANGE_EVENT, event => {
+    touchLayout = normalizeArcadeTouchLayout((event as CustomEvent<{ layout: string }>).detail?.layout);
+    relayout();
+  });
 
   function persist(): void {
     try {
@@ -497,7 +526,7 @@ export function initSolitaire(): void {
   function tap(x: number, y: number): void {
     if (isArcadeSessionPaused('solitaire') || game.phase !== 'playing') return;
     // Stock
-    if (x >= columnX(0) && x <= columnX(0) + CARD_W && y >= TOP && y <= TOP + CARD_H) {
+    if (x >= row.stockX && x <= row.stockX + CARD_W && y >= TOP && y <= TOP + CARD_H) {
       selected = null;
       game.draw();
       after();
@@ -523,13 +552,13 @@ export function initSolitaire(): void {
   /** What a tap at (x, y) points at: a card to lift, a pile to drop on, or both. */
   function hitTest(x: number, y: number): { source: Source | null; target: Target | null } | null {
     // Waste
-    const wasteX = columnX(1);
-    if (x >= wasteX && x <= wasteX + CARD_W + 36 && y >= TOP && y <= TOP + CARD_H && game.waste.length) {
+    const wasteLeft = row.deckSide === 'left' ? row.wasteX : row.wasteX - 36;
+    if (x >= wasteLeft && x <= wasteLeft + CARD_W + 36 && y >= TOP && y <= TOP + CARD_H && game.waste.length) {
       return { source: { pile: 'waste' }, target: null };
     }
     // Foundations
     for (let index = 0; index < 4; index++) {
-      const fx = columnX(3 + index);
+      const fx = row.foundationX[index];
       if (x >= fx && x <= fx + CARD_W && y >= TOP && y <= TOP + CARD_H) {
         return { source: { pile: 'foundation', index }, target: { pile: 'foundation', index } };
       }
@@ -595,25 +624,25 @@ export function initSolitaire(): void {
     ctx.fillRect(0, 0, table.width, table.height);
     const isSelected = (source: Source): boolean => sameSource(selected, source);
 
-    drawCard(game.stock.length ? { suit: 0, rank: 1, up: false } : null, columnX(0), TOP);
+    drawCard(game.stock.length ? { suit: 0, rank: 1, up: false } : null, row.stockX, TOP);
     if (!game.stock.length && game.waste.length) {
       ctx.fillStyle = 'rgba(255,255,255,.4)';
       ctx.font = '700 40px system-ui, sans-serif';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('↻', columnX(0) + CARD_W / 2, TOP + CARD_H / 2);
+      ctx.fillText('↻', row.stockX + CARD_W / 2, TOP + CARD_H / 2);
     }
     // Draw-three shows the last three waste cards fanned, only the top one playable.
     const fan = game.waste.slice(-(game.drawCount === 3 ? 3 : 1));
-    if (!fan.length) drawCard(null, columnX(1), TOP);
-    fan.forEach((card, i) => drawCard(card, columnX(1) + i * 18, TOP, i === fan.length - 1 && isSelected({ pile: 'waste' })));
+    if (!fan.length) drawCard(null, row.wasteX, TOP);
+    fan.forEach((card, i) => drawCard(card, wasteFanX(row, i, fan.length), TOP, i === fan.length - 1 && isSelected({ pile: 'waste' })));
     game.foundations.forEach((pile, index) => {
       const top = pile[pile.length - 1] ?? null;
-      drawCard(top, columnX(3 + index), TOP, isSelected({ pile: 'foundation', index }));
+      drawCard(top, row.foundationX[index], TOP, isSelected({ pile: 'foundation', index }));
       if (!top) {
         ctx.fillStyle = 'rgba(255,255,255,.18)';
         ctx.font = '40px system-ui, sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(SUIT_SYMBOLS[index], columnX(3 + index) + CARD_W / 2, TOP + CARD_H / 2);
+        ctx.fillText(SUIT_SYMBOLS[index], row.foundationX[index] + CARD_W / 2, TOP + CARD_H / 2);
       }
     });
     for (let column = 0; column < 7; column++) if (!game.tableau[column].length) drawCard(null, columnX(column), TABLEAU_TOP);
