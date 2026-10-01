@@ -207,7 +207,7 @@ test('a card can come back off the foundations to unlock a column', () => {
   assert.equal(isDealStuck(game, 1), false, 'take the 5 of clubs down, put the 4 on it, flip the 3');
 });
 
-test('reaching a dead end stops the game, says so, and undo reopens it', () => {
+test('reaching a dead end ends the game for good: no more moves and no undo', () => {
   const game = emptyTable();
   game.tableau[0] = [card(0, 1, false), card(1, 5)];
   game.stock = [card(3, 3, false)];
@@ -217,9 +217,12 @@ test('reaching a dead end stops the game, says so, and undo reopens it', () => {
   assert.equal(game.draw(), false, 'a stopped game takes no more moves');
   assert.equal(game.score(), 0);
   assert.equal(game.session(), null, 'a dead end is not saved to resume');
-  assert.equal(game.canUndo(), true);
-  assert.equal(game.undo(), true);
-  assert.equal(game.phase, 'playing');
+  assert.equal(game.canUndo(), false, 'an ended game cannot be taken back');
+  assert.equal(game.undo(), false);
+  assert.equal(game.phase, 'stuck');
+  assert.equal(game.move({ pile: 'tableau', index: 0, card: 1 }, { pile: 'tableau', index: 1 }), false);
+  assert.match(game.statusText(), /Deal again/);
+  assert.doesNotMatch(game.statusText(), /Undo/);
 });
 
 test('fresh deals are checked quickly and are almost never dead from the start', () => {
