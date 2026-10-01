@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { openGame, textContrast, READABLE_TEXT } from './helpers';
+import { openGame, box, overlaps, textContrast, READABLE_TEXT, MIN_TAP_TARGET } from './helpers';
 
 async function openHub(page: Page): Promise<void> {
   await page.addInitScript(() => {
@@ -32,6 +32,15 @@ test('a finished game reaches the Everyone board under the chosen alias', async 
   await openGame(page, 'hangman');
   const submitted = page.waitForResponse(response => response.url().endsWith('/api/scores') && response.request().method() === 'POST');
   for (const letter of 'cand') await page.keyboard.press(letter);
+
+  // The score makes the board, so the result card announces it and asks for a name first.
+  const claim = page.locator('.arcade-result-highscore');
+  await expect(claim).toBeVisible();
+  await expect(claim.locator('[data-highscore-title]')).toContainText('New high score! #');
+  await expect(claim.locator('[data-highscore-title]')).toContainText('Hangman');
+  expect(await textContrast(claim.locator('[data-highscore-title]'))).toBeGreaterThanOrEqual(READABLE_TEXT);
+  await expect(claim.locator('input')).toHaveValue(alias);
+  await claim.getByRole('button', { name: 'Post my name' }).click();
   const response = await submitted;
   expect(response.status()).toBe(201);
   expect((await response.json()).rank).not.toBeNull();
@@ -44,10 +53,37 @@ test('a finished game reaches the Everyone board under the chosen alias', async 
   await expect(row).toContainText('800');
   expect(await textContrast(row.locator('.leaderboard-player strong'))).toBeGreaterThanOrEqual(READABLE_TEXT);
   await expect(page.locator('#leaderboardCaption')).toContainText('all players');
+  await expect(page.locator('#leaderboardBoardGame')).toHaveText(/Hangman/);
 
   // This device still keeps its own board.
   await page.locator('[data-leaderboard-scope="device"]').click();
   await expect(page.locator('#leaderboardAliasRow')).toBeHidden();
+});
+
+test('a high score can stay Unknown, and nothing is posted before the choice', async ({ page }) => {
+  await openHub(page);
+  const posts: { alias: string }[] = [];
+  page.on('request', request => {
+    if (request.url().endsWith('/api/scores') && request.method() === 'POST') posts.push(request.postDataJSON());
+  });
+  await page.addInitScript(saved => {
+    try { localStorage.setItem('blast-arcade-hangman-session-v1', saved); } catch { /* storage blocked */ }
+  }, JSON.stringify({ difficulty: 'normal', word: 'CANADA', category: 'Countries', guesses: 'Z', streak: 0 }));
+  await openGame(page, 'hangman');
+  for (const letter of 'cand') await page.keyboard.press(letter);
+  const claim = page.locator('.arcade-result-highscore');
+  await expect(claim).toBeVisible();
+  expect(posts, 'nothing is posted before the player chooses').toHaveLength(0);
+  // The announcement still leaves the solved word in view, and its buttons are easy to tap.
+  expect(overlaps(await box(page.locator('.arcade-result-card')), await box(page.locator('#hangmanWord')))).toBe(false);
+  for (const button of await claim.locator('button').all()) {
+    expect((await box(button)).height).toBeGreaterThanOrEqual(MIN_TAP_TARGET);
+    expect(await textContrast(button)).toBeGreaterThanOrEqual(READABLE_TEXT);
+  }
+  await claim.getByRole('button', { name: 'Stay Unknown' }).click();
+  await expect(claim.locator('[data-highscore-note]')).toContainText('Posted as Unknown · #');
+  await expect(claim.locator('input')).toBeHidden();
+  expect(posts.map(post => post.alias)).toEqual(['Unknown']);
 });
 
 test('the scores API refuses anything that is not a real result', async ({ request }) => {

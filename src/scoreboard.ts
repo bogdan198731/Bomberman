@@ -85,3 +85,13 @@ export function addScore(entries: readonly ScoreEntry[], entry: ScoreEntry): { e
   const index = sorted.indexOf(entry);
   return { entries: sorted, rank: index >= 0 ? index + 1 : null };
 }
+
+/**
+ * The place a new result would take, worked out before it is sent so the
+ * player can be asked for a name first. Counted as Unknown, and after any
+ * equal score already there. Null when it would not make the board.
+ */
+export function placeForScore(entries: readonly ScoreEntry[], score: number): number | null {
+  if (!Number.isInteger(score) || score <= 0 || score > MAX_SCORE) return null;
+  return addScore(entries, { alias: UNKNOWN_ALIAS, score, outcome: 'complete', playedAt: Number.MAX_SAFE_INTEGER }).rank;
+}
