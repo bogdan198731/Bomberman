@@ -42,7 +42,7 @@ export const GAME_GUIDES: Record<ArcadeGameId, GuideCopy> = {
   tanks: {
     objective: copy('Bank shots around cover and win five rounds.', 'Ricoșează proiectilele în jurul obstacolelor și câștigă cinci runde.'),
     controls: copy('Moving also turns your turret. Use Fire only when the readiness ring is full.', 'Mișcarea rotește și turela. Trage doar când indicatorul de pregătire este plin.'),
-    rules: [copy('Shots bounce once from the arena wall.', 'Proiectilele ricoșează o dată din peretele arenei.'), copy('Orange cover breaks; steel cover does not.', 'Adăpostul portocaliu se sparge; cel de oțel nu.')],
+    rules: [copy('Shots bounce once from the arena wall.', 'Proiectilele ricoșează o dată din peretele arenei.'), copy('Orange cover breaks; steel cover does not.', 'Adăpostul portocaliu se sparge; cel de oțel nu.'), copy('Smashed crates sometimes leave a bonus - drive over it for a shield that blocks one hit, rapid fire, a triple shot, or a speed boost.', 'Lăzile sparte lasă uneori un bonus - treci peste el pentru un scut care oprește o lovitură, foc rapid, tragere triplă sau viteză sporită.')],
     tip: copy('Aim at a wall angle to reach a tank hiding behind cover.', 'Țintește într-un unghi de perete pentru a lovi un tanc ascuns după adăpost.'),
   },
   septica: {

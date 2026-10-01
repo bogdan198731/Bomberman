@@ -957,6 +957,9 @@ const UX_TRANSLATIONS: Record<string, string> = {
   'Star fruit': 'Fruct stea', 'Shrink': 'Micșorare', 'Slow time': 'Timp lent', 'Ghost': 'Fantomă',
   'Star fruit - 5 points!': 'Fruct stea - 5 puncte!', 'Shrink - tail trimmed!': 'Micșorare - coada s-a scurtat!',
   'Slow time!': 'Timp lent!', 'Ghost - slip through snakes!': 'Fantomă - treci prin șerpi!',
+  // Mini Tanks bonuses ('Rapid fire' is shared with Survival)
+  'Shield': 'Scut', 'Triple shot': 'Tragere triplă', 'Speed boost': 'Viteză sporită',
+  'Shield - blocks one hit!': 'Scut - oprește o lovitură!', 'Rapid fire!': 'Foc rapid!', 'Triple shot!': 'Tragere triplă!', 'Speed boost!': 'Viteză sporită!',
   'Point at the problem': 'Arată problema', 'Include this screenshot': 'Include această captură de ecran',
   'Tap the part that looks wrong': 'Atinge partea care arată greșit', 'Cancel': 'Anulează',
   'Screenshot of the game that will be sent with the report': 'Captura de ecran a jocului care va fi trimisă cu raportul',

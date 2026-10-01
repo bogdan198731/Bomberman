@@ -4,6 +4,7 @@ import { capturePointer, bindDirectionalJoystick } from './touch-controls.js';
 import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
 import { emitArcadeGameplayCue } from './feedback.js';
 import { bindLevelSelect, normalizeLevel, type LevelInfo } from './levels.js';
+import { translateArcadeText } from './i18n.js';
 
 export type TankPlayer = 1 | 2;
 export type TankMode = 'bot' | 'duel';
@@ -24,7 +25,60 @@ export interface MiniTank {
   direction: TankDirection;
   score: number;
   cooldown: number;
+  /** A shield soaks up the next hit. */
+  shield: boolean;
+  /** Seconds left on each timed bonus. */
+  rapid: number;
+  triple: number;
+  boost: number;
 }
+
+export type TankBonusKind = 'shield' | 'rapid' | 'triple' | 'boost';
+export type TankTimedBonus = 'rapid' | 'triple' | 'boost';
+
+export interface TankBonusInfo {
+  label: string;
+  /** Shown in the status line when picked up. */
+  notice: string;
+  color: string;
+  /** How long the effect lasts; 0 until used up. */
+  seconds: number;
+  /** Relative chance of this bonus among drops. */
+  weight: number;
+}
+
+export const TANK_BONUSES: Record<TankBonusKind, TankBonusInfo> = {
+  shield: { label: 'Shield', notice: 'Shield - blocks one hit!', color: '#5cd8ff', seconds: 0, weight: 2 },
+  rapid: { label: 'Rapid fire', notice: 'Rapid fire!', color: '#ff9f43', seconds: 8, weight: 3 },
+  triple: { label: 'Triple shot', notice: 'Triple shot!', color: '#b28dff', seconds: 7, weight: 2 },
+  boost: { label: 'Speed boost', notice: 'Speed boost!', color: '#ffe066', seconds: 8, weight: 3 },
+};
+export const TANK_BONUS_KINDS = Object.keys(TANK_BONUSES) as TankBonusKind[];
+const TIMED_BONUSES: TankTimedBonus[] = ['rapid', 'triple', 'boost'];
+/** Roughly one smashed crate in three leaves a bonus behind. */
+export const TANK_DROP_CHANCE = 0.35;
+export const TANK_PICKUP_SIZE = 30;
+const MAX_PICKUPS = 3;
+const RAPID_COOLDOWN = .3;
+const BOOST_FACTOR = 1.45;
+/** The two extra triple-shot shells fan out this far (radians). */
+const TRIPLE_SPREAD = .26;
+const NOTICE_SECONDS = 2.5;
+
+export interface TankPickup { x: number; y: number; kind: TankBonusKind }
+
+/** Picks a bonus by weight; `roll` is in [0, 1). */
+export function pickTankBonus(roll: number): TankBonusKind {
+  const total = TANK_BONUS_KINDS.reduce((sum, kind) => sum + TANK_BONUSES[kind].weight, 0);
+  let left = roll * total;
+  for (const kind of TANK_BONUS_KINDS) {
+    left -= TANK_BONUSES[kind].weight;
+    if (left < 0) return kind;
+  }
+  return TANK_BONUS_KINDS[TANK_BONUS_KINDS.length - 1];
+}
+
+const noBonuses = { shield: false, rapid: 0, triple: 0, boost: 0 };
 
 export interface TankBullet {
   x: number;
@@ -125,9 +179,12 @@ function overlapsRect(x: number, y: number, size: number, obstacle: TankObstacle
 
 export class MiniTanksGame {
   tanks: Record<TankPlayer, MiniTank> = {
-    1: { x: 80, y: TANK_ARENA_HEIGHT / 2, direction: 'right', score: 0, cooldown: 0 },
-    2: { x: TANK_ARENA_WIDTH - 80, y: TANK_ARENA_HEIGHT / 2, direction: 'left', score: 0, cooldown: 0 },
+    1: { x: 80, y: TANK_ARENA_HEIGHT / 2, direction: 'right', score: 0, cooldown: 0, ...noBonuses },
+    2: { x: TANK_ARENA_WIDTH - 80, y: TANK_ARENA_HEIGHT / 2, direction: 'left', score: 0, cooldown: 0, ...noBonuses },
   };
+  pickups: TankPickup[] = [];
+  notice = '';
+  noticeLeft = 0;
   inputs: Record<TankPlayer, TankInput> = { 1: emptyInput(), 2: emptyInput() };
   bullets: TankBullet[] = [];
   level = 1;
@@ -140,6 +197,27 @@ export class MiniTanksGame {
   private botDecisionTimer = 0;
   private elapsed = 0;
   private botDetour: { phase: 'sidestep' | 'push'; direction: TankDirection; resume: TankDirection; until: number } | null = null;
+
+  constructor(private readonly random: () => number = Math.random) {}
+
+  /** Timed bonuses a tank has running, longest-lasting first, with a shield first of all. */
+  activeEffects(player: TankPlayer): { kind: TankBonusKind; seconds: number }[] {
+    const tank = this.tanks[player];
+    const timed = TIMED_BONUSES.filter(kind => tank[kind] > 0)
+      .map(kind => ({ kind: kind as TankBonusKind, seconds: tank[kind] }))
+      .sort((a, b) => b.seconds - a.seconds);
+    return tank.shield ? [{ kind: 'shield', seconds: 0 }, ...timed] : timed;
+  }
+
+  /** Applies a bonus a tank just drove over. */
+  collect(player: TankPlayer, kind: TankBonusKind): void {
+    const tank = this.tanks[player];
+    this.notice = `${player === 1 ? 'Mint' : 'Coral'}: ${TANK_BONUSES[kind].notice}`;
+    this.noticeLeft = NOTICE_SECONDS;
+    if (kind === 'shield') tank.shield = true;
+    else tank[kind] = TANK_BONUSES[kind].seconds;
+    emitArcadeGameplayCue('pickup');
+  }
 
   restart(mode: TankMode = this.mode): void {
     this.mode = mode;
@@ -176,16 +254,21 @@ export class MiniTanksGame {
     const tank = this.tanks[player];
     if (this.phase !== 'playing' || tank.cooldown > 0) return false;
     const [dx, dy] = VECTORS[tank.direction];
-    this.bullets.push({
-      x: tank.x + dx * 25,
-      y: tank.y + dy * 25,
-      vx: dx * BULLET_SPEED,
-      vy: dy * BULLET_SPEED,
-      owner: player,
-      bounces: 0,
-      age: 0,
-    });
-    tank.cooldown = .65;
+    const turns = tank.triple > 0 ? [0, -TRIPLE_SPREAD, TRIPLE_SPREAD] : [0];
+    for (const turn of turns) {
+      const vx = dx * Math.cos(turn) - dy * Math.sin(turn);
+      const vy = dx * Math.sin(turn) + dy * Math.cos(turn);
+      this.bullets.push({
+        x: tank.x + dx * 25,
+        y: tank.y + dy * 25,
+        vx: vx * BULLET_SPEED,
+        vy: vy * BULLET_SPEED,
+        owner: player,
+        bounces: 0,
+        age: 0,
+      });
+    }
+    tank.cooldown = tank.rapid > 0 ? RAPID_COOLDOWN : .65;
     return true;
   }
 
@@ -195,6 +278,11 @@ export class MiniTanksGame {
     this.elapsed += dt;
     this.tanks[1].cooldown = Math.max(0, this.tanks[1].cooldown - dt);
     this.tanks[2].cooldown = Math.max(0, this.tanks[2].cooldown - dt);
+    ([1, 2] as TankPlayer[]).forEach(player => {
+      const tank = this.tanks[player];
+      for (const kind of TIMED_BONUSES) tank[kind] = Math.max(0, tank[kind] - dt);
+    });
+    this.noticeLeft = Math.max(0, this.noticeLeft - dt);
     this.botDecisionTimer -= dt;
     if (this.mode === 'bot' && this.botDecisionTimer <= 0) {
       this.updateBot();
@@ -202,6 +290,7 @@ export class MiniTanksGame {
     }
     this.moveTank(1, dt);
     this.moveTank(2, dt);
+    this.collectPickups();
     ([1, 2] as TankPlayer[]).forEach(player => {
       if (this.inputs[player].fire) {
         this.fire(player);
@@ -213,14 +302,16 @@ export class MiniTanksGame {
 
   statusText(): string {
     if (this.phase === 'ready') return this.mode === 'bot' ? 'Start a duel against the Coral bot.' : 'Start the local tank duel.';
-    if (this.phase === 'playing') return 'Move, aim, and bank one-bounce shots off the arena walls.';
+    if (this.phase === 'playing') return this.noticeLeft > 0 ? this.notice : 'Move, aim, and bank one-bounce shots off the arena walls.';
     if (this.phase === 'round-over') return `${this.roundWinner === 1 ? 'Mint' : 'Coral'} takes the round. Launch the next one.`;
     return `${this.matchWinner === 1 ? 'Mint' : 'Coral'} wins the tank clash!`;
   }
 
   private resetRound(): void {
-    this.tanks[1] = { ...this.tanks[1], x: 80, y: TANK_ARENA_HEIGHT / 2, direction: 'right', cooldown: 0 };
-    this.tanks[2] = { ...this.tanks[2], x: TANK_ARENA_WIDTH - 80, y: TANK_ARENA_HEIGHT / 2, direction: 'left', cooldown: 0 };
+    this.tanks[1] = { ...this.tanks[1], x: 80, y: TANK_ARENA_HEIGHT / 2, direction: 'right', cooldown: 0, ...noBonuses };
+    this.tanks[2] = { ...this.tanks[2], x: TANK_ARENA_WIDTH - 80, y: TANK_ARENA_HEIGHT / 2, direction: 'left', cooldown: 0, ...noBonuses };
+    this.pickups = [];
+    this.noticeLeft = 0;
     this.inputs = { 1: emptyInput(), 2: emptyInput() };
     this.bullets = [];
     this.botDecisionTimer = 0;
@@ -241,12 +332,28 @@ export class MiniTanksGame {
     if (!direction) return;
     tank.direction = direction;
     const [dx, dy] = VECTORS[direction];
-    const nextX = Math.max(TANK_SIZE / 2, Math.min(TANK_ARENA_WIDTH - TANK_SIZE / 2, tank.x + dx * TANK_SPEED * dt));
-    const nextY = Math.max(TANK_SIZE / 2, Math.min(TANK_ARENA_HEIGHT - TANK_SIZE / 2, tank.y + dy * TANK_SPEED * dt));
+    const speed = TANK_SPEED * (tank.boost > 0 ? BOOST_FACTOR : 1);
+    const nextX = Math.max(TANK_SIZE / 2, Math.min(TANK_ARENA_WIDTH - TANK_SIZE / 2, tank.x + dx * speed * dt));
+    const nextY = Math.max(TANK_SIZE / 2, Math.min(TANK_ARENA_HEIGHT - TANK_SIZE / 2, tank.y + dy * speed * dt));
     if (!this.obstacles.some(obstacle => overlapsRect(nextX, nextY, TANK_SIZE, obstacle))) {
       tank.x = nextX;
       tank.y = nextY;
     }
+  }
+
+  private collectPickups(): void {
+    this.pickups = this.pickups.filter(pickup => {
+      const reach = (TANK_SIZE + TANK_PICKUP_SIZE) / 2;
+      const player = ([1, 2] as TankPlayer[]).find(id =>
+        Math.abs(this.tanks[id].x - pickup.x) < reach && Math.abs(this.tanks[id].y - pickup.y) < reach);
+      if (player) this.collect(player, pickup.kind);
+      return !player;
+    });
+  }
+
+  private maybeDrop(crate: TankObstacle): void {
+    if (this.pickups.length >= MAX_PICKUPS || this.random() >= TANK_DROP_CHANCE) return;
+    this.pickups.push({ x: crate.x + crate.width / 2, y: crate.y + crate.height / 2, kind: pickTankBonus(this.random()) });
   }
 
   private blocked(tank: MiniTank, direction: TankDirection): boolean {
@@ -329,12 +436,22 @@ export class MiniTanksGame {
 
       const obstacleIndex = this.obstacles.findIndex(obstacle => overlapsRect(bullet.x, bullet.y, 8, obstacle));
       if (obstacleIndex >= 0) {
-        if (this.obstacles[obstacleIndex].destructible) this.obstacles.splice(obstacleIndex, 1);
+        const obstacle = this.obstacles[obstacleIndex];
+        if (obstacle.destructible) {
+          this.obstacles.splice(obstacleIndex, 1);
+          this.maybeDrop(obstacle);
+        }
         continue;
       }
 
       const victim = (bullet.owner === 1 ? 2 : 1) as TankPlayer;
       if (bullet.age > .08 && Math.hypot(bullet.x - this.tanks[victim].x, bullet.y - this.tanks[victim].y) < TANK_SIZE * .62) {
+        if (this.tanks[victim].shield) {
+          // The shield pops and swallows the shell.
+          this.tanks[victim].shield = false;
+          emitArcadeGameplayCue('hit', 'SHIELD');
+          continue;
+        }
         emitArcadeGameplayCue('hit', `${bullet.owner === 1 ? 'MINT' : 'CORAL'} HIT`);
         this.finishRound(bullet.owner);
         return;
@@ -396,6 +513,7 @@ export function initMiniTanks(): void {
     return {
       level: game.level,
       tanks: game.tanks, bullets: game.bullets, obstacles: game.obstacles,
+      pickups: game.pickups, notice: game.notice, noticeLeft: game.noticeLeft,
       mode: game.mode, phase: game.phase, roundWinner: game.roundWinner, matchWinner: game.matchWinner,
       botPace: game.botPace,
     };
@@ -406,6 +524,9 @@ export function initMiniTanks(): void {
     game.tanks = state.tanks as Record<TankPlayer, MiniTank>;
     game.bullets = state.bullets as TankBullet[];
     game.obstacles = state.obstacles as TankObstacle[];
+    game.pickups = Array.isArray(state.pickups) ? state.pickups as TankPickup[] : [];
+    game.notice = typeof state.notice === 'string' ? state.notice : '';
+    game.noticeLeft = Number(state.noticeLeft) || 0;
     if (state.level !== undefined) {
       game.level = normalizeLevel(state.level, TANK_LEVELS.length);
       if (levelSelect) levelSelect.value = String(game.level);
@@ -479,6 +600,7 @@ export function initMiniTanks(): void {
       ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
       ctx.strokeStyle = 'rgba(255,255,255,.18)'; ctx.lineWidth = 3; ctx.strokeRect(obstacle.x + 2, obstacle.y + 2, obstacle.width - 4, obstacle.height - 4);
     });
+    game.pickups.forEach(drawPickup);
     const colors: Record<TankPlayer, string> = { 1: '#54e38e', 2: '#ff6b78' };
     ([1, 2] as TankPlayer[]).forEach(player => {
       const tank = game.tanks[player];
@@ -486,13 +608,108 @@ export function initMiniTanks(): void {
       ctx.save(); ctx.translate(tank.x, tank.y); ctx.shadowBlur = 18; ctx.shadowColor = colors[player];
       ctx.fillStyle = colors[player]; ctx.fillRect(-17, -17, 34, 34);
       ctx.fillStyle = '#111722'; ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = colors[player]; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(dx * 28, dy * 28); ctx.stroke(); ctx.restore();
+      ctx.strokeStyle = colors[player]; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(dx * 28, dy * 28); ctx.stroke();
+      if (tank.shield) {
+        ctx.strokeStyle = TANK_BONUSES.shield.color; ctx.shadowColor = TANK_BONUSES.shield.color; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.restore();
     });
     game.bullets.forEach(bullet => {
       ctx.fillStyle = '#ffc857'; ctx.shadowBlur = 15; ctx.shadowColor = '#ffc857';
       ctx.beginPath(); ctx.arc(bullet.x, bullet.y, 7, 0, Math.PI * 2); ctx.fill();
     });
     ctx.shadowBlur = 0;
+    drawEffects(1);
+    drawEffects(2);
+  }
+
+  function drawPickup(pickup: TankPickup): void {
+    const { color } = TANK_BONUSES[pickup.kind];
+    const half = TANK_PICKUP_SIZE / 2;
+    ctx.fillStyle = color;
+    ctx.shadowBlur = 16; ctx.shadowColor = color;
+    ctx.beginPath();
+    ctx.roundRect(pickup.x - half, pickup.y - half, TANK_PICKUP_SIZE, TANK_PICKUP_SIZE, 8);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    drawIcon(pickup.kind, pickup.x, pickup.y, 20, '#0a1120');
+  }
+
+  /** Language-free symbols, so a bonus reads the same in every language and font. */
+  function drawIcon(kind: TankBonusKind, x: number, y: number, size: number, color: string): void {
+    const h = size / 2;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = color;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = size / 6;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    if (kind === 'shield') {
+      ctx.moveTo(0, -h);
+      ctx.lineTo(h * 0.85, -h * 0.6);
+      ctx.quadraticCurveTo(h * 0.8, h * 0.5, 0, h);
+      ctx.quadraticCurveTo(-h * 0.8, h * 0.5, -h * 0.85, -h * 0.6);
+      ctx.closePath();
+      ctx.fill();
+    } else if (kind === 'rapid') {
+      // A lightning bolt.
+      ctx.moveTo(h * 0.25, -h);
+      ctx.lineTo(-h * 0.6, h * 0.15);
+      ctx.lineTo(0, h * 0.15);
+      ctx.lineTo(-h * 0.25, h);
+      ctx.lineTo(h * 0.6, -h * 0.15);
+      ctx.lineTo(0, -h * 0.15);
+      ctx.closePath();
+      ctx.fill();
+    } else if (kind === 'triple') {
+      // Three shells fanning out.
+      for (const [tx, ty] of [[0, -h], [-h * 0.8, -h * 0.55], [h * 0.8, -h * 0.55]]) {
+        ctx.moveTo(0, h * 0.8); ctx.lineTo(tx, ty);
+      }
+      ctx.stroke();
+    } else {
+      // Speed: two forward chevrons.
+      ctx.moveTo(-h * 0.9, -h * 0.7); ctx.lineTo(-h * 0.1, 0); ctx.lineTo(-h * 0.9, h * 0.7);
+      ctx.moveTo(0, -h * 0.7); ctx.lineTo(h * 0.8, 0); ctx.lineTo(0, h * 0.7);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /** Each crew's running bonuses sit on its own side of the top edge, with a draining bar. */
+  function drawEffects(player: TankPlayer): void {
+    const effects = game.activeEffects(player);
+    if (!effects.length) return;
+    const chipH = 44;
+    const gap = 10;
+    ctx.font = '700 22px system-ui, sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    let edge = player === 1 ? 10 : TANK_ARENA_WIDTH - 10;
+    effects.forEach(effect => {
+      const { color, seconds, label } = TANK_BONUSES[effect.kind];
+      const text = effect.kind === 'shield' ? translateArcadeText(label) : `${translateArcadeText(label)} ${Math.ceil(effect.seconds)}`;
+      const width = 40 + ctx.measureText(text).width + 14;
+      const x = player === 1 ? edge : edge - width;
+      const y = 10;
+      ctx.fillStyle = 'rgba(10,17,32,.88)';
+      ctx.strokeStyle = player === 1 ? '#54e38e' : '#ff6b78';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(x, y, width, chipH, 10);
+      ctx.fill();
+      ctx.stroke();
+      drawIcon(effect.kind, x + 20, y + chipH / 2 - 2, 20, color);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(text, x + 38, y + chipH / 2 - 2);
+      ctx.fillStyle = color;
+      const share = effect.kind === 'shield' ? 1 : effect.seconds / seconds;
+      ctx.fillRect(x + 8, y + chipH - 7, (width - 16) * share, 3);
+      edge = player === 1 ? x + width + gap : x - gap;
+    });
   }
 
   const commands: Record<string, readonly [TankPlayer, keyof TankInput]> = {
