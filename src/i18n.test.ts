@@ -84,3 +84,9 @@ test('Romanian translations cover the Sudoku interface and dynamic progress', ()
     'Celulă goală, rândul 2, coloana 6',
   );
 });
+
+test('solitaire difficulty picker reads in Romanian', () => {
+  assert.equal(translateArcadeText('Easy · draw 1', 'ro'), 'Ușor · trage 1');
+  assert.equal(translateArcadeText('Hard · draw 3', 'ro'), 'Greu · trage 3');
+  assert.equal(translateArcadeText('Solitaire difficulty', 'ro'), 'Dificultate Solitaire');
+});
