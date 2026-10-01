@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blast-arcade-solitaire-deck-side-2026-10-01';
+const CACHE_NAME = 'blast-arcade-share-cards-deck-side-2026-10-01';
 const APP_SHELL = [
   '/',
   '/index.html',
