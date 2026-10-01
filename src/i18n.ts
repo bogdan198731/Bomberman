@@ -266,6 +266,10 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Loading the Everyone board…': 'Se încarcă clasamentul tuturor…',
   'The Everyone board is offline right now. Your scores still count on this device.': 'Clasamentul tuturor nu e disponibil acum. Scorurile tale contează în continuare pe acest dispozitiv.',
   'No scores yet · all players': 'Încă niciun scor · toți jucătorii',
+  'Posting your score…': 'Se publică scorul…',
+  'Post my name': 'Publică numele meu',
+  'Stay Unknown': 'Rămân Necunoscut',
+  'The Everyone board is offline right now. Your score still counts on this device.': 'Clasamentul tuturor nu e disponibil acum. Scorul tău contează în continuare pe acest dispozitiv.',
   'Finish a match to claim the first spot.': 'Termină un meci pentru a ocupa primul loc.',
   'Game library': 'Bibliotecă de jocuri',
   'Choose your next round': 'Alege următoarea rundă',
@@ -722,6 +726,12 @@ function translateRomanianPattern(value: string): string | null {
   // The Everyone scoreboard
   match = value.match(/^Top (\d+) · all players$/);
   if (match) return `Primii ${match[1]} · toți jucătorii`;
+  match = value.match(/^New high score! #(\d+) on the Everyone board for (.+)\.$/);
+  if (match) return `Scor record! Locul #${match[1]} în clasamentul tuturor la ${match[2]}.`;
+  match = value.match(/^Posted as (.+) · #(\d+) on the Everyone board\.$/);
+  if (match) return `Publicat ca ${match[1] === 'Unknown' ? 'Necunoscut' : match[1]} · locul #${match[2]} în clasamentul tuturor.`;
+  match = value.match(/^Your earlier score as (.+) is still your best\.$/);
+  if (match) return `Scorul tău de dinainte ca ${match[1]} rămâne cel mai bun.`;
   match = value.match(/^No scores yet\. Finish a (.+) game to take first place\.$/);
   if (match) return `Încă niciun scor. Termină un joc de ${match[1]} ca să iei primul loc.`;
   // Online rooms for three or four

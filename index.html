@@ -1605,6 +1605,13 @@
       background: rgba(5, 9, 15, 0.22);
     }
 
+    .leaderboard-board-game {
+      padding: 2px 4px 8px;
+      color: var(--ink);
+      font-size: 1rem;
+      font-weight: 900;
+    }
+
     .leaderboard-board-heading {
       display: flex;
       justify-content: space-between;
@@ -2968,6 +2975,64 @@
       }
       .arcade-result-card > :not(.arcade-result-actions) { grid-column: 1; }
       .arcade-result-actions { grid-column: 2; grid-row: 1 / span 3; margin-top: 0; grid-template-columns: repeat(2, minmax(120px, auto)); }
+    }
+    /*
+     * A score that makes the Everyone board is announced here. Until the
+     * player picks a name or stays Unknown, the choice takes the place of the
+     * usual buttons, so the card does not grow over the end of the game.
+     */
+    .arcade-result-highscore {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 6px;
+      margin-top: 10px;
+      padding: 8px 10px;
+      border: 1px solid rgba(255, 200, 87, .45);
+      border-radius: 14px;
+      background: rgba(255, 200, 87, .1);
+      text-align: left;
+    }
+    .arcade-result-highscore[hidden] { display: none; }
+    .arcade-result-highscore strong { color: #ffd47a; font-size: .88rem; line-height: 1.3; }
+    .arcade-result-highscore-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .arcade-result-highscore-row input { grid-column: 1 / -1; }
+    .arcade-result-highscore input {
+      width: 100%;
+      min-width: 0;
+      min-height: 44px;
+      padding: 0 12px;
+      border: 1px solid rgba(255, 255, 255, .2);
+      border-radius: 12px;
+      color: #f2f6fb;
+      background: #1a2536;
+      font: inherit;
+    }
+    .arcade-result-highscore input:focus { border-color: #ffc857; outline: none; }
+    .arcade-result-highscore button {
+      min-height: 44px;
+      padding: 0 12px;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 12px;
+      background: #ffc857;
+      color: #1a1203;
+      font-weight: 900;
+      font-family: inherit;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .arcade-result-highscore button[data-highscore-unknown] { background: #263246; color: #eaf1fa; }
+    .arcade-result-highscore.asking [data-highscore-note] { display: none; }
+    .arcade-result-card:has(> .arcade-result-highscore.asking) .arcade-result-actions { display: none; }
+    /* Once sent, just a line saying where the score landed. */
+    .arcade-result-highscore:not(.asking) { margin-top: 4px; padding: 0; border: 0; background: none; }
+    .arcade-result-highscore:not(.asking) :is(strong, .arcade-result-highscore-row) { display: none; }
+    .arcade-result-highscore [data-highscore-note] { color: #ffd47a; font-size: .88rem; font-weight: 750; }
+    @media (min-width: 720px) {
+      .arcade-result-card > .arcade-result-highscore { grid-column: 1; }
+      .arcade-result-card > .arcade-result-highscore.asking { grid-column: 2; grid-row: 1 / span 3; width: 480px; margin-top: 0; }
+      .arcade-result-highscore-row { display: flex; }
+      .arcade-result-highscore-row input { flex: 1 1 0; }
     }
     .arcade-result-actions [data-result-next] { grid-column: 1 / -1; background: #ffc857; color: #1a1203; }
     .arcade-result-actions [data-result-close] { background: #263246; color: #eaf1fa; }
@@ -8187,6 +8252,7 @@
       </div>
       <div id="leaderboardGameTabs" class="leaderboard-tabs" role="tablist" aria-label="Choose a game leaderboard"></div>
       <div class="leaderboard-board">
+        <div id="leaderboardBoardGame" class="leaderboard-board-game"></div>
         <div class="leaderboard-board-heading"><span id="leaderboardBoardTitle">Local top five</span><span id="leaderboardCaption">Waiting for the first result · saved on this device</span></div>
         <div id="leaderboardList" class="leaderboard-list" role="list" aria-live="polite">
           <div class="leaderboard-empty">Finish a match to claim the first spot.</div>

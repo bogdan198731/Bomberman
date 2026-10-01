@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
-  MAX_SCORE, SCOREBOARD_SIZE, UNKNOWN_ALIAS, addScore, normalizeScoreEntries, sanitizeAlias, validateScoreSubmission,
+  MAX_SCORE, SCOREBOARD_SIZE, UNKNOWN_ALIAS, addScore, normalizeScoreEntries, placeForScore, sanitizeAlias, validateScoreSubmission,
   type ScoreEntry,
 } from './scoreboard.js';
 import { FileScoreStore, Scoreboard, UpstashScoreStore, createScoreStore, type ScoreStore } from './score-store.js';
@@ -47,6 +47,17 @@ test('a named alias keeps only its best score; Unknown results each stand alone'
   board = addScore(board, entry(UNKNOWN_ALIAS, 30)).entries;
   board = addScore(board, entry(UNKNOWN_ALIAS, 20)).entries;
   assert.equal(board.filter(row => row.alias === UNKNOWN_ALIAS).length, 2);
+});
+
+test('the place a score would take is known before it is sent, so the player can be asked for a name', () => {
+  assert.equal(placeForScore([], 1), 1, 'an empty board takes any score');
+  let board: ScoreEntry[] = [];
+  for (let i = 1; i <= 10; i++) board = addScore(board, entry(`P${i}`, i * 10, i)).entries;
+  assert.equal(placeForScore(board, 55), 6);
+  assert.equal(placeForScore(board, 100), 2, 'a tie goes behind the earlier score');
+  assert.equal(placeForScore(board, 10), null, 'tying the last place does not push it off');
+  assert.equal(placeForScore(board, 0), null);
+  assert.equal(placeForScore(board, MAX_SCORE + 1), null);
 });
 
 test('stored boards are read defensively', () => {

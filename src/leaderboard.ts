@@ -5,7 +5,8 @@ import {
   sanitizeProfileName,
 } from './stats.js';
 import type { ArcadeGameId, ArcadeOutcome, ArcadeResult } from './stats.js';
-import { SCOREBOARD_ENDPOINT, UNKNOWN_ALIAS, normalizeScoreEntries, sanitizeAlias, type ScoreEntry } from './scoreboard.js';
+import { isDialogOpen } from './dialogs.js';
+import { SCOREBOARD_ENDPOINT, UNKNOWN_ALIAS, normalizeScoreEntries, placeForScore, sanitizeAlias, type ScoreEntry } from './scoreboard.js';
 
 export const LEADERBOARD_STORAGE_KEY = 'blast-arcade-leaderboards-v1';
 export const MAX_LEADERBOARD_ENTRIES = 5;
@@ -162,7 +163,11 @@ export function loadScoreboardAlias(storage: LeaderboardStorage | undefined = br
  * Sends a finished game's score to the Everyone board. Scores of zero stay
  * off it, and being offline only means the score is not shared.
  */
-export async function submitEveryoneScore(gameId: ArcadeGameId, result: ArcadeResult, alias: string = loadScoreboardAlias()): Promise<ScoreEntry[] | null> {
+export async function submitEveryoneScore(
+  gameId: ArcadeGameId,
+  result: ArcadeResult,
+  alias: string = loadScoreboardAlias(),
+): Promise<{ entries: ScoreEntry[]; rank: number | null } | null> {
   const score = Math.floor(result.score ?? 0);
   if (score <= 0 || typeof fetch === 'undefined') return null;
   try {
@@ -172,7 +177,8 @@ export async function submitEveryoneScore(gameId: ArcadeGameId, result: ArcadeRe
       body: JSON.stringify({ game: gameId, score, outcome: result.outcome, alias: sanitizeAlias(alias) }),
     });
     if (!response.ok) return null;
-    return normalizeScoreEntries(((await response.json()) as { entries?: unknown }).entries);
+    const body = (await response.json()) as { entries?: unknown; rank?: unknown };
+    return { entries: normalizeScoreEntries(body.entries), rank: typeof body.rank === 'number' ? body.rank : null };
   } catch {
     return null;
   }
@@ -188,6 +194,7 @@ export function initArcadeLeaderboard(): void {
   const list = document.getElementById('leaderboardList');
   const caption = document.getElementById('leaderboardCaption');
   const boardTitle = document.getElementById('leaderboardBoardTitle');
+  const boardGame = document.getElementById('leaderboardBoardGame');
   const focusButton = document.getElementById('hubLeaderboardChip');
   const panel = document.getElementById('leaderboardPanel');
   const aliasRow = document.getElementById('leaderboardAliasRow');
@@ -271,6 +278,15 @@ export function initArcadeLeaderboard(): void {
       button.setAttribute('aria-pressed', String(selected));
     });
     if (aliasRow) aliasRow.hidden = scope !== 'everyone';
+    // Says which game the board is for, so a single row is never ambiguous.
+    if (boardGame) {
+      const icon = document.createElement('span');
+      icon.setAttribute('aria-hidden', 'true');
+      icon.textContent = `${GAME_META[activeGameId].icon} `;
+      const name = document.createElement('span');
+      name.textContent = GAME_META[activeGameId].name;
+      boardGame.replaceChildren(icon, name);
+    }
     if (boardTitle) boardTitle.textContent = scope === 'everyone' ? 'Everyone · top ten' : 'Local top five';
 
     if (scope === 'everyone') {
@@ -345,16 +361,100 @@ export function initArcadeLeaderboard(): void {
     });
   }
 
+  function remember(gameId: ArcadeGameId, posted: { entries: ScoreEntry[] } | null): void {
+    if (!posted) return;
+    everyone.set(gameId, { entries: posted.entries, at: Date.now() });
+    if (scope === 'everyone' && activeGameId === gameId) render();
+  }
+
+  function saveAlias(alias: string): void {
+    const value = alias === UNKNOWN_ALIAS ? '' : alias;
+    if (aliasInput) aliasInput.value = value;
+    try { localStorage.setItem(SCOREBOARD_ALIAS_STORAGE_KEY, value); } catch { /* this visit only */ }
+  }
+
+  // A score that makes the Everyone board is announced on the result card,
+  // and only sent once the player picks a name or stays Unknown, so the
+  // board never shows a name they did not choose for that score.
+  let pending: { gameId: ArcadeGameId; result: ArcadeResult } | null = null;
+  let offerId = 0;
+
+  function claimForm(): HTMLFormElement | null {
+    return document.querySelector<HTMLFormElement>('.arcade-result-highscore');
+  }
+
+  function post(alias: string): void {
+    const claim = pending;
+    pending = null;
+    if (!claim) return;
+    const form = claimForm();
+    const note = form?.querySelector<HTMLElement>('[data-highscore-note]');
+    form?.classList.remove('asking');
+    if (note) note.textContent = 'Posting your score…';
+    const name = sanitizeAlias(alias);
+    void submitEveryoneScore(claim.gameId, claim.result, name).then(posted => {
+      remember(claim.gameId, posted);
+      if (!note) return;
+      note.textContent = !posted ? 'The Everyone board is offline right now. Your score still counts on this device.'
+        : posted.rank ? `Posted as ${name} · #${posted.rank} on the Everyone board.`
+          : `Your earlier score as ${name} is still your best.`;
+    });
+  }
+
+  async function offerEveryoneScore(gameId: ArcadeGameId, result: ArcadeResult): Promise<void> {
+    const id = ++offerId;
+    if (pending) post(loadScoreboardAlias());
+    const form = claimForm();
+    if (form) form.hidden = true;
+    const score = Math.floor(result.score ?? 0);
+    if (score <= 0 || typeof fetch === 'undefined') return;
+    let entries = everyone.get(gameId)?.entries;
+    try {
+      const response = await fetch(`${SCOREBOARD_ENDPOINT}?game=${gameId}`);
+      if (response.ok) entries = normalizeScoreEntries(((await response.json()) as { entries?: unknown }).entries);
+    } catch { /* fall back to the board as last seen */ }
+    if (id !== offerId) return;
+    pending = { gameId, result };
+    const place = entries ? placeForScore(entries, score) : null;
+    const resultCard = document.querySelector<HTMLElement>('.arcade-result-overlay');
+    const asking = place !== null && form && isDialogOpen('result') && resultCard?.dataset.game === gameId;
+    if (!asking) {
+      // Not near the top (or no card to ask on): shared under the saved name, if it counts at all.
+      if (entries && place === null) pending = null;
+      else post(loadScoreboardAlias());
+      return;
+    }
+    form.classList.add('asking');
+    form.querySelector<HTMLElement>('[data-highscore-title]')!.textContent = `New high score! #${place} on the Everyone board for ${GAME_META[gameId].name}.`;
+    form.querySelector<HTMLInputElement>('input')!.value = loadScoreboardAlias();
+    form.hidden = false;
+    // The buttons the card showed are hidden now; a button, not the input, so phones do not pop up a keyboard.
+    form.querySelector<HTMLButtonElement>('button[type="submit"]')!.focus({ preventScroll: true });
+  }
+
+  document.addEventListener('submit', event => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || !form.classList.contains('arcade-result-highscore')) return;
+    event.preventDefault();
+    const unknown = (event as SubmitEvent).submitter?.hasAttribute('data-highscore-unknown');
+    const alias = unknown ? UNKNOWN_ALIAS : sanitizeAlias(form.querySelector<HTMLInputElement>('input')?.value);
+    if (!unknown) saveAlias(alias);
+    post(alias);
+    // The usual buttons come back; keep the keyboard on the card.
+    document.querySelector<HTMLElement>('.arcade-result-overlay [data-result-replay]')?.focus({ preventScroll: true });
+  });
+  // Leaving the result card without choosing keeps the saved name (Unknown if none).
+  window.addEventListener('arcade-dialog-change', event => {
+    const detail = (event as CustomEvent<{ active: string | null; previous: string | null }>).detail;
+    if (detail?.previous === 'result' && detail.active !== 'result' && pending) post(loadScoreboardAlias());
+  });
+
   window.addEventListener('arcade-game-result', event => {
     const detail = (event as CustomEvent<{ gameId: ArcadeGameId; result: ArcadeResult }>).detail;
     if (!detail || !ARCADE_GAME_IDS.includes(detail.gameId)) return;
     activeGameId = detail.gameId;
     recordLeaderboardResult(detail.gameId, loadArcadeProfile().name, detail.result);
-    void submitEveryoneScore(detail.gameId, detail.result).then(entries => {
-      if (!entries) return;
-      everyone.set(detail.gameId, { entries, at: Date.now() });
-      if (scope === 'everyone' && activeGameId === detail.gameId) render();
-    });
+    void offerEveryoneScore(detail.gameId, detail.result);
   });
   window.addEventListener('arcade-leaderboard-updated', event => {
     const detail = (event as CustomEvent<{ gameId: ArcadeGameId; leaderboards: ArcadeLeaderboards }>).detail;
