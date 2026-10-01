@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { networkInterfaces } from 'node:os';
@@ -14,6 +14,10 @@ import { InviteRoom, isOnlineGameId, isRelayPayload, isRelaySeat, roomSize, type
 import { MatchmakingQueue } from './matchmaking.js';
 import { buildRobotsTxt, buildSitemapXml, gameFromPath, parseSeoPath } from './seo.js';
 import { renderPageForView } from './page-render.js';
+import { contentValidators, fileValidators, isNotModified, legacyHostRedirect, type Validators } from './server-http.js';
+import { pageDates, parseGitFileDates } from './sitemap-dates.js';
+import type { ArcadeLanguage } from './i18n.js';
+import type { SeoView } from './seo.js';
 import { BUG_REPORT_ENDPOINT, BUG_REPORT_LIMITS, validateBugReport } from './bug-report.js';
 import { ReportRateLimiter, createReportId, forwardReport, storeReport, storeScreenshot, type StoredReport } from './report-intake.js';
 import { TesterRegistry } from './testers.js';
@@ -247,15 +251,54 @@ function handleScores(request: IncomingMessage, response: ServerResponse): void 
   });
 }
 
-function sitemapLastModified(): string {
-  return new Date(statSync(indexPath).mtimeMs).toISOString().slice(0, 10);
+let sitemapDateCache: Record<SeoView, string> | undefined;
+
+/** Each page's last change, read once from git history; a copy without .git dates everything from index.html. */
+function sitemapDates(): Record<SeoView, string> {
+  if (sitemapDateCache) return sitemapDateCache;
+  const fallback = new Date(statSync(indexPath).mtimeMs).toISOString().slice(0, 10);
+  let log = '';
+  try {
+    log = execFileSync('git', ['log', '--format=%x00%cs', '--name-only', '--no-renames'], { cwd: root, stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 32 * 1024 * 1024 }).toString();
+  } catch { /* No git history here: every page gets the fallback date. */ }
+  sitemapDateCache = pageDates(parseGitFileDates(log), fallback);
+  return sitemapDateCache;
 }
 
-function sendText(response: ServerResponse, body: string, type: string, cacheControl: string): void {
+const pageCache = new Map<string, { body: string; validators: Validators }>();
+
+/** Pages only change when index.html does, so each language and route renders once per deploy. */
+function renderedPage(view: SeoView, language: ArcadeLanguage): { body: string; validators: Validators } {
+  const html = readIndexHtml();
+  const key = `${indexCache?.mtimeMs}:${view}:${language}`;
+  let page = pageCache.get(key);
+  if (!page) {
+    if (pageCache.size > 200) pageCache.clear();
+    const body = renderPageForView(html, view, undefined, language);
+    page = { body, validators: contentValidators(body) };
+    pageCache.set(key, page);
+  }
+  return page;
+}
+
+function validatorHeaders(validators: Validators): Record<string, string> {
+  return validators.lastModified ? { ETag: validators.etag, 'Last-Modified': validators.lastModified } : { ETag: validators.etag };
+}
+
+/** Answers 304 when the browser already has this version; true if it did. */
+function sendNotModified(request: IncomingMessage, response: ServerResponse, validators: Validators, cacheControl: string): boolean {
+  if (!isNotModified(request.headers, validators)) return false;
+  response.writeHead(304, { 'Cache-Control': cacheControl, ...validatorHeaders(validators) });
+  response.end();
+  return true;
+}
+
+function sendText(response: ServerResponse, body: string, type: string, cacheControl: string, validators?: Validators): void {
   response.writeHead(200, {
     'Content-Type': type,
     'Cache-Control': cacheControl,
     'Content-Length': Buffer.byteLength(body),
+    ...(validators ? validatorHeaders(validators) : {}),
   });
   response.end(body);
 }
@@ -269,6 +312,13 @@ function cacheControlFor(publicPath: string): string {
 }
 
 const server = createServer((request, response) => {
+  // The old Render address moves for good to blastarcade.ro, so links to it count for the real site.
+  const redirect = legacyHostRedirect(request.headers.host, request.method, request.url);
+  if (redirect) {
+    response.writeHead(301, { Location: redirect, 'Cache-Control': 'public, max-age=86400' });
+    response.end();
+    return;
+  }
   const requestPath = new URL(request.url || '/', `http://${request.headers.host}`).pathname;
 
   if (requestPath === SCOREBOARD_ENDPOINT) {
@@ -289,7 +339,7 @@ const server = createServer((request, response) => {
     return;
   }
   if (requestPath === '/sitemap.xml') {
-    sendText(response, buildSitemapXml(sitemapLastModified()), mimeTypes['.xml'], 'public, max-age=86400');
+    sendText(response, buildSitemapXml(sitemapDates()), mimeTypes['.xml'], 'public, max-age=86400');
     return;
   }
 
@@ -303,7 +353,9 @@ const server = createServer((request, response) => {
   }
   const route = parseSeoPath(requestPath);
   if (route) {
-    sendText(response, renderPageForView(readIndexHtml(), route.view, undefined, route.language), mimeTypes['.html'], 'no-cache');
+    const page = renderedPage(route.view, route.language);
+    if (sendNotModified(request, response, page.validators, 'no-cache')) return;
+    sendText(response, page.body, mimeTypes['.html'], 'no-cache', page.validators);
     return;
   }
 
@@ -327,9 +379,16 @@ const server = createServer((request, response) => {
     return;
   }
 
+  // Revalidation used to re-download every file: there was nothing to compare against.
+  const { size, mtimeMs } = statSync(filePath);
+  const validators = fileValidators(size, mtimeMs);
+  const cacheControl = cacheControlFor(publicPath);
+  if (sendNotModified(request, response, validators, cacheControl)) return;
   response.writeHead(200, {
     'Content-Type': mimeTypes[extname(filePath)] || 'application/octet-stream',
-    'Cache-Control': cacheControlFor(publicPath),
+    'Cache-Control': cacheControl,
+    'Content-Length': size,
+    ...validatorHeaders(validators),
   });
   createReadStream(filePath).pipe(response);
 });

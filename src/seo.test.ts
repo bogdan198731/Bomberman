@@ -21,6 +21,7 @@ import {
   parseSeoPath,
   routePath,
   seoForView,
+  shareImagePath,
   renderSeoTags,
   structuredDataForView,
   viewElementId,
@@ -85,7 +86,7 @@ test('rendered tags carry the route title, canonical, and social card', () => {
   assert.match(tags, /<title>Mini Tanks[^<]*<\/title>/);
   assert.match(tags, new RegExp(`<link rel="canonical" href="${SITE_ORIGIN}/play/tanks">`));
   assert.match(tags, new RegExp(`<meta property="og:url" content="${SITE_ORIGIN}/play/tanks">`));
-  assert.match(tags, new RegExp(`<meta property="og:image" content="${SITE_ORIGIN}/public/og-v4\\.jpg">`));
+  assert.match(tags, new RegExp(`<meta property="og:image" content="${SITE_ORIGIN}/public/og/tanks\\.jpg">`), 'a game page shares its own card');
   assert.match(tags, /<meta name="twitter:card" content="summary_large_image">/);
   // Absolute image URLs are required: scrapers do not resolve relative paths.
   assert.doesNotMatch(tags, /content="\/public/);
@@ -302,5 +303,43 @@ test('the sitemap tells search engines which pages are translations of each othe
   assert.equal(entries.length, views.length * 2);
   for (const entry of entries) {
     assert.equal(entry.match(/<xhtml:link rel="alternate" hreflang="(en|ro|x-default)"/g)?.length, 3);
+  }
+});
+
+function jpegSize(bytes: Buffer): [number, number] | null {
+  let offset = 2;
+  while (offset < bytes.length) {
+    const marker = bytes.readUInt16BE(offset);
+    if (marker === 0xffc0 || marker === 0xffc2) return [bytes.readUInt16BE(offset + 7), bytes.readUInt16BE(offset + 5)];
+    offset += 2 + bytes.readUInt16BE(offset + 2);
+  }
+  return null;
+}
+
+test('a shared game link shows that game: each has its own light, card-sized image', () => {
+  for (const game of ARCADE_GAME_IDS) {
+    const path = shareImagePath(game);
+    assert.equal(path, `/public/og/${game}.jpg`);
+    const bytes = readFileSync(new URL(`..${path}`, import.meta.url));
+    assert.deepEqual(jpegSize(bytes), [1200, 630], `${game} card size (run npm run share-images)`);
+    assert.ok(bytes.length < 150_000, `${game} card is ${Math.round(bytes.length / 1024)} KB`);
+    for (const language of ['en', 'ro'] as const) {
+      const tags = renderSeoTags(game, SITE_ORIGIN, language);
+      assert.ok(tags.includes(`<meta property="og:image" content="${SITE_ORIGIN}/public/og/${game}.jpg">`), `${game}/${language}`);
+      assert.ok(tags.includes(`<meta name="twitter:image" content="${SITE_ORIGIN}/public/og/${game}.jpg">`));
+    }
+  }
+  assert.equal(shareImagePath('hub'), OG_IMAGE_PATH, 'the hub keeps the whole-arcade card');
+  assert.ok(renderSeoTags('hub', SITE_ORIGIN, 'ro').includes('content="Blast Arcade — 20 jocuri într-un singur loc"'));
+});
+
+test('the sitemap can date every page separately', () => {
+  const dates = Object.fromEntries(views.map((view, index) => [view, `2026-09-${String(index + 1).padStart(2, '0')}`])) as Record<SeoView, string>;
+  const sitemap = buildSitemapXml(dates);
+  for (const view of views) {
+    for (const language of ['en', 'ro'] as const) {
+      const entry = sitemap.split('<url>').find(part => part.includes(`<loc>${canonicalUrl(view, SITE_ORIGIN, language)}</loc>`))!;
+      assert.ok(entry.includes(`<lastmod>${dates[view]}</lastmod>`), `${view}/${language}`);
+    }
   }
 });

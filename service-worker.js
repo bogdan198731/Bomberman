@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blast-arcade-input-isolation-2026-10-01';
+const CACHE_NAME = 'blast-arcade-input-isolation-share-cards-2026-10-01';
 const APP_SHELL = [
   '/',
   '/index.html',
