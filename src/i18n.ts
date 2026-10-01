@@ -960,6 +960,9 @@ const UX_TRANSLATIONS: Record<string, string> = {
   // Mini Tanks bonuses ('Rapid fire' is shared with Survival)
   'Shield': 'Scut', 'Triple shot': 'Tragere triplă', 'Speed boost': 'Viteză sporită',
   'Shield - blocks one hit!': 'Scut - oprește o lovitură!', 'Rapid fire!': 'Foc rapid!', 'Triple shot!': 'Tragere triplă!', 'Speed boost!': 'Viteză sporită!',
+  // Paddle Clash bonuses
+  'Big paddle': 'Paletă mare', 'Tiny rival': 'Rival mic', 'Goal shield': 'Scut de poartă',
+  'Big paddle!': 'Paletă mare!', 'Tiny rival paddle!': 'Paleta rivalului e mică!', 'Goal shield - saves one point!': 'Scut de poartă - salvează un punct!',
   'Point at the problem': 'Arată problema', 'Include this screenshot': 'Include această captură de ecran',
   'Tap the part that looks wrong': 'Atinge partea care arată greșit', 'Cancel': 'Anulează',
   'Screenshot of the game that will be sent with the report': 'Captura de ecran a jocului care va fi trimisă cu raportul',

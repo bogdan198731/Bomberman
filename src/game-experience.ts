@@ -30,7 +30,7 @@ export const GAME_GUIDES: Record<ArcadeGameId, GuideCopy> = {
   paddle: {
     objective: copy('Return the ball past your opponent. The first player to 7 wins.', 'Trimite mingea dincolo de adversar. Primul jucător la 7 puncte câștigă.'),
     controls: copy('Move your paddle with its on-screen joystick. In solo, you can also drag the Mint paddle directly.', 'Mișcă paleta cu joystickul de pe ecran. Solo, poți și să tragi direct paleta Mint.'),
-    rules: [copy('Hit nearer a paddle edge for a sharper angle.', 'Lovește mai aproape de marginea paletei pentru un unghi mai ascuțit.'), copy('Long rallies gradually accelerate the ball.', 'Schimburile lungi accelerează treptat mingea.')],
+    rules: [copy('Hit nearer a paddle edge for a sharper angle.', 'Lovește mai aproape de marginea paletei pentru un unghi mai ascuțit.'), copy('Long rallies gradually accelerate the ball.', 'Schimburile lungi accelerează treptat mingea.'), copy('Orbs sometimes float onto the court - send the ball through one for a big paddle, a tiny rival paddle, or a goal shield that saves one point. Bonuses last until the next point.', 'Uneori apar globuri pe teren - trimite mingea prin ele pentru o paletă mare, o paletă mică pentru rival sau un scut de poartă care salvează un punct. Bonusurile țin până la următorul punct.')],
     tip: copy('Return toward open space instead of chasing the ball at the last moment.', 'Trimite spre spațiul liber în loc să urmărești mingea în ultima clipă.'),
   },
   snake: {
