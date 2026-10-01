@@ -12,7 +12,8 @@ import {
 } from './multiplayer.js';
 import { InviteRoom, isOnlineGameId, isRelayPayload, isRelaySeat, roomSize, type OnlineGameId, type RelaySeat } from './relay.js';
 import { MatchmakingQueue } from './matchmaking.js';
-import { buildRobotsTxt, buildSitemapXml, gameFromPath, renderPageForView, type SeoView } from './seo.js';
+import { buildRobotsTxt, buildSitemapXml, gameFromPath, parseSeoPath } from './seo.js';
+import { renderPageForView } from './page-render.js';
 import { BUG_REPORT_ENDPOINT, BUG_REPORT_LIMITS, validateBugReport } from './bug-report.js';
 import { ReportRateLimiter, createReportId, forwardReport, storeReport, storeScreenshot, type StoredReport } from './report-intake.js';
 import { TesterRegistry } from './testers.js';
@@ -292,13 +293,17 @@ const server = createServer((request, response) => {
     return;
   }
 
-  // The hub and every /play/<game> route render the same shell with route-specific
-  // metadata, so crawlers see real titles and canonicals without running JavaScript.
-  const routedGame = gameFromPath(requestPath);
-  const isShellRoute = requestPath === '/' || requestPath === '/index.html' || Boolean(routedGame);
-  if (isShellRoute) {
-    const view: SeoView = routedGame ?? 'hub';
-    sendText(response, renderPageForView(readIndexHtml(), view), mimeTypes['.html'], 'no-cache');
+  // The hub and every game page, in English (/play/<game>) and Romanian (/ro/joc/<game>),
+  // render the same shell with route-specific metadata and text, so crawlers see real
+  // titles, canonicals and content without running JavaScript.
+  if (requestPath === '/ro') {
+    response.writeHead(301, { Location: '/ro/' });
+    response.end();
+    return;
+  }
+  const route = parseSeoPath(requestPath);
+  if (route) {
+    sendText(response, renderPageForView(readIndexHtml(), route.view, undefined, route.language), mimeTypes['.html'], 'no-cache');
     return;
   }
 

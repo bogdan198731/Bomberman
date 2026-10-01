@@ -27,6 +27,19 @@ test('games live at crawlable /play paths while legacy hash links still resolve'
   assert.equal(new URL(arcadeRouteUrl('http://localhost/play/snake', { view: 'hub', section: 'profile' })).pathname, '/');
   assert.equal(readArcadeRoute('http://localhost/play/not-a-game').view, 'hub');
 });
+test('in Romanian the address bar uses the Romanian pages, and they read back as the same route', () => {
+  for (const view of ARCADE_GAME_IDS) {
+    const url = arcadeRouteUrl('http://localhost/play/snake?theme=dark', { view, section: 'games' }, 'ro');
+    assert.equal(new URL(url).pathname, `/ro/joc/${view}`);
+    assert.equal(new URL(url).search, '?theme=dark', 'unrelated parameters survive');
+    assert.deepEqual(readArcadeRoute(url), { view, section: 'games' });
+  }
+  const hub = arcadeRouteUrl('http://localhost/ro/joc/mines', { view: 'hub', section: 'challenges' }, 'ro');
+  assert.equal(new URL(hub).pathname + new URL(hub).hash, '/ro/#challenges');
+  assert.deepEqual(readArcadeRoute(hub), { view: 'hub', section: 'challenges' });
+  assert.equal(new URL(arcadeRouteUrl('http://localhost/ro/joc/mines', { view: 'mines', section: 'games' }, 'en')).pathname, '/play/mines',
+    'switching back to English leaves the Romanian address');
+});
 test('invite route wins over stale hashes; leaving removes only invite parameters', () => {
   const invite = createArcadeInviteUrl('http://localhost/?theme=dark#games', 'racing', 'ABCDE');
   assert.equal(readArcadeRoute(invite + '#profile').view, 'racing');
@@ -90,7 +103,7 @@ test('Back/Forward and reload retain edited library state and emit cleanup befor
   };
   const globals = {
     window: win, history: historyMock, location: url,
-    document: { body, title: '', getElementById: () => search, querySelector: queryMock },
+    document: { body, title: '', getElementById: (id: string) => id === 'catalogSearch' ? search : null, querySelector: queryMock },
     requestAnimationFrame: (callback: FrameRequestCallback) => { frames.push(callback); return frames.length; },
   };
   for (const [key, value] of Object.entries(globals)) {

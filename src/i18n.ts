@@ -904,6 +904,51 @@ export function currentArcadeLanguage(): ArcadeLanguage {
   return activeLanguage;
 }
 
+let staticTranslations: Map<string, string> | null = null;
+let servedSources: Map<string, string> | null = null;
+
+/**
+ * The fixed strings that can be translated on the server and still be turned
+ * back into English in the browser: each Romanian text belongs to exactly one
+ * English text, and is not itself English text that means something else.
+ */
+function staticTranslationTables(): { forward: Map<string, string>; reverse: Map<string, string> } {
+  if (staticTranslations && servedSources) return { forward: staticTranslations, reverse: servedSources };
+  const all = { ...ROMANIAN_TRANSLATIONS, ...UX_TRANSLATIONS };
+  const owners = new Map<string, string[]>();
+  Object.entries(all).forEach(([english, romanian]) => owners.set(romanian, [...(owners.get(romanian) ?? []), english]));
+  staticTranslations = new Map();
+  servedSources = new Map();
+  Object.entries(all).forEach(([english, romanian]) => {
+    if (romanian === english || owners.get(romanian)!.length !== 1) return;
+    if (romanian in all) return;
+    staticTranslations!.set(english, romanian);
+    servedSources!.set(romanian, english);
+  });
+  return { forward: staticTranslations, reverse: servedSources };
+}
+
+/** Romanian for a fixed page string, only when the browser can reverse it; otherwise undefined. */
+export function translateStaticText(english: string): string | undefined {
+  return staticTranslationTables().forward.get(english);
+}
+
+/** The English a server-translated Romanian string came from, so switching to English still works. */
+export function servedSourceText(romanian: string): string | undefined {
+  return staticTranslationTables().reverse.get(romanian);
+}
+
+/** Set when the server already sent this page in Romanian (see <html data-served-lang>). */
+let servedLanguage: ArcadeLanguage = 'en';
+
+function englishSource(value: string): string {
+  if (servedLanguage === 'en') return value;
+  const leading = value.match(/^\s*/)?.[0] ?? '';
+  const trailing = value.match(/\s*$/)?.[0] ?? '';
+  const source = servedSourceText(value.slice(leading.length, value.length - trailing.length));
+  return source === undefined ? value : `${leading}${source}${trailing}`;
+}
+
 function canTranslateText(node: Text): boolean {
   const parent = node.parentElement;
   return Boolean(parent && !parent.closest('script, style, noscript'));
@@ -914,7 +959,7 @@ function localizeTextNode(node: Text): void {
   const current = node.data;
   let record = textRecords.get(node);
   if (!record) {
-    record = { source: current, rendered: current };
+    record = { source: englishSource(current), rendered: current };
     textRecords.set(node, record);
   } else if (current !== record.rendered) {
     record.source = current;
@@ -934,7 +979,7 @@ function localizeAttribute(element: Element, attribute: string): void {
   }
   let record = records.get(attribute);
   if (!record) {
-    record = { source: current, rendered: current };
+    record = { source: englishSource(current), rendered: current };
     records.set(attribute, record);
   } else if (current !== record.rendered) {
     record.source = current;
@@ -988,6 +1033,7 @@ export function setArcadeLanguage(language: ArcadeLanguage): void {
   const changed = language !== activeLanguage;
   activeLanguage = language;
   if (typeof document === 'undefined') return;
+  if (!initialized) servedLanguage = document.documentElement.dataset.servedLang === 'ro' ? 'ro' : 'en';
   document.documentElement.lang = language;
   startObserver();
   if (changed || !initialized) {
