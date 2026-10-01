@@ -358,6 +358,7 @@ export function initNeonSnake(): void {
     resultReporter.report(game.phase === 'finished', {
       outcome: game.mode === 'solo' ? 'complete' : game.winner === 0 ? 'draw' : game.winner === trackedPlayer ? 'win' : 'loss',
       score: game.riders[trackedPlayer].score,
+      runOver: game.mode === 'solo',
     });
   }
 

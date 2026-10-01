@@ -21,6 +21,8 @@ export type WeeklyQuestId = typeof WEEKLY_QUEST_IDS[number];
 export interface ArcadeResult {
   outcome: ArcadeOutcome;
   score?: number;
+  /** A scored run that ended by losing (a crash, the last ship gone), not by finishing it. */
+  runOver?: boolean;
 }
 
 export interface DailyChallenge {

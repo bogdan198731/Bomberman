@@ -60,7 +60,7 @@ test('a finished game reaches the Everyone board under the chosen alias', async 
   await expect(page.locator('#leaderboardAliasRow')).toBeHidden();
 });
 
-test('a high score can stay Unknown, and nothing is posted before the choice', async ({ page }) => {
+test('a high score can be posted anonymously, and nothing is posted before the choice', async ({ page }) => {
   await openHub(page);
   const posts: { alias: string }[] = [];
   page.on('request', request => {
@@ -78,12 +78,37 @@ test('a high score can stay Unknown, and nothing is posted before the choice', a
   expect(overlaps(await box(page.locator('.arcade-result-card')), await box(page.locator('#hangmanWord')))).toBe(false);
   for (const button of await claim.locator('button').all()) {
     expect((await box(button)).height).toBeGreaterThanOrEqual(MIN_TAP_TARGET);
+    // The label fits inside its button.
+    expect(await button.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
     expect(await textContrast(button)).toBeGreaterThanOrEqual(READABLE_TEXT);
   }
-  await claim.getByRole('button', { name: 'Stay Unknown' }).click();
+  await claim.getByRole('button', { name: 'Post anonymously' }).click();
   await expect(claim.locator('[data-highscore-note]')).toContainText('Posted as Unknown · #');
   await expect(claim.locator('input')).toBeHidden();
   expect(posts.map(post => post.alias)).toEqual(['Unknown']);
+});
+
+test('a high score can be kept private: nothing is sent', async ({ page }) => {
+  await openHub(page);
+  const posts: unknown[] = [];
+  page.on('request', request => {
+    if (request.url().endsWith('/api/scores') && request.method() === 'POST') posts.push(request.postDataJSON());
+  });
+  await page.addInitScript(saved => {
+    try { localStorage.setItem('blast-arcade-hangman-session-v1', saved); } catch { /* storage blocked */ }
+  }, JSON.stringify({ difficulty: 'normal', word: 'CANADA', category: 'Countries', guesses: 'Z', streak: 0 }));
+  await openGame(page, 'hangman');
+  for (const letter of 'cand') await page.keyboard.press(letter);
+  const claim = page.locator('.arcade-result-highscore');
+  // Says the board is public before anything is shared.
+  await expect(claim.locator('[data-highscore-title]')).toContainText('public');
+  await claim.getByRole('button', { name: 'Keep private' }).click();
+  await expect(claim.locator('[data-highscore-note]')).toHaveText('Kept private · saved on this device only.');
+  expect(await textContrast(claim.locator('[data-highscore-note]'))).toBeGreaterThanOrEqual(READABLE_TEXT);
+  // Leaving the card afterwards does not send it either.
+  await page.locator('[data-result-close]').click();
+  await page.waitForTimeout(300);
+  expect(posts).toEqual([]);
 });
 
 test('the scores API refuses anything that is not a real result', async ({ request }) => {

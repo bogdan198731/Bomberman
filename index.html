@@ -3025,7 +3025,12 @@
       white-space: nowrap;
       cursor: pointer;
     }
-    .arcade-result-highscore button[data-highscore-unknown] { background: #263246; color: #eaf1fa; }
+    .arcade-result-highscore button:is([data-highscore-unknown], [data-highscore-private]) { background: #263246; color: #eaf1fa; }
+    .arcade-result-highscore button[data-highscore-private] { grid-column: 1 / -1; background: transparent; }
+    /* Narrow phones: a long label wraps inside its button instead of spilling out. */
+    @media (max-width: 719px) {
+      .arcade-result-highscore button { white-space: normal; padding: 4px 8px; line-height: 1.15; overflow-wrap: anywhere; }
+    }
     .arcade-result-highscore.asking [data-highscore-note] { display: none; }
     .arcade-result-card:has(> .arcade-result-highscore.asking) .arcade-result-actions > :not([data-result-continue]) { display: none; }
     /* A 2048 run can keep going while the name is asked; otherwise the row would sit empty. */
@@ -3037,10 +3042,11 @@
     .arcade-result-highscore [data-highscore-note] { color: #ffd47a; font-size: .88rem; font-weight: 750; }
     @media (min-width: 720px) {
       .arcade-result-card > .arcade-result-highscore { grid-column: 1; }
-      .arcade-result-card > .arcade-result-highscore.asking { grid-column: 2; grid-row: 1 / span 3; width: 480px; margin-top: 0; }
+      .arcade-result-card:has(> .arcade-result-highscore.asking) { width: min(100%, 980px); }
+      .arcade-result-card > .arcade-result-highscore.asking { grid-column: 2; grid-row: 1 / span 3; width: min(660px, calc(100vw - 340px)); margin-top: 0; }
       .arcade-result-card:has(> .arcade-result-highscore.asking) .arcade-result-actions { grid-column: 2; grid-row: 4; margin-top: 8px; }
-      .arcade-result-highscore-row { display: flex; }
-      .arcade-result-highscore-row input { flex: 1 1 0; }
+      .arcade-result-highscore-row { display: flex; flex-wrap: wrap; }
+      .arcade-result-highscore-row input { flex: 1 1 120px; }
     }
     .arcade-result-actions [data-result-next] { grid-column: 1 / -1; background: #ffc857; color: #1a1203; }
     .arcade-result-actions [data-result-close] { background: #263246; color: #eaf1fa; }
@@ -5230,9 +5236,16 @@
         font-size: 0;
       }
 
+      /* A pixel-art sprite drawn as a mask: no font glyph a phone could lack. */
       .game-nav-actions .skin-toggle-button::before {
-        content: 'A6';
-        font-size: .95rem;
+        content: '';
+        display: block;
+        width: 20px;
+        height: 15px;
+        margin: auto;
+        background: currentColor;
+        -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 11 8' shape-rendering='crispEdges'%3E%3Cpath d='M2 0h1v1H2zM8 0h1v1H8zM3 1h5v1H3zM2 2h7v1H2zM1 3h2v1H1zM4 3h3v1H4zM8 3h2v1H8zM0 4h11v1H0zM0 5h1v1H0zM2 5h7v1H2zM10 5h1v1h-1zM0 6h1v1H0zM2 6h1v1H2zM8 6h1v1H8zM10 6h1v1h-1zM3 7h2v1H3zM6 7h2v1H6z'/%3E%3C/svg%3E") center / contain no-repeat;
+        mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 11 8' shape-rendering='crispEdges'%3E%3Cpath d='M2 0h1v1H2zM8 0h1v1H8zM3 1h5v1H3zM2 2h7v1H2zM1 3h2v1H1zM4 3h3v1H4zM8 3h2v1H8zM0 4h11v1H0zM0 5h1v1H0zM2 5h7v1H2zM10 5h1v1h-1zM0 6h1v1H0zM2 6h1v1H2zM8 6h1v1H8zM10 6h1v1h-1zM3 7h2v1H3zM6 7h2v1H6z'/%3E%3C/svg%3E") center / contain no-repeat;
       }
 
       .game-nav-actions .back-to-hub::before {
@@ -7127,6 +7140,45 @@
       border: 0;
     }
 
+    /*
+     * Canvas boards (Minesweeper, Reversi, Four in a Row, Solitaire) carry a
+     * layer of real buttons laid over their squares and cards, for screen
+     * readers and the keyboard. Taps fall through to the canvas; only the
+     * keyboard focus ring shows.
+     */
+    .board-access {
+      position: absolute;
+      z-index: 2;
+      pointer-events: none;
+    }
+    .board-access-spot {
+      position: absolute;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: transparent;
+      pointer-events: none;
+      cursor: inherit;
+    }
+    .board-access-spot:focus { outline: none; }
+    .board-access-spot:focus-visible {
+      outline: 3px solid #ffc857;
+      outline-offset: -3px;
+      /* A dark halo outside the ring keeps it visible on light cards and dark squares alike. */
+      box-shadow: 0 0 0 4px rgba(7, 12, 22, .8);
+    }
+    .board-access-live {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: 0;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+    }
+
     .game-room-panel {
       display: grid;
       gap: 10px;
@@ -8651,8 +8703,8 @@
         </article>
       </div>
       <div id="catalogEmptyState" class="catalog-empty-state" hidden>
-        <strong>No games found</strong>
-        <p>Try another search or show the complete arcade.</p>
+        <strong id="catalogEmptyTitle">No games found</strong>
+        <p id="catalogEmptyText">Try another search or show the complete arcade.</p>
         <button id="catalogResetButton" type="button">Show all games</button>
       </div>
     </section>

@@ -139,7 +139,17 @@ export function initGameCatalog(): void {
       button.setAttribute('aria-pressed', String(active));
     });
     if (resultCount) resultCount.textContent = `${visible} game${visible === 1 ? '' : 's'}`;
-    if (emptyState) emptyState.hidden = visible !== 0;
+    if (emptyState) {
+      emptyState.hidden = visible !== 0;
+      // An empty Favorites list is not a failed search: say how to fill it.
+      const noFavorites = activeFilter === 'favorites' && !favorites.length && !activeSearch.value.trim();
+      const title = document.getElementById('catalogEmptyTitle');
+      const text = document.getElementById('catalogEmptyText');
+      if (title) title.textContent = noFavorites ? 'No favorites yet' : 'No games found';
+      if (text) text.textContent = noFavorites
+        ? 'Tap the ☆ star on any game card to keep it here.'
+        : 'Try another search or show the complete arcade.';
+    }
     if (clearSearch) clearSearch.hidden = !activeSearch.value;
     window.requestAnimationFrame(updateFilterCue);
     window.dispatchEvent(new Event('arcade-catalog-change'));

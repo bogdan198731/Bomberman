@@ -66,7 +66,7 @@ test('continuing after 2048 still ends with a game-over card and a scoreboard of
     expect(await textContrast(button)).toBeGreaterThanOrEqual(READABLE_TEXT);
   }
   await page.screenshot({ path: test.info().outputPath('over.png') });
-  await claim.getByRole('button', { name: 'Stay Unknown' }).click();
+  await claim.getByRole('button', { name: 'Post anonymously' }).click();
   await expect(claim.locator('[data-highscore-note]')).toContainText('Posted as Unknown · #');
   expect(posts).toEqual([expect.objectContaining({ score: 22_048, alias: 'Unknown' })]);
 });
