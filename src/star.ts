@@ -423,7 +423,7 @@ export function initStarDefender(): void {
     });
     coralControls?.classList.toggle('solo-hidden', game.mode === 'solo');
     const totalScore = game.players[1].score + (game.mode === 'coop' ? game.players[2].score : 0);
-    resultReporter.report(game.phase === 'finished', { outcome: 'complete', score: totalScore });
+    resultReporter.report(game.phase === 'finished', { outcome: 'complete', score: totalScore, runOver: true });
   }
 
   function drawShip(playerId: StarPlayerId): void {

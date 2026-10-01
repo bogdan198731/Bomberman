@@ -1980,6 +1980,8 @@ export function initGame(): void {
     'Space', 'Enter', 'KeyR',
   ]);
   window.addEventListener('keydown', event => {
+    // Another game is on screen: its keys are not ours, even with a round still running here.
+    if (!elements.gameView || elements.gameView.classList.contains('view-hidden')) return;
     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLButtonElement) return;
     if (!handledKeys.has(event.code)) return;
     event.preventDefault();

@@ -247,7 +247,7 @@ export function initBrickBreaker(): void {
       launchButton.textContent = game.phase === 'playing' ? 'In play'
         : game.phase === 'cleared' ? 'Next wall' : game.phase === 'won' || game.phase === 'lost' ? 'Play again' : 'Launch';
     }
-    resultReporter.report(game.phase === 'won' || game.phase === 'lost', { outcome: 'complete', score: game.score });
+    resultReporter.report(game.phase === 'won' || game.phase === 'lost', { outcome: 'complete', score: game.score, runOver: game.phase === 'lost' });
   }
 
   function render(): void {

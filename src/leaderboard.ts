@@ -425,7 +425,7 @@ export function initArcadeLeaderboard(): void {
       return;
     }
     form.classList.add('asking');
-    form.querySelector<HTMLElement>('[data-highscore-title]')!.textContent = `New high score! #${place} on the Everyone board for ${GAME_META[gameId].name}.`;
+    form.querySelector<HTMLElement>('[data-highscore-title]')!.textContent = `New high score! #${place} on the public Everyone board for ${GAME_META[gameId].name}.`;
     form.querySelector<HTMLInputElement>('input')!.value = loadScoreboardAlias();
     form.hidden = false;
     // The buttons the card showed are hidden now; a button, not the input, so phones do not pop up a keyboard.
@@ -436,7 +436,17 @@ export function initArcadeLeaderboard(): void {
     const form = event.target;
     if (!(form instanceof HTMLFormElement) || !form.classList.contains('arcade-result-highscore')) return;
     event.preventDefault();
-    const unknown = (event as SubmitEvent).submitter?.hasAttribute('data-highscore-unknown');
+    const submitter = (event as SubmitEvent).submitter;
+    if (submitter?.hasAttribute('data-highscore-private')) {
+      // Not shared at all: the score stays in this device's own board.
+      pending = null;
+      form.classList.remove('asking');
+      const note = form.querySelector<HTMLElement>('[data-highscore-note]');
+      if (note) note.textContent = 'Kept private · saved on this device only.';
+      document.querySelector<HTMLElement>('.arcade-result-overlay [data-result-replay]')?.focus({ preventScroll: true });
+      return;
+    }
+    const unknown = submitter?.hasAttribute('data-highscore-unknown');
     const alias = unknown ? UNKNOWN_ALIAS : sanitizeAlias(form.querySelector<HTMLInputElement>('input')?.value);
     if (!unknown) saveAlias(alias);
     post(alias);

@@ -1,4 +1,4 @@
-import { closeArcadeDialog, dismissArcadeDialogs, openArcadeDialog, registerArcadeDialog } from './dialogs.js';
+import { closeArcadeDialog, dismissArcadeDialogs, isDialogOpen, openArcadeDialog, registerArcadeDialog } from './dialogs.js';
 import { arcadeSessionMode, clearArcadePause } from './session-control.js';
 import { currentArcadeLanguage, translateArcadeText } from './i18n.js';
 import { circuitCurrentGame, circuitIsComplete, loadCircuitProgress } from './circuit.js';
@@ -236,12 +236,22 @@ export function initGameExperience(): void {
     guideOverlay.querySelector<HTMLElement>('.game-help-tip')!.textContent = `${ro ? 'Sfat' : 'Player tip'}: ${localized(guide.tip)}`;
     guideOverlay.querySelector<HTMLButtonElement>('.game-help-close')!.textContent = ro ? 'Am înțeles' : 'Got it';
   };
-  const openGuide = (gameId: ArcadeGameId): void => {
+  // The guide shown on a game's first visit, rather than one the player asked for.
+  let firstVisitGuide = false;
+  const openGuide = (gameId: ArcadeGameId, firstVisit = false): void => {
     window.clearTimeout(guideTimer);
+    firstVisitGuide = firstVisit;
     renderGuide(gameId);
     openArcadeDialog('help');
   };
-  const closeGuide = (): void => { saveSeen(activeGuide); closeArcadeDialog('help'); };
+  const closeGuide = (): void => {
+    const wasOpen = isDialogOpen('help');
+    saveSeen(activeGuide);
+    closeArcadeDialog('help');
+    // "Got it" on a first visit goes straight to the board, not to a pause card.
+    if (wasOpen && firstVisitGuide) window.dispatchEvent(new CustomEvent('arcade-first-guide-closed', { detail: { gameId: activeGuide } }));
+    firstVisitGuide = false;
+  };
   registerArcadeDialog({ id: 'help', overlay: guideOverlay, priority: 70, dismiss: closeGuide });
   guideOverlay.querySelector('.game-help-close')?.addEventListener('click', closeGuide);
   guideOverlay.addEventListener('click', event => { if (event.target === guideOverlay) closeGuide(); });
@@ -262,7 +272,7 @@ export function initGameExperience(): void {
   const resultOverlay = document.createElement('div');
   resultOverlay.className = 'arcade-result-overlay';
   resultOverlay.hidden = true;
-  resultOverlay.innerHTML = '<section class="arcade-result-card" role="dialog" aria-modal="true" aria-labelledby="arcadeResultTitle"><span class="arcade-result-kicker"></span><h2 id="arcadeResultTitle"></h2><p class="arcade-result-explanation"></p><form class="arcade-result-highscore" hidden><strong data-highscore-title></strong><span data-highscore-note></span><div class="arcade-result-highscore-row"><input type="text" maxlength="20" placeholder="Unknown" aria-label="Your name on the Everyone board" autocomplete="off" spellcheck="false"><button type="submit">Post my name</button><button type="submit" data-highscore-unknown>Stay Unknown</button></div></form><div class="arcade-result-actions"><button type="button" data-result-replay></button><button type="button" data-result-continue hidden>Continue playing</button><button type="button" data-result-next hidden></button><button type="button" data-result-close></button></div></section>';
+  resultOverlay.innerHTML = '<section class="arcade-result-card" role="dialog" aria-modal="true" aria-labelledby="arcadeResultTitle"><span class="arcade-result-kicker"></span><h2 id="arcadeResultTitle"></h2><p class="arcade-result-explanation"></p><form class="arcade-result-highscore" hidden><strong data-highscore-title></strong><span data-highscore-note></span><div class="arcade-result-highscore-row"><input type="text" maxlength="20" placeholder="Unknown" aria-label="Your name on the Everyone board" autocomplete="off" spellcheck="false"><button type="submit">Post my name</button><button type="submit" data-highscore-unknown>Post anonymously</button><button type="submit" data-highscore-private>Keep private</button></div></form><div class="arcade-result-actions"><button type="button" data-result-replay></button><button type="button" data-result-continue hidden>Continue playing</button><button type="button" data-result-next hidden></button><button type="button" data-result-close></button></div></section>';
   document.body.append(resultOverlay);
   let resultGame: ArcadeGameId = 'bomberman';
   window.addEventListener('arcade-restart-active', () => {
@@ -320,7 +330,7 @@ export function initGameExperience(): void {
     const view = (event as CustomEvent<{ view?: string }>).detail?.view as ArcadeGameId | undefined;
     if (view && GAME_GUIDES[view] && !seenGuides().has(view)) {
       guideTimer = window.setTimeout(() => {
-        if (document.body.dataset.view === view) openGuide(view);
+        if (document.body.dataset.view === view) openGuide(view, true);
       }, 180);
     }
   });
@@ -337,15 +347,17 @@ export function initGameExperience(): void {
     const ro = currentArcadeLanguage() === 'ro';
     const label = detail.result.outcome === 'win' ? (ro ? 'VICTORIE' : 'VICTORY')
       : detail.result.outcome === 'loss' ? (ro ? 'ÎNFRÂNGERE' : 'DEFEAT')
-        : detail.result.outcome === 'draw' ? (ro ? 'EGALITATE' : 'DRAW') : (ro ? 'COMPLET' : 'COMPLETE');
+        : detail.result.outcome === 'draw' ? (ro ? 'EGALITATE' : 'DRAW')
+          // A run that crashed is over, not complete; "complete" is kept for a finished puzzle or wall.
+          : detail.result.runOver ? (ro ? 'JOC TERMINAT' : 'GAME OVER') : (ro ? 'COMPLET' : 'COMPLETE');
     resultOverlay.querySelector<HTMLElement>('.arcade-result-kicker')!.textContent = GAME_META[detail.gameId].name;
     resultOverlay.querySelector<HTMLElement>('#arcadeResultTitle')!.textContent = label;
     const statusText = document.querySelector<HTMLElement>(RESULT_STATUS_SELECTORS[detail.gameId])?.textContent?.trim();
     const fallback = ro
       ? label === 'VICTORIE' ? 'Obiectiv atins.' : label === 'COMPLET' ? 'Sesiune încheiată.'
-        : label === 'EGALITATE' ? 'Niciun jucător nu a obținut avantajul decisiv.' : 'Rivalul a îndeplinit primul obiectivul.'
+        : label === 'JOC TERMINAT' ? 'Runda s-a încheiat.' : label === 'EGALITATE' ? 'Niciun jucător nu a obținut avantajul decisiv.' : 'Rivalul a îndeplinit primul obiectivul.'
       : label === 'VICTORY' ? 'Objective achieved.' : label === 'COMPLETE' ? 'Session complete.'
-        : label === 'DRAW' ? 'Neither player found the deciding advantage.' : 'The rival completed the objective first.';
+        : label === 'GAME OVER' ? 'Run over.' : label === 'DRAW' ? 'Neither player found the deciding advantage.' : 'The rival completed the objective first.';
     const explanation = statusText ? translateArcadeText(statusText, currentArcadeLanguage()) : fallback;
     resultOverlay.querySelector<HTMLElement>('.arcade-result-explanation')!.textContent = `${explanation} ${ro ? 'Scor' : 'Score'}: ${Math.max(0, Math.floor(detail.result.score ?? 0)).toLocaleString()}.`;
     resultOverlay.querySelector<HTMLButtonElement>('[data-result-replay]')!.textContent = ro ? 'Joacă din nou' : 'Play again';

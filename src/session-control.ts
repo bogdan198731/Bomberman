@@ -1,6 +1,6 @@
 import type { ArcadeGameId } from './stats.js';
 import { FULLSCREEN_TRANSITION_EVENT } from './mobile-fullscreen.js';
-import { closeArcadeDialog, isDialogOpen, openArcadeDialog, registerArcadeDialog } from './dialogs.js';
+import { activeArcadeDialog, closeArcadeDialog, isDialogOpen, openArcadeDialog, registerArcadeDialog } from './dialogs.js';
 import { SessionState, type Interruption } from './session-state.js';
 import { translateArcadeText } from './i18n.js';
 
@@ -219,6 +219,58 @@ export function initArcadeSessionControl(): void {
       });
       actions.insertBefore(button, actions.querySelector('[data-open-settings]'));
     });
+
+  /*
+   * "Close — stay paused" leaves the board on screen to look at, but a paused
+   * game must not move. Input aimed at the paused game is stopped here,
+   * before any game's own listener sees it, and brings the pause card back
+   * so the player knows why nothing happened. The header (Resume, Settings,
+   * Help) and the game setup panel keep working.
+   */
+  const pausedViewFor = (target: EventTarget | null): HTMLElement | null => {
+    if (activeArcadeDialog()) return null;
+    const registration = sessionState.pausedGame ? registrations.get(sessionState.pausedGame as ArcadeGameId) : undefined;
+    if (!registration || !isArcadeSessionPaused(registration.gameId) || registration !== registrationForActiveView()) return null;
+    if (target instanceof Element && (
+      !registration.view.contains(target)
+      || target.closest('.topbar, [data-pause-game], .arcade-mode-panel, .star-mode-panel, .tintar-bot-panel')
+    )) return null;
+    return registration.view;
+  };
+  const showPauseAgain = (): void => {
+    pauseDismissed = false;
+    renderPauseOverlay();
+  };
+  document.addEventListener('keydown', event => {
+    if (event.ctrlKey || event.metaKey || event.altKey || ['Tab', 'Escape', 'Shift', 'Control', 'Alt', 'Meta'].includes(event.key) || /^F\d+$/.test(event.key)) return;
+    const target = event.target instanceof Element && event.target !== document.body ? event.target : null;
+    if (target?.closest('input, select, textarea, [contenteditable="true"]')) return;
+    const view = pausedViewFor(null);
+    if (!view || (target && !view.contains(target))) return;
+    // No game hears it, even when focus is on a header button (Resume after
+    // "Close — stay paused"): the button still works, the board stays put.
+    event.stopPropagation();
+    if (target?.closest('button, a[href], [role="button"]')) return;
+    event.preventDefault();
+    if (!event.repeat) showPauseAgain();
+  }, true);
+  for (const type of ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'click'] as const) {
+    document.addEventListener(type, event => {
+      if (!pausedViewFor(event.target)) return;
+      event.stopPropagation();
+      if (event.cancelable) event.preventDefault();
+      if (type === 'pointerdown') showPauseAgain();
+    }, { capture: true, passive: false });
+  }
+
+  window.addEventListener('arcade-first-guide-closed', event => {
+    const gameId = (event as CustomEvent<{ gameId?: ArcadeGameId }>).detail?.gameId;
+    // The guide paused a board the player had not touched yet; there is nothing to count back into.
+    if (gameId && sessionState.pausedGame === gameId && !blockingReasons.size) {
+      cancelCountdown();
+      finishResume(gameId);
+    }
+  });
 
   window.addEventListener('arcade-settings-change', event => {
     const open = Boolean((event as CustomEvent<{ open?: boolean }>).detail?.open);

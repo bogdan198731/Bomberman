@@ -268,7 +268,9 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'No scores yet · all players': 'Încă niciun scor · toți jucătorii',
   'Posting your score…': 'Se publică scorul…',
   'Post my name': 'Publică numele meu',
-  'Stay Unknown': 'Rămân Necunoscut',
+  'Post anonymously': 'Publică anonim',
+  'Keep private': 'Păstrează privat',
+  'Kept private · saved on this device only.': 'Păstrat privat · salvat doar pe acest dispozitiv.',
   'The Everyone board is offline right now. Your score still counts on this device.': 'Clasamentul tuturor nu e disponibil acum. Scorul tău contează în continuare pe acest dispozitiv.',
   'Finish a match to claim the first spot.': 'Termină un meci pentru a ocupa primul loc.',
   'Game library': 'Bibliotecă de jocuri',
@@ -351,6 +353,8 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Break invader formations, collect weapon boosts, and challenge a command ship every fifth wave.':
     'Sparge formațiile invadatorilor, colectează arme și înfruntă o navă de comandă la fiecare al cincilea val.',
   'No games found': 'Nu s-au găsit jocuri',
+  'No favorites yet': 'Încă nu ai favorite',
+  'Tap the ☆ star on any game card to keep it here.': 'Apasă steaua ☆ de pe orice joc ca să-l păstrezi aici.',
   'Try another search or show the complete arcade.': 'Încearcă altă căutare sau afișează întreaga arcadă.',
   'Show all games': 'Arată toate jocurile',
   'Blast Arcade · Play instantly in your browser': 'Blast Arcade · Joacă instant în browser',
@@ -726,8 +730,8 @@ function translateRomanianPattern(value: string): string | null {
   // The Everyone scoreboard
   match = value.match(/^Top (\d+) · all players$/);
   if (match) return `Primii ${match[1]} · toți jucătorii`;
-  match = value.match(/^New high score! #(\d+) on the Everyone board for (.+)\.$/);
-  if (match) return `Scor record! Locul #${match[1]} în clasamentul tuturor la ${match[2]}.`;
+  match = value.match(/^New high score! #(\d+) on the public Everyone board for (.+)\.$/);
+  if (match) return `Scor record! Locul #${match[1]} în clasamentul public al tuturor la ${match[2]}.`;
   match = value.match(/^Posted as (.+) · #(\d+) on the Everyone board\.$/);
   if (match) return `Publicat ca ${match[1] === 'Unknown' ? 'Necunoscut' : match[1]} · locul #${match[2]} în clasamentul tuturor.`;
   match = value.match(/^Your earlier score as (.+) is still your best\.$/);
