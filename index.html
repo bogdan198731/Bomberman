@@ -3023,7 +3023,10 @@
     }
     .arcade-result-highscore button[data-highscore-unknown] { background: #263246; color: #eaf1fa; }
     .arcade-result-highscore.asking [data-highscore-note] { display: none; }
-    .arcade-result-card:has(> .arcade-result-highscore.asking) .arcade-result-actions { display: none; }
+    .arcade-result-card:has(> .arcade-result-highscore.asking) .arcade-result-actions > :not([data-result-continue]) { display: none; }
+    /* A 2048 run can keep going while the name is asked; otherwise the row would sit empty. */
+    .arcade-result-card:has(> .arcade-result-highscore.asking) .arcade-result-actions { grid-template-columns: 1fr; }
+    .arcade-result-card:has(> .arcade-result-highscore.asking) .arcade-result-actions:not(:has(> [data-result-continue]:not([hidden]))) { display: none; }
     /* Once sent, just a line saying where the score landed. */
     .arcade-result-highscore:not(.asking) { margin-top: 4px; padding: 0; border: 0; background: none; }
     .arcade-result-highscore:not(.asking) :is(strong, .arcade-result-highscore-row) { display: none; }
@@ -3031,6 +3034,7 @@
     @media (min-width: 720px) {
       .arcade-result-card > .arcade-result-highscore { grid-column: 1; }
       .arcade-result-card > .arcade-result-highscore.asking { grid-column: 2; grid-row: 1 / span 3; width: 480px; margin-top: 0; }
+      .arcade-result-card:has(> .arcade-result-highscore.asking) .arcade-result-actions { grid-column: 2; grid-row: 4; margin-top: 8px; }
       .arcade-result-highscore-row { display: flex; }
       .arcade-result-highscore-row input { flex: 1 1 0; }
     }
