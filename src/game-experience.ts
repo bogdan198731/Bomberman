@@ -30,19 +30,19 @@ export const GAME_GUIDES: Record<ArcadeGameId, GuideCopy> = {
   paddle: {
     objective: copy('Return the ball past your opponent. The first player to 7 wins.', 'Trimite mingea dincolo de adversar. Primul jucător la 7 puncte câștigă.'),
     controls: copy('Move your paddle with its on-screen joystick. In solo, you can also drag the Mint paddle directly.', 'Mișcă paleta cu joystickul de pe ecran. Solo, poți și să tragi direct paleta Mint.'),
-    rules: [copy('Hit nearer a paddle edge for a sharper angle.', 'Lovește mai aproape de marginea paletei pentru un unghi mai ascuțit.'), copy('Long rallies gradually accelerate the ball.', 'Schimburile lungi accelerează treptat mingea.')],
+    rules: [copy('Hit nearer a paddle edge for a sharper angle.', 'Lovește mai aproape de marginea paletei pentru un unghi mai ascuțit.'), copy('Long rallies gradually accelerate the ball.', 'Schimburile lungi accelerează treptat mingea.'), copy('Orbs sometimes float onto the court - send the ball through one for a big paddle, a tiny rival paddle, or a goal shield that saves one point. Bonuses last until the next point.', 'Uneori apar globuri pe teren - trimite mingea prin ele pentru o paletă mare, o paletă mică pentru rival sau un scut de poartă care salvează un punct. Bonusurile țin până la următorul punct.')],
     tip: copy('Return toward open space instead of chasing the ball at the last moment.', 'Trimite spre spațiul liber în loc să urmărești mingea în ultima clipă.'),
   },
   snake: {
     objective: copy('Collect fruit, grow, and avoid walls, trails, and the rival snake.', 'Colectează fructe, crește și evită pereții, urmele și șarpele rival.'),
     controls: copy('Swipe the arena, use the direction pad/joystick, or press WASD and arrows.', 'Glisează pe arenă, folosește padul/joystickul sau tastele WASD și săgețile.'),
-    rules: [copy('You cannot reverse directly into your own body.', 'Nu poți întoarce direct în propriul corp.'), copy('Start on Chill speed while learning the turn rhythm.', 'Începe pe viteza Calm pentru a învăța ritmul virajelor.')],
+    rules: [copy('You cannot reverse directly into your own body.', 'Nu poți întoarce direct în propriul corp.'), copy('Start on Chill speed while learning the turn rhythm.', 'Începe pe viteza Calm pentru a învăța ritmul virajelor.'), copy('Fruit sometimes brings out a bonus for a few seconds - a star for 5 points, a shrink that trims your tail, slow time, or a ghost that slips through snakes.', 'Fructele scot uneori un bonus pentru câteva secunde - o stea pentru 5 puncte, o micșorare care îți scurtează coada, timp lent sau o fantomă care trece prin șerpi.')],
     tip: copy('Leave yourself an exit before circling a fruit.', 'Lasă-ți o ieșire înainte să înconjori un fruct.'),
   },
   tanks: {
     objective: copy('Bank shots around cover and win five rounds.', 'Ricoșează proiectilele în jurul obstacolelor și câștigă cinci runde.'),
     controls: copy('Moving also turns your turret. Use Fire only when the readiness ring is full.', 'Mișcarea rotește și turela. Trage doar când indicatorul de pregătire este plin.'),
-    rules: [copy('Shots bounce once from the arena wall.', 'Proiectilele ricoșează o dată din peretele arenei.'), copy('Orange cover breaks; steel cover does not.', 'Adăpostul portocaliu se sparge; cel de oțel nu.')],
+    rules: [copy('Shots bounce once from the arena wall.', 'Proiectilele ricoșează o dată din peretele arenei.'), copy('Orange cover breaks; steel cover does not.', 'Adăpostul portocaliu se sparge; cel de oțel nu.'), copy('Smashed crates sometimes leave a bonus - drive over it for a shield that blocks one hit, rapid fire, a triple shot, or a speed boost.', 'Lăzile sparte lasă uneori un bonus - treci peste el pentru un scut care oprește o lovitură, foc rapid, tragere triplă sau viteză sporită.')],
     tip: copy('Aim at a wall angle to reach a tank hiding behind cover.', 'Țintește într-un unghi de perete pentru a lovi un tanc ascuns după adăpost.'),
   },
   septica: {

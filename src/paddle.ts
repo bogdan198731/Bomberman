@@ -2,6 +2,7 @@ import { GameRoomClient } from './game-room.js';
 import { ArcadeResultReporter } from './stats.js';
 import { capturePointer, bindDirectionalJoystick } from './touch-controls.js';
 import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
+import { translateArcadeText } from './i18n.js';
 
 export type PaddlePlayer = 1 | 2;
 export type PaddleDirection = 'up' | 'down';
@@ -11,7 +12,7 @@ export const PADDLE_WIDTH = 900;
 export const PADDLE_HEIGHT = 540;
 export const PADDLE_TARGET_SCORE = 7;
 const BAT_WIDTH = 18;
-const BAT_HEIGHT = 108;
+export const BAT_HEIGHT = 108;
 const BAT_MARGIN = 38;
 const BALL_RADIUS = 11;
 const BAT_SPEED = 460;
@@ -22,6 +23,55 @@ export interface PaddleBat {
   y: number;
   score: number;
 }
+
+export type PaddleBonusKind = 'big' | 'tiny' | 'shield';
+
+export interface PaddleBonusInfo {
+  label: string;
+  /** Shown in the status line when caught. */
+  notice: string;
+  color: string;
+  /** How long the effect lasts; 0 until used up. */
+  seconds: number;
+  /** Relative chance of this bonus among orbs. */
+  weight: number;
+}
+
+export const PADDLE_BONUSES: Record<PaddleBonusKind, PaddleBonusInfo> = {
+  big: { label: 'Big paddle', notice: 'Big paddle!', color: '#54e3d0', seconds: 10, weight: 3 },
+  tiny: { label: 'Tiny rival', notice: 'Tiny rival paddle!', color: '#b28dff', seconds: 8, weight: 2 },
+  shield: { label: 'Goal shield', notice: 'Goal shield - saves one point!', color: '#5cd8ff', seconds: 0, weight: 2 },
+};
+export const PADDLE_BONUS_KINDS = Object.keys(PADDLE_BONUSES) as PaddleBonusKind[];
+/** Chance that a bat hit brings out an orb, when none is out. */
+export const PADDLE_ORB_CHANCE = 0.3;
+export const PADDLE_ORB_RADIUS = 24;
+/** An orb nobody hits fades after this long. */
+export const PADDLE_ORB_SECONDS = 9;
+export const BIG_BAT_HEIGHT = 162;
+export const TINY_BAT_HEIGHT = 70;
+const NOTICE_SECONDS = 2.5;
+
+export interface PaddleOrb { x: number; y: number; kind: PaddleBonusKind; secondsLeft: number }
+
+/** Bonuses a player holds: timed effects in seconds, and a one-save shield. */
+export interface PaddleEffects { big: number; tiny: number; shield: boolean }
+
+/** Picks a bonus by weight; `roll` is in [0, 1). */
+export function pickPaddleBonus(roll: number): PaddleBonusKind {
+  const total = PADDLE_BONUS_KINDS.reduce((sum, kind) => sum + PADDLE_BONUSES[kind].weight, 0);
+  let left = roll * total;
+  for (const kind of PADDLE_BONUS_KINDS) {
+    left -= PADDLE_BONUSES[kind].weight;
+    if (left < 0) return kind;
+  }
+  return PADDLE_BONUS_KINDS[PADDLE_BONUS_KINDS.length - 1];
+}
+
+const noEffects = (): Record<PaddlePlayer, PaddleEffects> => ({
+  1: { big: 0, tiny: 0, shield: false },
+  2: { big: 0, tiny: 0, shield: false },
+});
 
 export interface PaddleBall {
   x: number;
@@ -48,10 +98,63 @@ export class PaddleClashGame {
   phase: PaddlePhase = 'ready';
   winner: PaddlePlayer | null = null;
   rallyHits = 0;
+  orb: PaddleOrb | null = null;
+  /** Bonuses on each side; 'tiny' counts down on the side it shrinks. */
+  effects = noEffects();
+  /** Who touched the ball last, and so who an orb it passes through goes to. */
+  lastHitter: PaddlePlayer = 1;
+  notice = '';
+  noticeLeft = 0;
   private serveDirection: 1 | -1 = 1;
   private serveIndex = 0;
 
+  constructor(private readonly random: () => number = Math.random) {}
+
+  batHeight(player: PaddlePlayer): number {
+    const effects = this.effects[player];
+    if (effects.tiny > 0) return TINY_BAT_HEIGHT;
+    return effects.big > 0 ? BIG_BAT_HEIGHT : BAT_HEIGHT;
+  }
+
+  /** Bonuses helping a player, longest-lasting first; a tiny rival shows on the side that caught it. */
+  activeEffects(player: PaddlePlayer): { kind: PaddleBonusKind; seconds: number }[] {
+    const own = this.effects[player];
+    const rival = this.effects[player === 1 ? 2 : 1];
+    const timed = [{ kind: 'big' as const, seconds: own.big }, { kind: 'tiny' as const, seconds: rival.tiny }]
+      .filter(effect => effect.seconds > 0)
+      .sort((a, b) => b.seconds - a.seconds);
+    return own.shield ? [{ kind: 'shield', seconds: 0 }, ...timed] : timed;
+  }
+
+  /** Gives a bonus to a player. */
+  collect(player: PaddlePlayer, kind: PaddleBonusKind): void {
+    const rival = player === 1 ? 2 : 1;
+    this.notice = `${player === 1 ? 'Mint' : 'Coral'}: ${PADDLE_BONUSES[kind].notice}`;
+    this.noticeLeft = NOTICE_SECONDS;
+    const centres = this.batCentres();
+    if (kind === 'shield') this.effects[player].shield = true;
+    else if (kind === 'big') {
+      this.effects[player].big = PADDLE_BONUSES.big.seconds;
+      this.effects[player].tiny = 0;
+    } else {
+      this.effects[rival].tiny = PADDLE_BONUSES.tiny.seconds;
+      this.effects[rival].big = 0;
+    }
+    this.recentre(centres);
+  }
+
+  private batCentres(): Record<PaddlePlayer, number> {
+    return { 1: this.players[1].y + this.batHeight(1) / 2, 2: this.players[2].y + this.batHeight(2) / 2 };
+  }
+
+  /** A bat that changes size keeps its centre, sliding back in if it would poke off the court. */
+  private recentre(centres: Record<PaddlePlayer, number>): void {
+    this.moveBatTo(1, centres[1]);
+    this.moveBatTo(2, centres[2]);
+  }
+
   restart(): void {
+    this.effects = noEffects();
     this.players = {
       1: { y: (PADDLE_HEIGHT - BAT_HEIGHT) / 2, score: 0 },
       2: { y: (PADDLE_HEIGHT - BAT_HEIGHT) / 2, score: 0 },
@@ -73,7 +176,8 @@ export class PaddleClashGame {
   }
 
   moveBatTo(player: PaddlePlayer, centerY: number): void {
-    this.players[player].y = Math.max(0, Math.min(PADDLE_HEIGHT - BAT_HEIGHT, centerY - BAT_HEIGHT / 2));
+    const height = this.batHeight(player);
+    this.players[player].y = Math.max(0, Math.min(PADDLE_HEIGHT - height, centerY - height / 2));
   }
 
   serve(): boolean {
@@ -85,6 +189,7 @@ export class PaddleClashGame {
     this.ball.vy = START_BALL_SPEED * verticalRatio;
     this.phase = 'playing';
     this.rallyHits = 0;
+    this.lastHitter = this.serveDirection === 1 ? 1 : 2;
     return true;
   }
 
@@ -107,6 +212,11 @@ export class PaddleClashGame {
 
     this.collideWithBat(1);
     this.collideWithBat(2);
+    this.tickBonuses(dt);
+
+    // A goal shield bounces the ball back once instead of conceding.
+    if (this.ball.x - BALL_RADIUS <= 0 && this.ball.vx < 0 && this.effects[1].shield) this.shieldSave(1);
+    else if (this.ball.x + BALL_RADIUS >= PADDLE_WIDTH && this.ball.vx > 0 && this.effects[2].shield) this.shieldSave(2);
 
     if (this.ball.x + BALL_RADIUS < 0) this.scorePoint(2);
     else if (this.ball.x - BALL_RADIUS > PADDLE_WIDTH) this.scorePoint(1);
@@ -115,6 +225,7 @@ export class PaddleClashGame {
   statusText(): string {
     if (this.phase === 'finished') return `${this.winner === 1 ? 'Mint' : 'Coral'} wins the clash!`;
     if (this.phase === 'ready') return 'Press Serve or Space to start the rally.';
+    if (this.noticeLeft > 0) return this.notice;
     return this.rallyHits >= 5 ? `Rally x${this.rallyHits} — the ball is heating up!` : 'Keep the ball in play.';
   }
 
@@ -122,7 +233,45 @@ export class PaddleClashGame {
     const input = this.inputs[player];
     const direction = Number(input.down) - Number(input.up);
     const bat = this.players[player];
-    bat.y = Math.max(0, Math.min(PADDLE_HEIGHT - BAT_HEIGHT, bat.y + direction * BAT_SPEED * dt));
+    bat.y = Math.max(0, Math.min(PADDLE_HEIGHT - this.batHeight(player), bat.y + direction * BAT_SPEED * dt));
+  }
+
+  private tickBonuses(dt: number): void {
+    const centres = this.batCentres();
+    ([1, 2] as PaddlePlayer[]).forEach(player => {
+      const effects = this.effects[player];
+      effects.big = Math.max(0, effects.big - dt);
+      effects.tiny = Math.max(0, effects.tiny - dt);
+    });
+    this.recentre(centres);
+    this.noticeLeft = Math.max(0, this.noticeLeft - dt);
+    const orb = this.orb;
+    if (!orb) return;
+    if (Math.hypot(this.ball.x - orb.x, this.ball.y - orb.y) <= PADDLE_ORB_RADIUS + BALL_RADIUS) {
+      this.orb = null;
+      this.collect(this.lastHitter, orb.kind);
+    } else {
+      orb.secondsLeft -= dt;
+      if (orb.secondsLeft <= 0) this.orb = null;
+    }
+  }
+
+  private shieldSave(player: PaddlePlayer): void {
+    this.effects[player].shield = false;
+    this.ball.vx = -this.ball.vx;
+    this.ball.x = player === 1 ? BALL_RADIUS : PADDLE_WIDTH - BALL_RADIUS;
+    this.lastHitter = player;
+  }
+
+  private maybeSpawnOrb(): void {
+    if (this.orb || this.random() >= PADDLE_ORB_CHANCE) return;
+    // Orbs float in the middle of the court, away from both bats.
+    this.orb = {
+      x: PADDLE_WIDTH * (0.33 + this.random() * 0.34),
+      y: 70 + this.random() * (PADDLE_HEIGHT - 140),
+      kind: pickPaddleBonus(this.random()),
+      secondsLeft: PADDLE_ORB_SECONDS,
+    };
   }
 
   private collideWithBat(player: PaddlePlayer): void {
@@ -131,18 +280,21 @@ export class PaddleClashGame {
     const movingTowardBat = player === 1 ? this.ball.vx < 0 : this.ball.vx > 0;
     if (!movingTowardBat) return;
     const overlapsX = this.ball.x + BALL_RADIUS >= batX && this.ball.x - BALL_RADIUS <= batX + BAT_WIDTH;
-    const overlapsY = this.ball.y + BALL_RADIUS >= bat.y && this.ball.y - BALL_RADIUS <= bat.y + BAT_HEIGHT;
+    const height = this.batHeight(player);
+    const overlapsY = this.ball.y + BALL_RADIUS >= bat.y && this.ball.y - BALL_RADIUS <= bat.y + height;
     if (!overlapsX || !overlapsY) return;
 
     const currentSpeed = Math.hypot(this.ball.vx, this.ball.vy);
     const nextSpeed = Math.min(MAX_BALL_SPEED, currentSpeed * 1.065 + 8);
-    const relativeHit = Math.max(-1, Math.min(1, (this.ball.y - (bat.y + BAT_HEIGHT / 2)) / (BAT_HEIGHT / 2)));
+    const relativeHit = Math.max(-1, Math.min(1, (this.ball.y - (bat.y + height / 2)) / (height / 2)));
     const angle = relativeHit * Math.PI * 0.34;
     const horizontalDirection = player === 1 ? 1 : -1;
     this.ball.vx = horizontalDirection * nextSpeed * Math.cos(angle);
     this.ball.vy = nextSpeed * Math.sin(angle);
     this.ball.x = player === 1 ? batX + BAT_WIDTH + BALL_RADIUS : batX - BALL_RADIUS;
     this.rallyHits += 1;
+    this.lastHitter = player;
+    this.maybeSpawnOrb();
   }
 
   private scorePoint(player: PaddlePlayer): void {
@@ -152,6 +304,7 @@ export class PaddleClashGame {
       this.winner = player;
       this.ball.vx = 0;
       this.ball.vy = 0;
+      this.clearBonuses();
       return;
     }
     this.phase = 'ready';
@@ -162,6 +315,16 @@ export class PaddleClashGame {
   private resetBall(): void {
     this.ball = { x: PADDLE_WIDTH / 2, y: PADDLE_HEIGHT / 2, vx: 0, vy: 0 };
     this.rallyHits = 0;
+    this.clearBonuses();
+  }
+
+  /** Bonuses last one rally: every point starts level. */
+  private clearBonuses(): void {
+    const centres = this.batCentres();
+    this.orb = null;
+    this.effects = noEffects();
+    this.noticeLeft = 0;
+    this.recentre(centres);
   }
 }
 
@@ -192,6 +355,7 @@ export function initPaddleClash(): void {
     return {
       players: game.players, ball: game.ball, phase: game.phase,
       winner: game.winner, rallyHits: game.rallyHits,
+      orb: game.orb, effects: game.effects, notice: game.notice, noticeLeft: game.noticeLeft,
     };
   }
 
@@ -202,6 +366,10 @@ export function initPaddleClash(): void {
     game.phase = state.phase as PaddlePhase;
     game.winner = state.winner as PaddlePlayer | null;
     game.rallyHits = Number(state.rallyHits) || 0;
+    game.orb = (state.orb as PaddleOrb | null) ?? null;
+    if (state.effects) game.effects = state.effects as Record<PaddlePlayer, PaddleEffects>;
+    game.notice = typeof state.notice === 'string' ? state.notice : '';
+    game.noticeLeft = Number(state.noticeLeft) || 0;
   }
 
   function setPlayerInput(player: PaddlePlayer, direction: PaddleDirection, pressed: boolean): void {
@@ -292,8 +460,15 @@ export function initPaddleClash(): void {
       ctx.shadowBlur = 22;
       ctx.shadowColor = batColors[player];
       ctx.fillStyle = batColors[player];
-      roundedRect(ctx, x, game.players[player].y, BAT_WIDTH, BAT_HEIGHT, 9);
+      roundedRect(ctx, x, game.players[player].y, BAT_WIDTH, game.batHeight(player), 9);
+      if (game.effects[player].shield) {
+        // The goal shield glows along that player's back wall.
+        ctx.fillStyle = PADDLE_BONUSES.shield.color;
+        ctx.shadowColor = PADDLE_BONUSES.shield.color;
+        roundedRect(ctx, player === 1 ? 2 : PADDLE_WIDTH - 8, 10, 6, PADDLE_HEIGHT - 20, 3);
+      }
     });
+    if (game.orb) drawOrb(game.orb);
 
     ctx.shadowBlur = game.rallyHits > 4 ? 28 : 16;
     ctx.shadowColor = game.rallyHits > 4 ? '#ffc857' : '#ffffff';
@@ -314,6 +489,89 @@ export function initPaddleClash(): void {
       ctx.font = '700 16px Inter, sans-serif';
       ctx.fillText(game.phase === 'finished' ? 'Choose New match to play again' : 'Serve to launch the ball', PADDLE_WIDTH / 2, PADDLE_HEIGHT / 2 + 28);
     }
+    drawEffects(1);
+    drawEffects(2);
+  }
+
+  function drawOrb(orb: PaddleOrb): void {
+    const ctx = renderContext;
+    const { color } = PADDLE_BONUSES[orb.kind];
+    // An orb about to fade blinks.
+    if (orb.secondsLeft < 2 && Math.floor(orb.secondsLeft * 6) % 2 === 0) return;
+    ctx.fillStyle = color;
+    ctx.shadowBlur = 20; ctx.shadowColor = color;
+    ctx.beginPath(); ctx.arc(orb.x, orb.y, PADDLE_ORB_RADIUS, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+    drawIcon(orb.kind, orb.x, orb.y, 24, '#0a1120');
+  }
+
+  /** Language-free symbols, so a bonus reads the same in every language and font. */
+  function drawIcon(kind: PaddleBonusKind, x: number, y: number, size: number, color: string): void {
+    const ctx = renderContext;
+    const h = size / 2;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = color;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = size / 6;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    if (kind === 'big') {
+      // Arrows pushing a bar apart.
+      ctx.moveTo(0, -h); ctx.lineTo(0, h);
+      ctx.moveTo(-h * 0.55, -h * 0.45); ctx.lineTo(0, -h); ctx.lineTo(h * 0.55, -h * 0.45);
+      ctx.moveTo(-h * 0.55, h * 0.45); ctx.lineTo(0, h); ctx.lineTo(h * 0.55, h * 0.45);
+      ctx.stroke();
+    } else if (kind === 'tiny') {
+      // Arrows squeezing a bar together.
+      ctx.moveTo(0, -h); ctx.lineTo(0, -h * 0.15);
+      ctx.moveTo(-h * 0.5, -h * 0.6); ctx.lineTo(0, -h * 0.15); ctx.lineTo(h * 0.5, -h * 0.6);
+      ctx.moveTo(0, h); ctx.lineTo(0, h * 0.15);
+      ctx.moveTo(-h * 0.5, h * 0.6); ctx.lineTo(0, h * 0.15); ctx.lineTo(h * 0.5, h * 0.6);
+      ctx.stroke();
+    } else {
+      ctx.moveTo(0, -h);
+      ctx.lineTo(h * 0.85, -h * 0.6);
+      ctx.quadraticCurveTo(h * 0.8, h * 0.5, 0, h);
+      ctx.quadraticCurveTo(-h * 0.8, h * 0.5, -h * 0.85, -h * 0.6);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /** Each player's bonuses stack down from the top of their own half, with a draining bar. */
+  function drawEffects(player: PaddlePlayer): void {
+    const ctx = renderContext;
+    const effects = game.activeEffects(player);
+    if (!effects.length) return;
+    const chipH = 44;
+    const gap = 8;
+    ctx.font = '700 22px system-ui, sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    const edge = player === 1 ? 70 : PADDLE_WIDTH - 70;
+    effects.forEach((effect, index) => {
+      const { color, seconds, label } = PADDLE_BONUSES[effect.kind];
+      const text = effect.kind === 'shield' ? translateArcadeText(label) : `${translateArcadeText(label)} ${Math.ceil(effect.seconds)}`;
+      const width = 40 + ctx.measureText(text).width + 14;
+      const x = player === 1 ? edge : edge - width;
+      const y = 10 + index * (chipH + gap);
+      ctx.fillStyle = 'rgba(10,17,32,.88)';
+      ctx.strokeStyle = player === 1 ? '#54e38e' : '#ff6b78';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(x, y, width, chipH, 10);
+      ctx.fill();
+      ctx.stroke();
+      drawIcon(effect.kind, x + 20, y + chipH / 2 - 2, 20, color);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(text, x + 38, y + chipH / 2 - 2);
+      ctx.fillStyle = color;
+      const share = effect.kind === 'shield' ? 1 : effect.seconds / seconds;
+      ctx.fillRect(x + 8, y + chipH - 7, (width - 16) * share, 3);
+    });
   }
 
   function isVisible(): boolean {
@@ -445,16 +703,18 @@ export function initPaddleClash(): void {
       if (!room?.isGuest()) {
         const previousPhase = game.phase;
         const previousScore = game.players[1].score + game.players[2].score;
+        const previousStatus = game.statusText();
         if (!isArcadeSessionPaused('paddle')) {
           if (practiceBot && !room?.session().online) {
-            const coralCenter = game.players[2].y + BAT_HEIGHT / 2;
+            const coralCenter = game.players[2].y + game.batHeight(2) / 2;
             const target = game.phase === 'playing' ? game.ball.y : PADDLE_HEIGHT / 2;
             game.setInput(2, 'up', target < coralCenter - 34);
             game.setInput(2, 'down', target > coralCenter + 34);
           }
           game.update(seconds);
         }
-        if (game.phase !== previousPhase || game.players[1].score + game.players[2].score !== previousScore) syncUi();
+        if (game.phase !== previousPhase || game.players[1].score + game.players[2].score !== previousScore
+          || game.statusText() !== previousStatus) syncUi();
         room?.broadcastState(snapshot());
       }
       render();

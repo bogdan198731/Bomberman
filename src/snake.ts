@@ -3,6 +3,7 @@ import { ArcadeResultReporter } from './stats.js';
 import { bindVirtualJoystick, digitalJoystickState, type JoystickInputDirection } from './touch-controls.js';
 import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
 import { bindLevelSelect, normalizeLevel, type LevelInfo } from './levels.js';
+import { translateArcadeText } from './i18n.js';
 
 export type SnakePlayer = 1 | 2;
 export type SnakeMode = 'solo' | 'duel';
@@ -23,6 +24,55 @@ export interface SnakeRider {
   queuedDirection: SnakeDirection;
   alive: boolean;
   score: number;
+  /** Ticks left as a ghost that slips through snakes. */
+  ghostTicks: number;
+}
+
+export type SnakeBonusKind = 'star' | 'shrink' | 'slow' | 'ghost';
+
+export interface SnakeBonusInfo {
+  label: string;
+  /** Shown in the status line when caught. */
+  notice: string;
+  color: string;
+  /** How many ticks the effect lasts; 0 for one-off bonuses. */
+  ticks: number;
+  /** Relative chance of this bonus among spawns. */
+  weight: number;
+}
+
+export const SNAKE_BONUSES: Record<SnakeBonusKind, SnakeBonusInfo> = {
+  star: { label: 'Star fruit', notice: 'Star fruit - 5 points!', color: '#ff9f43', ticks: 0, weight: 3 },
+  shrink: { label: 'Shrink', notice: 'Shrink - tail trimmed!', color: '#5cd8ff', ticks: 0, weight: 2 },
+  slow: { label: 'Slow time', notice: 'Slow time!', color: '#b28dff', ticks: 60, weight: 2 },
+  ghost: { label: 'Ghost', notice: 'Ghost - slip through snakes!', color: '#e6ebff', ticks: 45, weight: 2 },
+};
+export const SNAKE_BONUS_KINDS = Object.keys(SNAKE_BONUSES) as SnakeBonusKind[];
+/** Chance that eating a fruit makes a bonus appear, when none is out. */
+export const SNAKE_BONUS_CHANCE = 0.35;
+/** A bonus left alone fades after this many ticks. */
+export const SNAKE_BONUS_LIFETIME = 50;
+export const SNAKE_STAR_POINTS = 5;
+export const SNAKE_SHRINK_CELLS = 3;
+export const SNAKE_MIN_LENGTH = 3;
+/** Slow time stretches every tick by this much. */
+export const SNAKE_SLOW_FACTOR = 1.6;
+const NOTICE_TICKS = 18;
+
+export interface SnakeBonus extends SnakeCell {
+  kind: SnakeBonusKind;
+  ticksLeft: number;
+}
+
+/** Picks a bonus by weight; `roll` is in [0, 1). */
+export function pickSnakeBonus(roll: number): SnakeBonusKind {
+  const total = SNAKE_BONUS_KINDS.reduce((sum, kind) => sum + SNAKE_BONUSES[kind].weight, 0);
+  let left = roll * total;
+  for (const kind of SNAKE_BONUS_KINDS) {
+    left -= SNAKE_BONUSES[kind].weight;
+    if (left < 0) return kind;
+  }
+  return SNAKE_BONUS_KINDS[SNAKE_BONUS_KINDS.length - 1];
 }
 
 export interface SnakeLevel extends LevelInfo {
@@ -89,11 +139,11 @@ function makeRiders(): Record<SnakePlayer, SnakeRider> {
   return {
     1: {
       body: [{ x: 5, y: 8 }, { x: 4, y: 8 }, { x: 3, y: 8 }],
-      direction: 'right', queuedDirection: 'right', alive: true, score: 0,
+      direction: 'right', queuedDirection: 'right', alive: true, score: 0, ghostTicks: 0,
     },
     2: {
       body: [{ x: 18, y: 8 }, { x: 19, y: 8 }, { x: 20, y: 8 }],
-      direction: 'left', queuedDirection: 'left', alive: true, score: 0,
+      direction: 'left', queuedDirection: 'left', alive: true, score: 0, ghostTicks: 0,
     },
   };
 }
@@ -101,6 +151,11 @@ function makeRiders(): Record<SnakePlayer, SnakeRider> {
 export class NeonSnakeGame {
   riders = makeRiders();
   food: SnakeCell = { x: 12, y: 8 };
+  bonus: SnakeBonus | null = null;
+  /** Ticks left of slow time, which affects the whole arena. */
+  slowTicks = 0;
+  notice = '';
+  noticeTicks = 0;
   mode: SnakeMode = 'solo';
   phase: SnakePhase = 'ready';
   winner: SnakePlayer | 0 | null = null;
@@ -136,7 +191,38 @@ export class NeonSnakeGame {
     this.winner = null;
     this.ticks = 0;
     this.collisionCause = '';
+    this.bonus = null;
+    this.slowTicks = 0;
+    this.noticeTicks = 0;
     this.spawnFood();
+  }
+
+  /** How much longer than normal each tick should last right now. */
+  tickScale(): number {
+    return this.slowTicks > 0 ? SNAKE_SLOW_FACTOR : 1;
+  }
+
+  /** Timed bonuses still running, longest-lasting first. */
+  activeEffects(): { kind: SnakeBonusKind; ticks: number; player?: SnakePlayer }[] {
+    const effects: { kind: SnakeBonusKind; ticks: number; player?: SnakePlayer }[] = [];
+    if (this.slowTicks > 0) effects.push({ kind: 'slow', ticks: this.slowTicks });
+    ([1, 2] as SnakePlayer[]).forEach(player => {
+      const rider = this.riders[player];
+      if (rider.alive && rider.ghostTicks > 0) effects.push({ kind: 'ghost', ticks: rider.ghostTicks, player });
+    });
+    return effects.sort((a, b) => b.ticks - a.ticks);
+  }
+
+  /** Applies a bonus the player's head just reached. */
+  collect(player: SnakePlayer, kind: SnakeBonusKind): void {
+    const rider = this.riders[player];
+    const info = SNAKE_BONUSES[kind];
+    this.notice = this.mode === 'duel' ? `${player === 1 ? 'Mint' : 'Coral'}: ${info.notice}` : info.notice;
+    this.noticeTicks = NOTICE_TICKS;
+    if (kind === 'star') rider.score += SNAKE_STAR_POINTS;
+    else if (kind === 'shrink') rider.body = rider.body.slice(0, Math.max(SNAKE_MIN_LENGTH, rider.body.length - SNAKE_SHRINK_CELLS));
+    else if (kind === 'slow') this.slowTicks = info.ticks;
+    else rider.ghostTicks = info.ticks;
   }
 
   start(): boolean {
@@ -167,6 +253,8 @@ export class NeonSnakeGame {
     activePlayers.forEach(player => growing.set(player, sameCell(nextHeads.get(player)!, this.food)));
     const occupied = new Map<string, SnakePlayer[]>();
     activePlayers.forEach(player => {
+      // A ghost's body is no obstacle to anyone.
+      if (this.riders[player].ghostTicks > 0) return;
       const body = growing.get(player) ? this.riders[player].body : this.riders[player].body.slice(0, -1);
       body.forEach(cell => {
         const key = `${cell.x},${cell.y}`;
@@ -174,12 +262,13 @@ export class NeonSnakeGame {
       });
     });
 
-    const headOnCollision = activePlayers.length === 2 && sameCell(nextHeads.get(1)!, nextHeads.get(2)!);
+    const anyGhost = activePlayers.some(player => this.riders[player].ghostTicks > 0);
+    const headOnCollision = activePlayers.length === 2 && !anyGhost && sameCell(nextHeads.get(1)!, nextHeads.get(2)!);
     activePlayers.forEach(player => {
       const head = nextHeads.get(player)!;
       const outOfBounds = head.x < 0 || head.x >= SNAKE_COLUMNS || head.y < 0 || head.y >= SNAKE_ROWS;
       const wallCollision = this.isWall(head);
-      const bodyCollision = occupied.has(`${head.x},${head.y}`);
+      const bodyCollision = this.riders[player].ghostTicks === 0 && occupied.has(`${head.x},${head.y}`);
       if (outOfBounds || wallCollision || bodyCollision || headOnCollision) {
         this.riders[player].alive = false;
         this.collisionCause = outOfBounds || wallCollision ? 'wall' : headOnCollision ? 'head-on collision' : 'snake trail';
@@ -194,13 +283,32 @@ export class NeonSnakeGame {
       else rider.body.pop();
     });
 
-    if (activePlayers.some(player => growing.get(player) && this.riders[player].alive)) this.spawnFood();
+    // Bonuses tick down before a new catch, so a fresh one starts at full length.
+    if (this.slowTicks > 0) this.slowTicks -= 1;
+    activePlayers.forEach(player => {
+      if (this.riders[player].ghostTicks > 0) this.riders[player].ghostTicks -= 1;
+    });
+    if (this.noticeTicks > 0) this.noticeTicks -= 1;
+    if (this.bonus) {
+      const bonus = this.bonus;
+      const catcher = activePlayers.find(player => this.riders[player].alive && sameCell(this.riders[player].body[0], bonus));
+      if (catcher) {
+        this.bonus = null;
+        this.collect(catcher, bonus.kind);
+      } else if (--bonus.ticksLeft <= 0) this.bonus = null;
+    }
+
+    if (activePlayers.some(player => growing.get(player) && this.riders[player].alive)) {
+      this.spawnFood();
+      if (!this.bonus && this.random() < SNAKE_BONUS_CHANCE) this.spawnBonus();
+    }
     this.ticks += 1;
     this.resolveGameOver();
   }
 
   statusText(): string {
     if (this.phase === 'ready') return this.mode === 'solo' ? 'Start a solo high-score run.' : 'Start the two-player duel.';
+    if (this.phase === 'playing' && this.noticeTicks > 0) return this.notice;
     if (this.phase === 'playing') return this.mode === 'solo'
       ? `Score ${this.riders[1].score} — collect the neon cells.`
       : 'Last snake moving wins the arena.';
@@ -222,6 +330,18 @@ export class NeonSnakeGame {
   }
 
   private spawnFood(): void {
+    const bonus = this.bonus;
+    const open = this.openCells().filter(cell => !bonus || !sameCell(cell, bonus));
+    this.food = open[Math.floor(this.random() * open.length)] || { x: 12, y: 8 };
+  }
+
+  private spawnBonus(): void {
+    const open = this.openCells().filter(cell => !sameCell(cell, this.food));
+    const cell = open[Math.floor(this.random() * open.length)];
+    if (cell) this.bonus = { ...cell, kind: pickSnakeBonus(this.random()), ticksLeft: SNAKE_BONUS_LIFETIME };
+  }
+
+  private openCells(): SnakeCell[] {
     const occupied = new Set<string>();
     ([1, 2] as SnakePlayer[]).forEach(player => {
       if (this.mode === 'solo' && player === 2) return;
@@ -233,7 +353,7 @@ export class NeonSnakeGame {
         if (!occupied.has(`${x},${y}`) && !this.walls.has(`${x},${y}`)) open.push({ x, y });
       }
     }
-    this.food = open[Math.floor(this.random() * open.length)] || { x: 12, y: 8 };
+    return open;
   }
 }
 
@@ -292,6 +412,7 @@ export function initNeonSnake(): void {
   function snapshot(): Record<string, unknown> {
     return {
       riders: game.riders, food: game.food, mode: game.mode, level: game.level,
+      bonus: game.bonus, slowTicks: game.slowTicks, notice: game.notice, noticeTicks: game.noticeTicks,
       phase: game.phase, winner: game.winner, ticks: game.ticks, collisionCause: game.collisionCause, tickInterval,
     };
   }
@@ -300,6 +421,10 @@ export function initNeonSnake(): void {
     if (!state.riders || !state.food) return;
     game.riders = state.riders as Record<SnakePlayer, SnakeRider>;
     game.food = state.food as SnakeCell;
+    game.bonus = (state.bonus as SnakeBonus | null) ?? null;
+    game.slowTicks = Number(state.slowTicks) || 0;
+    game.notice = typeof state.notice === 'string' ? state.notice : '';
+    game.noticeTicks = Number(state.noticeTicks) || 0;
     game.mode = state.mode as SnakeMode;
     if (state.level !== undefined && Number(state.level) !== game.level) {
       game.setLevel(Number(state.level), false);
@@ -403,12 +528,15 @@ export function initNeonSnake(): void {
     context.arc((game.food.x + .5) * cellSize, (game.food.y + .5) * cellSize, cellSize * .25, 0, Math.PI * 2);
     context.fill();
     context.shadowBlur = 0;
+    if (game.bonus) drawBonus(game.bonus);
 
     const colors: Record<SnakePlayer, readonly [string, string]> = {
       1: ['#54e38e', '#1f9d5a'], 2: ['#ff6b78', '#d83c51'],
     };
     ([1, 2] as SnakePlayer[]).forEach(player => {
       if (game.mode === 'solo' && player === 2) return;
+      // A ghost snake is see-through, so everyone can tell it will slip past.
+      context.globalAlpha = game.riders[player].ghostTicks > 0 ? 0.45 : 1;
       game.riders[player].body.forEach((cell, index) => {
         context.fillStyle = index === 0 ? colors[player][0] : colors[player][1];
         context.shadowBlur = index === 0 ? 14 : 0;
@@ -418,7 +546,107 @@ export function initNeonSnake(): void {
         context.fill();
       });
     });
+    context.globalAlpha = 1;
     context.shadowBlur = 0;
+    drawEffects();
+  }
+
+  function drawBonus(bonus: SnakeBonus): void {
+    const { color } = SNAKE_BONUSES[bonus.kind];
+    // A bonus about to fade blinks.
+    if (bonus.ticksLeft < 15 && bonus.ticksLeft % 2 === 0) return;
+    const x = bonus.x * cellSize;
+    const y = bonus.y * cellSize;
+    snakeContext.fillStyle = color;
+    snakeContext.shadowBlur = 16;
+    snakeContext.shadowColor = color;
+    snakeContext.beginPath();
+    snakeContext.roundRect(x + 2, y + 2, cellSize - 4, cellSize - 4, 8);
+    snakeContext.fill();
+    snakeContext.shadowBlur = 0;
+    drawIcon(bonus.kind, x + cellSize / 2, y + cellSize / 2, 18, '#0a1120');
+  }
+
+  /** Language-free symbols, so a bonus reads the same in every language and font. */
+  function drawIcon(kind: SnakeBonusKind, x: number, y: number, size: number, color: string): void {
+    const ctx = snakeContext;
+    const h = size / 2;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = color;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = size / 6;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    if (kind === 'star') {
+      for (let i = 0; i < 10; i += 1) {
+        const radius = i % 2 === 0 ? h : h * 0.45;
+        const angle = -Math.PI / 2 + (i * Math.PI) / 5;
+        ctx.lineTo(Math.cos(angle) * radius, Math.sin(angle) * radius);
+      }
+      ctx.closePath();
+      ctx.fill();
+    } else if (kind === 'shrink') {
+      // Two arrows pressing inwards.
+      ctx.moveTo(-h, 0); ctx.lineTo(-h * 0.15, 0);
+      ctx.moveTo(-h * 0.55, -h * 0.45); ctx.lineTo(-h * 0.15, 0); ctx.lineTo(-h * 0.55, h * 0.45);
+      ctx.moveTo(h, 0); ctx.lineTo(h * 0.15, 0);
+      ctx.moveTo(h * 0.55, -h * 0.45); ctx.lineTo(h * 0.15, 0); ctx.lineTo(h * 0.55, h * 0.45);
+      ctx.stroke();
+    } else if (kind === 'slow') {
+      // An hourglass.
+      ctx.moveTo(-h * 0.7, -h); ctx.lineTo(h * 0.7, -h); ctx.lineTo(-h * 0.7, h); ctx.lineTo(h * 0.7, h);
+      ctx.closePath();
+      ctx.fill();
+    } else {
+      // A little ghost with a wavy hem.
+      ctx.moveTo(-h * 0.8, h);
+      ctx.lineTo(-h * 0.8, -h * 0.1);
+      ctx.arc(0, -h * 0.1, h * 0.8, Math.PI, 0);
+      ctx.lineTo(h * 0.8, h);
+      ctx.lineTo(h * 0.4, h * 0.6);
+      ctx.lineTo(0, h);
+      ctx.lineTo(-h * 0.4, h * 0.6);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /** Running bonuses as small chips in the top-right corner, each with a draining bar. */
+  function drawEffects(): void {
+    const ctx = snakeContext;
+    const effects = game.activeEffects();
+    if (!effects.length) return;
+    const chipH = 42;
+    const secondsPerTick = (tickInterval * game.tickScale()) / 1000;
+    ctx.font = '700 22px system-ui, sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    let right = snakeCanvas.width - 14;
+    effects.forEach(effect => {
+      const { color, ticks, label } = SNAKE_BONUSES[effect.kind];
+      const text = `${translateArcadeText(label)} ${Math.ceil(effect.ticks * secondsPerTick)}`;
+      const width = 40 + ctx.measureText(text).width + 14;
+      const x = right - width;
+      const y = 6;
+      // In a duel the chip border says whose ghost it is.
+      const edge = effect.player === 2 && game.mode === 'duel' ? '#ff6b78' : effect.player === 1 && game.mode === 'duel' ? '#54e38e' : color;
+      ctx.fillStyle = 'rgba(10,17,32,.88)';
+      ctx.strokeStyle = edge;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(x, y, width, chipH, 9);
+      ctx.fill();
+      ctx.stroke();
+      drawIcon(effect.kind, x + 20, y + chipH / 2 - 2, 20, color);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(text, x + 38, y + chipH / 2 - 2);
+      ctx.fillStyle = color;
+      ctx.fillRect(x + 7, y + chipH - 6, (width - 14) * (effect.ticks / ticks), 3);
+      right = x - 8;
+    });
   }
 
   const directions: Record<string, readonly [SnakePlayer, SnakeDirection]> = {
@@ -528,9 +756,9 @@ export function initNeonSnake(): void {
     if (visible()) {
       if (!room?.isGuest() && !isArcadeSessionPaused('snake')) {
         accumulator += Math.min(100, now - previous);
-        while (accumulator >= tickInterval) {
+        while (accumulator >= tickInterval * game.tickScale()) {
+          accumulator -= tickInterval * game.tickScale();
           game.tick();
-          accumulator -= tickInterval;
           syncUi();
         }
         room?.broadcastState(snapshot());

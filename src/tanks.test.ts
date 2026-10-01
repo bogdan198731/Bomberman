@@ -1,6 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { MiniTanksGame, TANK_TARGET_SCORE } from './tanks.js';
+import {
+  MiniTanksGame,
+  TANK_BONUSES,
+  TANK_BONUS_KINDS,
+  TANK_DROP_CHANCE,
+  TANK_TARGET_SCORE,
+  pickTankBonus,
+} from './tanks.js';
+import { translateArcadeText } from './i18n.js';
 
 test('Mini Tanks starts ready in bot mode', () => {
   const game = new MiniTanksGame();
@@ -71,4 +79,112 @@ test('the first tank to five rounds wins the match', () => {
   game.update(.01);
   assert.equal(game.phase, 'finished');
   assert.equal(game.matchWinner, 1);
+});
+
+/** A duel in progress with the tanks parked apart and no crate drops unless asked. */
+function inPlay(random: () => number = () => 1): MiniTanksGame {
+  const game = new MiniTanksGame(random);
+  game.restart('duel');
+  game.startRound();
+  return game;
+}
+
+test('bonuses are picked by weight and crates drop them only sometimes', () => {
+  const counts = Object.fromEntries(TANK_BONUS_KINDS.map(kind => [kind, 0])) as Record<string, number>;
+  for (let i = 0; i < 1000; i++) counts[pickTankBonus(i / 1000)]++;
+  TANK_BONUS_KINDS.forEach(kind => assert.ok(counts[kind] > 0, `${kind} can drop`));
+  assert.ok(TANK_DROP_CHANCE > 0.15 && TANK_DROP_CHANCE < 0.6);
+  assert.equal(TANK_BONUSES.shield.seconds, 0, 'a shield lasts until it is hit');
+});
+
+test('a smashed crate can leave a bonus that a tank collects by driving over it', () => {
+  const rolls = [0, 0]; // drop, then the first kind: a shield
+  const game = inPlay(() => rolls.shift() ?? 1);
+  const crate = game.obstacles.find(obstacle => obstacle.destructible)!;
+  game.bullets = [{ x: crate.x + 10, y: crate.y + 10, vx: 0, vy: 0, owner: 1, bounces: 0, age: .2 }];
+  game.update(.01);
+  assert.deepEqual(game.pickups, [{ x: crate.x + crate.width / 2, y: crate.y + crate.height / 2, kind: 'shield' }]);
+  game.tanks[1].x = game.pickups[0].x;
+  game.tanks[1].y = game.pickups[0].y;
+  game.update(.01);
+  assert.equal(game.pickups.length, 0);
+  assert.equal(game.tanks[1].shield, true);
+  assert.equal(game.statusText(), 'Mint: Shield - blocks one hit!');
+  assert.equal(translateArcadeText(game.statusText(), 'ro'), 'Mint: Scut - oprește o lovitură!');
+});
+
+test('a crate that rolls no drop leaves nothing behind', () => {
+  const game = inPlay();
+  const crate = game.obstacles.find(obstacle => obstacle.destructible)!;
+  game.bullets = [{ x: crate.x + 10, y: crate.y + 10, vx: 0, vy: 0, owner: 1, bounces: 0, age: .2 }];
+  game.update(.01);
+  assert.equal(game.pickups.length, 0);
+});
+
+test('a shield soaks up one hit, then the next one counts', () => {
+  const game = inPlay();
+  game.collect(2, 'shield');
+  game.bullets = [{ x: game.tanks[2].x, y: game.tanks[2].y, vx: 0, vy: 0, owner: 1, bounces: 0, age: .2 }];
+  game.update(.01);
+  assert.equal(game.tanks[1].score, 0);
+  assert.equal(game.tanks[2].shield, false);
+  assert.equal(game.bullets.length, 0, 'the shell is swallowed');
+  game.bullets = [{ x: game.tanks[2].x, y: game.tanks[2].y, vx: 0, vy: 0, owner: 1, bounces: 0, age: .2 }];
+  game.update(.01);
+  assert.equal(game.tanks[1].score, 1);
+});
+
+test('rapid fire shortens the reload until it runs out', () => {
+  const game = inPlay();
+  game.fire(1);
+  const normal = game.tanks[1].cooldown;
+  game.tanks[1].cooldown = 0;
+  game.collect(1, 'rapid');
+  game.fire(1);
+  assert.ok(game.tanks[1].cooldown < normal / 2 + .01);
+  assert.deepEqual(game.activeEffects(1).map(effect => effect.kind), ['rapid']);
+  for (let t = 0; t < TANK_BONUSES.rapid.seconds / .04 + 2; t++) game.update(.04);
+  assert.deepEqual(game.activeEffects(1), []);
+});
+
+test('a triple shot fires three shells that fan out', () => {
+  const game = inPlay();
+  game.collect(1, 'triple');
+  game.fire(1);
+  assert.equal(game.bullets.length, 3);
+  const ys = game.bullets.map(bullet => Math.sign(Math.round(bullet.vy)));
+  assert.deepEqual([...ys].sort(), [-1, 0, 1]);
+  game.bullets.forEach(bullet => assert.ok(bullet.vx > 0, 'all head the way the turret faces'));
+});
+
+test('a speed boost makes the tank cover more ground', () => {
+  const plain = inPlay();
+  const boosted = inPlay();
+  boosted.collect(1, 'boost');
+  for (const game of [plain, boosted]) {
+    game.tanks[1].y = 560; // a clear lane along the bottom
+    game.setInput(1, 'right', true);
+    game.update(.04);
+  }
+  assert.ok(boosted.tanks[1].x - 80 > (plain.tanks[1].x - 80) * 1.3);
+});
+
+test('a new round clears every bonus and pickup', () => {
+  const game = inPlay();
+  game.collect(1, 'shield');
+  game.collect(1, 'triple');
+  game.pickups = [{ x: 300, y: 300, kind: 'boost' }];
+  game.bullets = [{ x: game.tanks[2].x, y: game.tanks[2].y, vx: 0, vy: 0, owner: 1, bounces: 0, age: .2 }];
+  game.update(.01);
+  game.startRound();
+  assert.equal(game.tanks[1].shield, false);
+  assert.equal(game.tanks[1].triple, 0);
+  assert.equal(game.pickups.length, 0);
+});
+
+test('every bonus label and notice has a Romanian translation', () => {
+  TANK_BONUS_KINDS.forEach(kind => {
+    assert.notEqual(translateArcadeText(TANK_BONUSES[kind].label, 'ro'), TANK_BONUSES[kind].label);
+    assert.notEqual(translateArcadeText(TANK_BONUSES[kind].notice, 'ro'), TANK_BONUSES[kind].notice);
+  });
 });
