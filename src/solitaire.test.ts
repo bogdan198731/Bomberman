@@ -2,11 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   CARD_H,
+  CARD_W,
   SolitaireGame,
   TABLE_HEIGHT,
   isDealStuck,
   normalizeSolitaireSession,
   tableauSpots,
+  topRowLayout,
+  wasteFanX,
   type Card,
   type Suit,
 } from './solitaire.js';
@@ -235,4 +238,27 @@ test('fresh deals are checked quickly and are almost never dead from the start',
   }
   assert.ok(stuck <= 5, `${stuck} of 100 fresh deals were called dead`);
   assert.ok(Date.now() - started < 3_000, 'the check is cheap enough to run after every move');
+});
+
+test('on a phone the stock sits on the joystick side; desktop keeps it on the left', () => {
+  const desktop = topRowLayout(false, 'joystick-right');
+  assert.equal(desktop.deckSide, 'left');
+  assert.ok(desktop.stockX < desktop.wasteX && desktop.wasteX < desktop.foundationX[0]);
+  assert.deepEqual(topRowLayout(true, 'joystick-left'), desktop);
+
+  const right = topRowLayout(true, 'joystick-right');
+  assert.equal(right.deckSide, 'right');
+  assert.ok(right.stockX > right.wasteX && right.wasteX > right.foundationX[3], 'stock, then waste, then foundations, right to left');
+  assert.equal(right.stockX, desktop.foundationX[3], 'the stock takes the rightmost column');
+});
+
+test('a draw-three fan never runs into the stock or the foundations', () => {
+  for (const row of [topRowLayout(false, 'joystick-right'), topRowLayout(true, 'joystick-right')]) {
+    const xs = [0, 1, 2].map(i => wasteFanX(row, i, 3));
+    // The playable card is drawn last and rightmost, so the cards under it still show their corner rank.
+    assert.equal(xs[2], Math.max(...xs));
+    const [left, right] = [Math.min(...xs), Math.max(...xs) + CARD_W];
+    const others = [row.stockX, ...row.foundationX];
+    for (const x of others) assert.ok(right <= x || left >= x + CARD_W, `fan ${left}-${right} overlaps a pile at ${x}`);
+  }
 });
