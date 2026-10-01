@@ -1,5 +1,6 @@
 import { ArcadeResultReporter } from './stats.js';
 import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
+import { AccessibleBoard, type BoardSpot } from './board-access.js';
 
 export type MineDifficulty = 'easy' | 'medium' | 'hard';
 export type MinePhase = 'ready' | 'playing' | 'won' | 'lost';
@@ -246,6 +247,17 @@ export class MinesweeperGame {
   }
 }
 
+/** What a square says to a screen reader: where it is and what is known about it. */
+export function mineCellLabel(game: Pick<MinesweeperGame, 'cells' | 'columns'>, index: number): string {
+  const cell = game.cells[index];
+  const where = `Row ${Math.floor(index / game.columns) + 1}, column ${(index % game.columns) + 1}`;
+  const state = !cell.revealed ? (cell.flagged ? 'flagged' : 'hidden')
+    : cell.mine ? 'mine'
+      : cell.adjacent === 1 ? '1 mine next to it'
+        : cell.adjacent ? `${cell.adjacent} mines next to it` : 'clear';
+  return `${where}: ${state}`;
+}
+
 export function initMinesweeper(): void {
   if (typeof document === 'undefined') return;
   const canvas = document.getElementById('minesCanvas') as HTMLCanvasElement | null;
@@ -268,6 +280,30 @@ export function initMinesweeper(): void {
   // True from a restore until the player's first move, so the status can say so.
   let resumed = false;
   const CELL = 40;
+  const access = new AccessibleBoard({
+    canvas: board,
+    label: 'Minesweeper field',
+    activate: key => act(Number(key), flagMode),
+    onKey: (key, event) => {
+      if (event.key.toLowerCase() !== 'f' || event.repeat) return false;
+      act(Number(key), true);
+      return true;
+    },
+    onFocus: key => { cursor = Number(key); },
+  });
+
+  /** The squares as buttons, refreshed after every change to the field. */
+  function syncAccess(): void {
+    const spots: BoardSpot[] = game.cells.map((_, index) => ({
+      key: String(index),
+      x: (index % game.columns) * CELL,
+      y: Math.floor(index / game.columns) * CELL,
+      width: CELL,
+      height: CELL,
+      label: mineCellLabel(game, index),
+    }));
+    access.update(spots);
+  }
 
   function sizeBoard(): void {
     board.width = game.columns * CELL;
@@ -285,6 +321,7 @@ export function initMinesweeper(): void {
     cursor = -1;
     sizeBoard();
     syncUi();
+    syncAccess();
   }
 
   function syncUi(): void {
@@ -302,12 +339,17 @@ export function initMinesweeper(): void {
   function act(index: number, flag: boolean): void {
     if (isArcadeSessionPaused('mines') || index < 0) return;
     const cell = game.cells[index];
+    const before = game.phase;
     if (flag) game.toggleFlag(index);
     else if (cell.revealed) game.chord(index);
     else game.reveal(index);
     resumed = false;
     persist();
     syncUi();
+    syncAccess();
+    // Said out loud: what the square turned out to be, and the result when the game ends.
+    const ended = before !== game.phase && (game.phase === 'won' || game.phase === 'lost');
+    access.announce(ended ? game.statusText() : mineCellLabel(game, index).replace(/^.*?: /, ''));
   }
 
   const numberColors = ['', '#68dfff', '#54e38e', '#ff6b78', '#b28bff', '#ffc857', '#4dd4c4', '#f4f6f8', '#9aa8bd'];
@@ -456,5 +498,6 @@ export function initMinesweeper(): void {
   }
   sizeBoard();
   syncUi();
+  syncAccess();
   requestAnimationFrame(loop);
 }

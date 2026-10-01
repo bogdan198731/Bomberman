@@ -181,8 +181,8 @@ const KEYBOARD_CONTROLS: Partial<Record<ArcadeGameId, [string, string]>> = {
   bricks: copy('Left/Right or A/D steer, Space launches.', 'Stânga/Dreapta sau A/D conduc, Spațiu lansează.'),
   mines: copy('Arrows move the cursor, Space or Enter uncovers, F places a flag.', 'Săgețile mută cursorul, Spațiu sau Enter descoperă, F pune un steag.'),
   hockey: copy('Mint: WASD. Coral: arrow keys. Against the bot, either set moves Mint. Space faces off.', 'Mint: WASD. Coral: săgețile. Contra botului, ambele seturi îl mută pe Mint. Spațiu pune pucul în joc.'),
-  reversi: copy('Arrow keys move, Enter places a disc.', 'Săgețile mută, Enter pune un disc.'),
-  solitaire: copy('Space draws, A sends cards to the foundations, U or Ctrl+Z undoes.', 'Spațiu trage, A trimite cărțile pe fundații, U sau Ctrl+Z anulează.'),
+  reversi: copy('Tab to the board, arrow keys move, Enter places a disc.', 'Tab până la tablă, săgețile mută, Enter pune un disc.'),
+  solitaire: copy('Space draws, A sends cards to the foundations, U or Ctrl+Z undoes. Tab to the table: arrows move between cards, Enter picks a card up and puts it down.', 'Spațiu trage, A trimite cărțile pe fundații, U sau Ctrl+Z anulează. Tab până la masă: săgețile mută între cărți, Enter ridică o carte și o așază.'),
   hangman: copy('Type any letter A-Z to guess it.', 'Scrie orice literă A-Z pentru a o ghici.'),
 };
 

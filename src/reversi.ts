@@ -1,6 +1,7 @@
 import { GameRoomClient } from './game-room.js';
 import { ArcadeResultReporter } from './stats.js';
 import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
+import { AccessibleBoard } from './board-access.js';
 
 export type ReversiPlayer = 1 | 2;
 export type ReversiDisc = 0 | ReversiPlayer;
@@ -218,6 +219,20 @@ export class ReversiGame {
   }
 }
 
+const discName = (disc: ReversiDisc): string => (disc === 1 ? 'Mint' : disc === 2 ? 'Coral' : 'empty');
+const where = (index: number): string => `row ${Math.floor(index / REVERSI_SIZE) + 1}, column ${(index % REVERSI_SIZE) + 1}`;
+
+/** What a square says to a screen reader; `playable` marks the legal moves for the player at the keyboard. */
+export function reversiCellLabel(board: readonly ReversiDisc[], index: number, playable: boolean): string {
+  const label = `${where(index).replace(/^r/, 'R')}: ${discName(board[index])}`;
+  return playable ? `${label}, you can play here` : label;
+}
+
+/** The move just made, said out loud: who, where, and how many discs turned. */
+export function reversiMoveText(board: readonly ReversiDisc[], index: number, flips: number): string {
+  return `${discName(board[index])} played ${where(index)}, flipping ${flips}.`;
+}
+
 export function initReversi(): void {
   if (typeof document === 'undefined') return;
   const canvas = document.getElementById('reversiCanvas') as HTMLCanvasElement | null;
@@ -241,9 +256,33 @@ export function initReversi(): void {
   const roomMount = document.querySelector<HTMLElement>('[data-game-room="reversi"]');
   let room: GameRoomClient | null = null;
   const resultReporter = new ArcadeResultReporter('reversi');
-  let cursor = 19;
   let playedAt = 0;
   let botTimer: number | undefined;
+  let spokenMove = -1;
+  const access = new AccessibleBoard({
+    canvas: board,
+    label: 'Reversi board',
+    activate: key => { if (game.phase === 'finished') nextGame(); else play(Number(key)); },
+  });
+
+  function syncAccess(): void {
+    const legal = game.phase === 'playing' && myTurn() ? new Set(legalMoves(game.board, game.current)) : new Set<number>();
+    access.update(game.board.map((_, index) => ({
+      key: String(index),
+      x: (index % 8) * CELL,
+      y: Math.floor(index / 8) * CELL,
+      width: CELL,
+      height: CELL,
+      label: reversiCellLabel(game.board, index, legal.has(index)),
+    })));
+    // Every move is read out, the bot's and an online opponent's included.
+    if (game.lastMove >= 0 && game.lastMove !== spokenMove) {
+      access.announce(`${reversiMoveText(game.board, game.lastMove, game.lastFlips.length)} ${game.statusText()}`);
+    } else if (game.lastMove < 0 && spokenMove >= 0) {
+      access.announce(game.statusText());
+    }
+    spokenMove = game.lastMove;
+  }
 
   function snapshot(): Record<string, unknown> {
     return {
@@ -317,6 +356,7 @@ export function initReversi(): void {
       outcome: game.winner === 0 ? 'draw' : game.winner === tracked ? 'win' : 'loss',
       score: counts[tracked],
     });
+    syncAccess();
   }
 
   const colors: Record<ReversiPlayer, string> = { 1: '#54e38e', 2: '#ff6b78' };
@@ -353,11 +393,6 @@ export function initReversi(): void {
         ctx.beginPath(); ctx.arc(cx, cy, CELL * .12, 0, Math.PI * 2); ctx.fill();
         ctx.globalAlpha = 1;
       }
-      if (index === cursor && document.activeElement === board) {
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 3;
-        ctx.strokeRect((index % 8) * CELL + 4, Math.floor(index / 8) * CELL + 4, CELL - 8, CELL - 8);
-      }
     }
   }
 
@@ -367,22 +402,10 @@ export function initReversi(): void {
     const row = Math.floor(((event.clientY - bounds.top) / bounds.height) * 8);
     return column < 0 || row < 0 || column > 7 || row > 7 ? -1 : row * 8 + column;
   }
-  board.tabIndex = 0;
+  // Keyboard play goes through the board's buttons (see AccessibleBoard above).
   board.addEventListener('pointerup', event => {
     const index = cellAt(event);
-    if (index >= 0) { cursor = index; play(index); }
-  });
-  board.addEventListener('keydown', event => {
-    const moves: Record<string, number> = { ArrowUp: -8, ArrowDown: 8, ArrowLeft: -1, ArrowRight: 1 };
-    if (event.key in moves) {
-      event.preventDefault();
-      const next = cursor + moves[event.key];
-      const sameRow = event.key === 'ArrowLeft' || event.key === 'ArrowRight' ? Math.floor(next / 8) === Math.floor(cursor / 8) : true;
-      if (next >= 0 && next < CELLS && sameRow) cursor = next;
-    } else if ((event.key === 'Enter' || event.key === ' ') && !event.repeat) {
-      event.preventDefault();
-      if (game.phase === 'finished') nextGame(); else play(cursor);
-    }
+    if (index >= 0) play(index);
   });
 
   nextButton?.addEventListener('click', nextGame);

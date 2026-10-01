@@ -1,5 +1,6 @@
 import { ArcadeResultReporter } from './stats.js';
 import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
+import { AccessibleBoard, type BoardSpot } from './board-access.js';
 import { ARCADE_TOUCH_LAYOUT_CHANGE_EVENT, loadArcadeTouchLayout, normalizeArcadeTouchLayout, type ArcadeTouchLayout } from './touch-controls.js';
 
 /** Suits in order spades, hearts, diamonds, clubs; hearts and diamonds are red. */
@@ -455,6 +456,75 @@ export function tableauSpots(tableau: readonly Card[][]): CardSpot[] {
   return spots;
 }
 
+const RANK_NAMES = ['', 'Ace', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King'] as const;
+const SUIT_NAMES = ['spades', 'hearts', 'diamonds', 'clubs'] as const;
+
+/** "Queen of hearts": a card as a screen reader says it. */
+export const cardName = (card: Card): string => `${RANK_NAMES[card.rank]} of ${SUIT_NAMES[card.suit]}`;
+
+/**
+ * Every place a player can act on, laid over the table for screen readers
+ * and the keyboard: the stock, the waste's top card, the four foundations,
+ * each face-up tableau card (on the strip of it that shows) and each empty
+ * column. Face-down cards are counted, never named.
+ */
+export function solitaireSpots(
+  state: Pick<SolitaireGame, 'stock' | 'waste' | 'foundations' | 'tableau' | 'drawCount'>,
+  row: TopRow,
+  selected: Source | null,
+): BoardSpot[] {
+  const spots: BoardSpot[] = [];
+  const stockLabel = state.stock.length ? `Stock: ${state.stock.length} ${state.stock.length === 1 ? 'card' : 'cards'}`
+    : state.waste.length ? 'Stock: empty, turn the waste over' : 'Stock: empty';
+  spots.push({ key: 'stock', x: row.stockX, y: TOP, width: CARD_W, height: CARD_H, label: stockLabel });
+  const fan = state.waste.slice(-(state.drawCount === 3 ? 3 : 1));
+  const wasteTop = state.waste[state.waste.length - 1];
+  spots.push({
+    key: 'waste',
+    x: fan.length ? wasteFanX(row, fan.length - 1, fan.length) : row.wasteX,
+    y: TOP, width: CARD_W, height: CARD_H,
+    label: wasteTop ? `Waste: ${cardName(wasteTop)}` : 'Waste: empty',
+    pressed: wasteTop ? selected?.pile === 'waste' : undefined,
+  });
+  state.foundations.forEach((pile, index) => {
+    const top = pile[pile.length - 1];
+    spots.push({
+      key: `foundation-${index}`,
+      x: row.foundationX[index], y: TOP, width: CARD_W, height: CARD_H,
+      label: `Foundation ${index + 1}: ${top ? cardName(top) : 'empty'}`,
+      pressed: top ? selected?.pile === 'foundation' && selected.index === index : undefined,
+    });
+  });
+  // The top row reads left to right whichever side the stock is on.
+  spots.sort((a, b) => a.x - b.x);
+  const held = selected?.pile === 'tableau' ? selected : null;
+  const laid = tableauSpots(state.tableau);
+  for (let column = 0; column < 7; column++) {
+    const pile = state.tableau[column];
+    if (!pile.length) {
+      spots.push({ key: `column-${column}`, x: columnX(column), y: TABLEAU_TOP, width: CARD_W, height: CARD_H, label: `Column ${column + 1}: empty` });
+      continue;
+    }
+    const inColumn = laid.filter(spot => (spot.source as { index: number }).index === column);
+    const facedown = pile.filter(card => !card.up).length;
+    inColumn.forEach((spot, i) => {
+      if (!spot.card.up) return;
+      const index = (spot.source as { card: number }).card;
+      // Only the strip that shows is this card's; the last card shows whole.
+      const next = inColumn[i + 1];
+      const height = next ? next.y - spot.y : CARD_H;
+      const under = index === facedown && facedown ? `, covering ${facedown} face-down ${facedown === 1 ? 'card' : 'cards'}` : '';
+      spots.push({
+        key: `column-${column}-${index}`,
+        x: spot.x, y: spot.y, width: CARD_W, height,
+        label: `Column ${column + 1}: ${cardName(spot.card)}${under}`,
+        pressed: Boolean(held && held.index === column && index >= held.card),
+      });
+    });
+  }
+  return spots;
+}
+
 export function initSolitaire(): void {
   if (typeof document === 'undefined') return;
   const canvas = document.getElementById('solitaireCanvas') as HTMLCanvasElement | null;
@@ -480,12 +550,41 @@ export function initSolitaire(): void {
   const mobileQuery = window.matchMedia('(max-width: 760px), (pointer: coarse)');
   let touchLayout = loadArcadeTouchLayout();
   let row = topRowLayout(mobileQuery.matches, touchLayout);
-  const relayout = (): void => { row = topRowLayout(mobileQuery.matches, touchLayout); };
+  const relayout = (): void => { row = topRowLayout(mobileQuery.matches, touchLayout); syncAccess(); };
   mobileQuery.addEventListener?.('change', relayout);
   window.addEventListener(ARCADE_TOUCH_LAYOUT_CHANGE_EVENT, event => {
     touchLayout = normalizeArcadeTouchLayout((event as CustomEvent<{ layout: string }>).detail?.layout);
     relayout();
   });
+
+  const access = new AccessibleBoard({
+    canvas: table,
+    label: 'Solitaire table',
+    activate: key => activateSpot(key),
+  });
+  let spots: BoardSpot[] = [];
+
+  function syncAccess(): void {
+    spots = solitaireSpots(game, row, selected);
+    access.update(spots);
+  }
+
+  /** Enter on a card or pile does what a tap there does, then says what happened. */
+  function activateSpot(key: string): void {
+    const spot = spots.find(item => item.key === key);
+    if (!spot || isArcadeSessionPaused('solitaire')) return;
+    const moves = game.moves;
+    // Tap the middle of the part of the card that shows.
+    tap(spot.x + spot.width / 2, spot.y + Math.min(spot.height, CARD_H) / 2);
+    const top = game.waste[game.waste.length - 1];
+    if (game.phase !== 'playing') access.announce(game.statusText());
+    else if (key === 'stock') access.announce(top && game.moves !== moves ? `Drew ${cardName(top)}.` : 'Nothing to draw.');
+    else if (selected) {
+      const lifted = game.lift(selected);
+      access.announce(`Picked up ${lifted.map(cardName).join(', ')}. Choose where it goes.`);
+    } else if (game.moves !== moves) access.announce(`Moved. ${game.statusText()}`);
+    else access.announce('No move there.');
+  }
 
   function persist(): void {
     try {
@@ -511,6 +610,7 @@ export function initSolitaire(): void {
     if (undoButton) undoButton.disabled = !game.canUndo();
     if (autoButton) autoButton.textContent = game.canAutoComplete() ? 'Finish' : 'Auto-play';
     resultReporter.report(game.phase !== 'playing', { outcome: game.phase === 'won' ? 'complete' : 'loss', score: game.score(now) });
+    syncAccess();
   }
 
   function after(): void {

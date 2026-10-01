@@ -354,6 +354,11 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
     'Sparge formațiile invadatorilor, colectează arme și înfruntă o navă de comandă la fiecare al cincilea val.',
   'No games found': 'Nu s-au găsit jocuri',
   'No favorites yet': 'Încă nu ai favorite',
+  'Minesweeper field': 'Câmpul de mine',
+  'Reversi board': 'Tabla de Reversi',
+  'Four in a Row board': 'Tabla Patru în linie',
+  'Nothing to draw.': 'Nu mai e nimic de tras.',
+  'No move there.': 'Nicio mutare acolo.',
   'Tap the ☆ star on any game card to keep it here.': 'Apasă steaua ☆ de pe orice joc ca să-l păstrezi aici.',
   'Try another search or show the complete arcade.': 'Încearcă altă căutare sau afișează întreaga arcadă.',
   'Show all games': 'Arată toate jocurile',
@@ -645,7 +650,60 @@ const textRecords = new WeakMap<Text, { source: string; rendered: string }>();
 const attributeRecords = new WeakMap<Element, Map<string, { source: string; rendered: string }>>();
 const translatedAttributes = ['aria-label', 'placeholder', 'title', 'alt'] as const;
 
+const CARD_RANKS_RO: Record<string, string> = { Ace: 'As', Jack: 'Valet', Queen: 'Damă', King: 'Popă' };
+const CARD_SUITS_RO: Record<string, string> = { spades: 'pică', hearts: 'inimă roșie', diamonds: 'romb', clubs: 'treflă' };
+const CELL_STATES_RO: Record<string, string> = {
+  hidden: 'acoperit', flagged: 'cu steag', mine: 'mină', clear: 'liber', empty: 'gol', Mint: 'Mint', Coral: 'Coral',
+  'empty, you can play here': 'gol, poți juca aici',
+};
+
+/** Card names and square states on the canvas boards' buttons (board-access.ts). */
+function translateBoardPart(value: string): string | null {
+  const card = value.match(/^(Ace|[2-9]|10|Jack|Queen|King) of (spades|hearts|diamonds|clubs)$/);
+  if (card) return `${CARD_RANKS_RO[card[1]] ?? card[1]} de ${CARD_SUITS_RO[card[2]]}`;
+  if (value in CELL_STATES_RO) return CELL_STATES_RO[value];
+  const near = value.match(/^(\d+) mines? next to it$/);
+  if (near) return `${near[1]} ${near[1] === '1' ? 'mină' : 'mine'} alături`;
+  return null;
+}
+
+function translateBoardText(value: string): string | null {
+  const ro = (text: string): string => translateArcadeText(text, 'ro');
+  const part = (text: string): string => translateBoardPart(text) ?? text;
+  const cards = (list: string): string => list.split(', ').map(part).join(', ');
+  let match = value.match(/^Row (\d+), column (\d+): (.+)$/);
+  if (match) return `Rândul ${match[1]}, coloana ${match[2]}: ${part(match[3])}`;
+  match = value.match(/^(Mint|Coral) played row (\d+), column (\d+), flipping (\d+)\.(?: (.+))?$/);
+  if (match) return `${match[1]} a jucat rândul ${match[2]}, coloana ${match[3]}, întorcând ${match[4]}.${match[5] ? ` ${ro(match[5])}` : ''}`;
+  match = value.match(/^Column (\d+): (full|(\d+) spaces? free)(?:\. From the bottom: (.+))?$/);
+  if (match) {
+    const room = match[2] === 'full' ? 'plină' : `${match[3]} ${match[3] === '1' ? 'loc liber' : 'locuri libere'}`;
+    return `Coloana ${match[1]}: ${room}${match[4] ? `. De jos în sus: ${match[4]}` : ''}`;
+  }
+  match = value.match(/^(Mint|Coral) dropped in column (\d+)\.(?: (.+))?$/);
+  if (match) return `${match[1]} a pus în coloana ${match[2]}.${match[3] ? ` ${ro(match[3])}` : ''}`;
+  match = value.match(/^Column (\d+): (.+?)(?:, covering (\d+) face-down cards?)?$/);
+  if (match) return `Coloana ${match[1]}: ${part(match[2])}${match[3] ? `, peste ${match[3]} ${match[3] === '1' ? 'carte cu fața în jos' : 'cărți cu fața în jos'}` : ''}`;
+  match = value.match(/^Stock: (\d+) cards?$/);
+  if (match) return `Pachet: ${match[1]} ${match[1] === '1' ? 'carte' : 'cărți'}`;
+  if (value === 'Stock: empty, turn the waste over') return 'Pachet: gol, întoarce cărțile trase';
+  if (value === 'Stock: empty') return 'Pachet: gol';
+  match = value.match(/^Waste: (.+)$/);
+  if (match) return `Cărți trase: ${part(match[1])}`;
+  match = value.match(/^Foundation (\d+): (.+)$/);
+  if (match) return `Fundația ${match[1]}: ${part(match[2])}`;
+  match = value.match(/^Drew (.+)\.$/);
+  if (match) return `Ai tras ${part(match[1])}.`;
+  match = value.match(/^Picked up (.+)\. Choose where it goes\.$/);
+  if (match) return `Ai ridicat ${cards(match[1])}. Alege unde o pui.`;
+  match = value.match(/^Moved\. (.+)$/);
+  if (match) return `Mutat. ${ro(match[1])}`;
+  return translateBoardPart(value);
+}
+
 function translateRomanianPattern(value: string): string | null {
+  const board = translateBoardText(value);
+  if (board) return board;
   // Hangman
   const tries = value.match(/^(\d+) tries left\.$/);
   if (tries) return `${tries[1]} încercări rămase.`;

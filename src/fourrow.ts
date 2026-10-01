@@ -1,6 +1,7 @@
 import { GameRoomClient } from './game-room.js';
 import { ArcadeResultReporter } from './stats.js';
 import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
+import { AccessibleBoard } from './board-access.js';
 
 export type FourPlayer = 1 | 2;
 export type FourDisc = 0 | FourPlayer;
@@ -213,6 +214,25 @@ export class FourInARowGame {
   }
 }
 
+const fourName = (disc: FourDisc): string => (disc === 1 ? 'Mint' : 'Coral');
+
+/**
+ * A column as a screen reader hears it: how much room is left, then the
+ * discs from the bottom up. Columns are what a player chooses, so each one
+ * is a single button.
+ */
+export function fourColumnLabel(board: readonly FourDisc[], column: number): string {
+  const discs: FourDisc[] = [];
+  for (let row = FOUR_ROWS - 1; row >= 0; row--) {
+    const disc = board[row * FOUR_COLUMNS + column];
+    if (disc) discs.push(disc);
+  }
+  const free = FOUR_ROWS - discs.length;
+  const room = free === 0 ? 'full' : `${free} ${free === 1 ? 'space' : 'spaces'} free`;
+  const stack = discs.length ? `. From the bottom: ${discs.map(fourName).join(', ')}` : '';
+  return `Column ${column + 1}: ${room}${stack}`;
+}
+
 export function initFourInARow(): void {
   if (typeof document === 'undefined') return;
   const canvas = document.getElementById('fourrowCanvas') as HTMLCanvasElement | null;
@@ -238,6 +258,31 @@ export function initFourInARow(): void {
   let hoverColumn = 3;
   let droppedAt = 0;
   let botTimer: number | undefined;
+  let spokenCell = -1;
+  const access = new AccessibleBoard({
+    canvas: board,
+    label: 'Four in a Row board',
+    activate: key => { hoverColumn = Number(key); if (game.phase === 'finished') nextGame(); else play(hoverColumn); },
+    onFocus: key => { hoverColumn = Number(key); },
+  });
+
+  function syncAccess(): void {
+    access.update(Array.from({ length: FOUR_COLUMNS }, (_, column) => ({
+      key: String(column),
+      x: column * cell,
+      y: 0,
+      width: cell,
+      height: FOUR_ROWS * cell,
+      label: fourColumnLabel(game.board, column),
+    })));
+    // Each drop is read out, the bot's and an online opponent's included.
+    if (game.lastCell >= 0 && game.lastCell !== spokenCell) {
+      access.announce(`${fourName(game.board[game.lastCell])} dropped in column ${(game.lastCell % FOUR_COLUMNS) + 1}. ${game.statusText()}`);
+    } else if (game.lastCell < 0 && spokenCell >= 0) {
+      access.announce(game.statusText());
+    }
+    spokenCell = game.lastCell;
+  }
 
   function snapshot(): Record<string, unknown> {
     return {
@@ -309,6 +354,7 @@ export function initFourInARow(): void {
       outcome: game.winner === 0 ? 'draw' : game.winner === tracked ? 'win' : 'loss',
       score: game.score(tracked),
     });
+    syncAccess();
   }
 
   function render(now: number): void {

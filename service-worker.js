@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blast-arcade-input-isolation-share-cards-2026-10-01';
+const CACHE_NAME = 'blast-arcade-board-access-2026-10-01';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -56,6 +56,7 @@ const APP_SHELL = [
   '/dist/reversi.js',
   '/dist/solitaire.js',
   '/dist/hangman.js',
+  '/dist/board-access.js',
   '/dist/bug-report.js',
   '/dist/report-capture.js',
 ];
