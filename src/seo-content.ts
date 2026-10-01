@@ -197,8 +197,8 @@ export const GAME_CONTENT: Record<ArcadeGameId, GameContent> = {
     ),
     faq: [
       copy('How many lives do you get in Brick Breaker?', 'Câte vieți ai la Brick Breaker?'),
-      copy('Three. Each time the ball gets past your paddle you lose one, and the run ends when all three are gone.',
-        'Trei. De fiecare dată când mingea trece de paletă pierzi una, iar jocul se termină când le pierzi pe toate trei.'),
+      copy('Three to start. Each time the ball gets past your paddle you lose one; catch a heart capsule from a broken brick to win one back, up to five.',
+        'Trei la început. De fiecare dată când mingea trece de paletă pierzi una; prinde o capsulă cu inimă dintr-o cărămidă spartă ca să câștigi una înapoi, până la cinci.'),
     ],
     related: ['paddle', 'star', 'blocks'],
   },

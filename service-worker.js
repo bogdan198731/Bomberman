@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blast-arcade-solitaire-difficulty-2026-10-01';
+const CACHE_NAME = 'blast-arcade-brick-capsules-2026-10-01';
 const APP_SHELL = [
   '/',
   '/index.html',
