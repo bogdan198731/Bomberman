@@ -289,19 +289,17 @@ export class SolitaireGame {
     return this.phase === 'playing' && !this.stock.length && !this.waste.length && this.tableau.every(pile => pile.every(card => card.up));
   }
 
-  /** Also works from a dead end, so the player can back up and try another line. */
+  /** Only during play: once a deal is won or dead it has ended and its result is recorded. */
   undo(): boolean {
-    if (this.phase === 'won') return false;
+    if (this.phase !== 'playing') return false;
     const previous = this.history.pop();
     if (!previous) return false;
     Object.assign(this, cloneState(previous));
-    this.phase = 'playing';
-    this.finishedAt = 0;
     return true;
   }
 
   canUndo(): boolean {
-    return this.history.length > 0 && this.phase !== 'won';
+    return this.history.length > 0 && this.phase === 'playing';
   }
 
   elapsed(now: number): number {
@@ -318,7 +316,7 @@ export class SolitaireGame {
   statusText(now: number = Date.now()): string {
     if (this.phase === 'won') return `Solved in ${this.moves} moves and ${this.elapsed(now)}s - ${this.score(now)} points!`;
     const home = this.foundations.reduce((sum, pile) => sum + pile.length, 0);
-    if (this.phase === 'stuck') return 'No moves left - this deal can no longer be won. Undo or deal again.';
+    if (this.phase === 'stuck') return 'No moves left - this deal can no longer be won. Deal again.';
     if (this.canAutoComplete()) return 'Everything is face up - finish it off.';
     return `${home} of 52 cards home · ${this.moves} moves.`;
   }
