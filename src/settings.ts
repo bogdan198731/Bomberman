@@ -5,11 +5,27 @@ import { languageFromPath } from './seo.js';
 
 export const SETTINGS_STORAGE_KEY = 'blast-arcade-settings-v1';
 
+export type ArcadeTheme = 'midnight' | 'ocean' | 'sunset' | 'forest' | 'galaxy';
+
+/** Each theme with the browser bar colour that matches its backdrop. */
+export const ARCADE_THEMES: Readonly<Record<ArcadeTheme, { browserColor: string }>> = {
+  midnight: { browserColor: '#10151f' },
+  ocean: { browserColor: '#01212b' },
+  sunset: { browserColor: '#1e0816' },
+  forest: { browserColor: '#04180b' },
+  galaxy: { browserColor: '#120a2a' },
+};
+
+export function normalizeTheme(value: unknown): ArcadeTheme {
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(ARCADE_THEMES, value) ? value as ArcadeTheme : 'midnight';
+}
+
 export interface ArcadeSettings {
   soundEnabled: boolean;
   volume: number;
   reducedMotion: boolean;
   highContrast: boolean;
+  theme: ArcadeTheme;
   language: ArcadeLanguage;
   touchControls: 'auto' | 'on' | 'off';
 }
@@ -42,6 +58,7 @@ export function createDefaultSettings(): ArcadeSettings {
     volume: 60,
     reducedMotion: false,
     highContrast: false,
+    theme: 'midnight',
     language: 'en',
     touchControls: 'auto',
   };
@@ -58,6 +75,7 @@ export function normalizeSettings(value: unknown): ArcadeSettings {
       : defaults.volume,
     reducedMotion: typeof candidate.reducedMotion === 'boolean' ? candidate.reducedMotion : defaults.reducedMotion,
     highContrast: typeof candidate.highContrast === 'boolean' ? candidate.highContrast : defaults.highContrast,
+    theme: normalizeTheme(candidate.theme),
     language: candidate.language === 'ro' ? 'ro' : defaults.language,
     touchControls: candidate.touchControls === 'on' || candidate.touchControls === 'off'
       ? candidate.touchControls
@@ -141,6 +159,7 @@ export function initArcadeSettings(): void {
   const motionToggle = document.getElementById('settingsMotionToggle') as HTMLInputElement | null;
   const contrastToggle = document.getElementById('settingsContrastToggle') as HTMLInputElement | null;
   const languageSelect = document.getElementById('settingsLanguageSelect') as HTMLSelectElement | null;
+  const themeSelect = document.getElementById('settingsThemeSelect') as HTMLSelectElement | null;
   const touchControlsSelect = document.getElementById('settingsTouchControls') as HTMLSelectElement | null;
   const testButton = document.getElementById('settingsTestSound');
   const fullscreenButton = document.getElementById('settingsFullscreenButton') as HTMLButtonElement | null;
@@ -161,6 +180,8 @@ export function initArcadeSettings(): void {
     document.documentElement.classList.toggle('touch-controls-on', settings.touchControls === 'on');
     document.documentElement.classList.toggle('touch-controls-off', settings.touchControls === 'off');
     document.documentElement.dataset.touchControls = settings.touchControls;
+    document.documentElement.dataset.theme = settings.theme;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', ARCADE_THEMES[settings.theme].browserColor);
     setArcadeLanguage(settings.language);
     if (soundToggle) soundToggle.checked = settings.soundEnabled;
     if (volumeInput) volumeInput.value = String(settings.volume);
@@ -168,6 +189,7 @@ export function initArcadeSettings(): void {
     if (motionToggle) motionToggle.checked = settings.reducedMotion;
     if (contrastToggle) contrastToggle.checked = settings.highContrast;
     if (languageSelect) languageSelect.value = settings.language;
+    if (themeSelect) themeSelect.value = settings.theme;
     if (touchControlsSelect) touchControlsSelect.value = settings.touchControls;
   }
 
@@ -210,6 +232,7 @@ export function initArcadeSettings(): void {
     settings.language = languageSelect.value === 'ro' ? 'ro' : 'en';
     applySettings();
   });
+  themeSelect?.addEventListener('change', () => { settings.theme = normalizeTheme(themeSelect.value); applySettings(); });
   touchControlsSelect?.addEventListener('change', () => {
     settings.touchControls = touchControlsSelect.value === 'on' || touchControlsSelect.value === 'off'
       ? touchControlsSelect.value
