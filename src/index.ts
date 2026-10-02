@@ -31,6 +31,7 @@ import { initBlockDrop } from './blocks.js';
 import { initTwenty48 } from './twenty48.js';
 import { initSolitaire } from './solitaire.js';
 import { initHangman } from './hangman.js';
+import { initMathCross } from './mathcross.js';
 import { initReversi } from './reversi.js';
 import { initAirHockey } from './hockey.js';
 import { initMinesweeper } from './mines.js';
@@ -2108,6 +2109,7 @@ if (typeof window !== 'undefined') {
     initSudoku();
     initSolitaire();
     initHangman();
+    initMathCross();
     initReversi();
     initAirHockey();
     initMinesweeper();

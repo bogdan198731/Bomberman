@@ -330,7 +330,7 @@ test('a shared game link shows that game: each has its own light, card-sized ima
     }
   }
   assert.equal(shareImagePath('hub'), OG_IMAGE_PATH, 'the hub keeps the whole-arcade card');
-  assert.ok(renderSeoTags('hub', SITE_ORIGIN, 'ro').includes('content="Blast Arcade — 20 jocuri într-un singur loc"'));
+  assert.ok(renderSeoTags('hub', SITE_ORIGIN, 'ro').includes('content="Blast Arcade — 21 de jocuri într-un singur loc"'));
 });
 
 test('the sitemap can date every page separately', () => {

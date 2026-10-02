@@ -135,6 +135,12 @@ export const GAME_GUIDES: Record<ArcadeGameId, GuideCopy> = {
     rules: [copy('A right letter appears everywhere it occurs in the word.', 'O literă corectă apare peste tot unde se află în cuvânt.'), copy('Each wrong letter costs a try: Easy gives 8, Normal 6, Hard 4.', 'Fiecare literă greșită costă o încercare: Ușor are 8, Normal 6, Greu 4.'), copy('In Romanian, A also finds Ă and Â, I finds Î, S finds Ș and T finds Ț.', 'În română, A găsește și Ă și Â, I găsește Î, S găsește Ș și T găsește Ț.')],
     tip: copy('Start with common vowels, then use the category to guess the rest.', 'Începe cu vocalele comune, apoi folosește categoria pentru a ghici restul.'),
   },
+  mathcross: {
+    objective: copy('Fill every empty circle so each equation, across and down, adds up.', 'Completează fiecare cerc gol astfel încât fiecare ecuație, pe orizontală și pe verticală, să fie corectă.'),
+    controls: copy('Tap an empty circle, then tap its number on the keypad or type it.', 'Apasă un cerc gol, apoi apasă numărul pe tastatura de pe ecran sau scrie-l.'),
+    rules: [copy('Equations read left to right and top to bottom; × and ÷ are worked out in that order too.', 'Ecuațiile se citesc de la stânga la dreapta și de sus în jos; × și ÷ se calculează tot în această ordine.'), copy('Every answer is a whole number; circles where two equations cross must fit both.', 'Fiecare rezultat este un număr întreg; cercurile unde se întâlnesc două ecuații trebuie să le respecte pe amândouă.'), copy('Easy goes up to 20, Normal to 50 and Hard to 99, with more empty circles.', 'Ușor merge până la 20, Normal până la 50, iar Greu până la 99, cu mai multe cercuri goale.')],
+    tip: copy('Start with an equation that has only one empty circle; its answer opens up the next one.', 'Începe cu o ecuație care are un singur cerc gol; rezultatul ei te ajută la următoarea.'),
+  },
 };
 
 const REPLAY_SELECTORS: Record<ArcadeGameId, string> = {
@@ -150,6 +156,7 @@ const REPLAY_SELECTORS: Record<ArcadeGameId, string> = {
   reversi: '#reversiNextButton',
   solitaire: '#solitaireNewButton',
   hangman: '#hangmanNewButton',
+  mathcross: '#mathcrossNewButton',
 };
 
 const RESULT_STATUS_SELECTORS: Record<ArcadeGameId, string> = {
@@ -164,6 +171,7 @@ const RESULT_STATUS_SELECTORS: Record<ArcadeGameId, string> = {
   reversi: '#reversiStatus',
   solitaire: '#solitaireStatus',
   hangman: '#hangmanStatus',
+  mathcross: '#mathcrossStatus',
 };
 
 
@@ -184,6 +192,7 @@ const KEYBOARD_CONTROLS: Partial<Record<ArcadeGameId, [string, string]>> = {
   reversi: copy('Tab to the board, arrow keys move, Enter places a disc.', 'Tab până la tablă, săgețile mută, Enter pune un disc.'),
   solitaire: copy('Space draws, A sends cards to the foundations, U or Ctrl+Z undoes. Tab to the table: arrows move between cards, Enter picks a card up and puts it down.', 'Spațiu trage, A trimite cărțile pe fundații, U sau Ctrl+Z anulează. Tab până la masă: săgețile mută între cărți, Enter ridică o carte și o așază.'),
   hangman: copy('Type any letter A-Z to guess it.', 'Scrie orice literă A-Z pentru a o ghici.'),
+  mathcross: copy('Arrow keys move between empty circles, 0-9 type a number, Backspace erases.', 'Săgețile mută între cercurile goale, 0-9 scriu un număr, Backspace șterge.'),
 };
 
 function localized(pair: [string, string]): string { return pair[currentArcadeLanguage() === 'ro' ? 1 : 0]; }
@@ -290,6 +299,7 @@ export function initGameExperience(): void {
       reversi: '#reversiRestartButton',
       solitaire: '#solitaireNewButton',
       hangman: '#hangmanNewButton',
+      mathcross: '#mathcrossNewButton',
     };
     if (!reset[gameId]) return;
     // These reset handlers confirm progress loss and clear pause only after acceptance.

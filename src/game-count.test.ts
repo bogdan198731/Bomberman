@@ -9,11 +9,11 @@ const read = (path: string): string => readFileSync(new URL(`../${path}`, import
 
 const ENGLISH: Record<string, number> = {
   ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15,
-  sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20,
+  sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20, 'twenty-one': 21,
 };
 const ROMANIAN: Record<string, number> = {
   zece: 10, unsprezece: 11, douăsprezece: 12, treisprezece: 13, paisprezece: 14, cincisprezece: 15,
-  șaisprezece: 16, șaptesprezece: 17, optsprezece: 18, nouăsprezece: 19, douăzeci: 20,
+  șaisprezece: 16, șaptesprezece: 17, optsprezece: 18, nouăsprezece: 19, douăzeci: 20, 'douăzeci și unu': 21,
 };
 
 /**
@@ -22,14 +22,14 @@ const ROMANIAN: Record<string, number> = {
  */
 function statedTotals(text: string): { phrase: string; count: number }[] {
   const found: { phrase: string; count: number }[] = [];
-  const english = /\b(\d+|[a-z]+) (?:free browser|instant browser|browser|instant|live) games\b|\ball (\d+|[a-z]+) games\b|>(\d+) games</gi;
+  const english = /\b(\d+|[a-z]+(?:-[a-z]+)?) (?:free browser|instant browser|browser|instant|live) games\b|\ball (\d+|[a-z]+) games\b|>(\d+) games</gi;
   for (const match of text.matchAll(english)) {
     const token = (match[1] ?? match[2] ?? match[3]).toLowerCase();
     const count = /^\d+$/.test(token) ? Number(token) : ENGLISH[token];
     if (count !== undefined) found.push({ phrase: match[0], count });
   }
-  // Twenty and up take "de" in Romanian: "douăzeci de jocuri".
-  const romanian = /(\d+|[a-zăâîșț]+) (?:de )?jocuri (?:instant|active)\b|toate cele (\d+) (?:de )?jocuri/gi;
+  // Twenty and up take "de" in Romanian: "douăzeci (și unu) de jocuri".
+  const romanian = /(\d+|(?:[a-zăâîșț]+ și )?[a-zăâîșț]+) (?:de )?jocuri (?:instant|active)\b|toate cele (\d+) (?:de )?jocuri/gi;
   for (const match of text.matchAll(romanian)) {
     const token = (match[1] ?? match[2]).toLowerCase();
     const count = /^\d+$/.test(token) ? Number(token) : ROMANIAN[token];

@@ -282,7 +282,7 @@ test('interface polish includes consistent focus, touch, and hub metadata', () =
   assert.match(html, /@media \(hover: none\)[\s\S]*?\.catalog-card:hover/);
   assert.match(html, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?animation-duration:\s*0\.001ms/);
   // The exact count is checked against the game list in game-count.test.ts.
-  assert.match(html, /content="Play [a-z]+ free browser games instantly/);
+  assert.match(html, /content="Play [a-z-]+ free browser games instantly/);
 });
 
 test('newer games keep their board in the wide column on short landscape phones', () => {
