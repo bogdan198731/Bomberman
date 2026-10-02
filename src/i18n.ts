@@ -32,7 +32,7 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Classic Klondike: build the foundations from ace to king, with undo and saved games.': 'Klondike clasic: construiește fundațiile de la as la rege, cu anulare și jocuri salvate.',
   'Play Solitaire': 'Joacă Solitaire',
   'Add Solitaire to favorites': 'Adaugă Solitaire la favorite',
-  'Solitaire table. Tap a card to pick it up, then tap where it goes': 'Masa Solitaire. Apasă o carte pentru a o ridica, apoi apasă unde merge',
+  'Solitaire table. Drag a card where it goes, or tap it and then tap where it goes': 'Masa Solitaire. Trage o carte unde merge sau apasă-o și apoi apasă unde merge',
   'Solitaire difficulty': 'Dificultate Solitaire',
   'Solitaire table': 'Masa Solitaire',
   'Solo · Klondike': 'Solo · Klondike',

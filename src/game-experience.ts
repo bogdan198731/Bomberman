@@ -125,7 +125,7 @@ export const GAME_GUIDES: Record<ArcadeGameId, GuideCopy> = {
   },
   solitaire: {
     objective: copy('Move all 52 cards up to the four foundations, building each suit from ace to king.', 'Mută toate cele 52 de cărți pe cele patru fundații, construind fiecare culoare de la as la rege.'),
-    controls: copy('Tap a card to pick it up, then tap where it should go. Tap a picked-up card again to send it to its best spot. Tap the deck to draw.', 'Apasă o carte pentru a o ridica, apoi apasă unde trebuie să ajungă. Apasă din nou cartea ridicată pentru a o trimite pe cel mai bun loc. Apasă pachetul pentru a trage.'),
+    controls: copy('Drag a card where it should go, or tap it to pick it up and tap where it goes. Tap a picked-up card again to send it to its best spot. Tap the deck to draw.', 'Trage o carte unde trebuie să ajungă sau apasă-o pentru a o ridica și apoi apasă unde merge. Apasă din nou cartea ridicată pentru a o trimite pe cel mai bun loc. Apasă pachetul pentru a trage.'),
     rules: [copy('Build columns down in alternating colours; only a king can fill an empty column.', 'Construiește coloanele descrescător, alternând culorile; doar un rege poate ocupa o coloană goală.'), copy('Moving a card off a face-down card turns it over.', 'Când muți o carte de pe o carte cu fața în jos, aceasta se întoarce.'), copy('Hard draws 3 cards at a time and scores more; Undo takes back any move.', 'Greu trage câte 3 cărți și aduce mai multe puncte; Anulează retrage orice mutare.')],
     tip: copy('Turn over face-down cards early - they are what keeps a game from getting stuck.', 'Întoarce devreme cărțile cu fața în jos - ele sunt cele care împiedică blocarea jocului.'),
   },

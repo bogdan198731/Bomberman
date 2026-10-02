@@ -1,7 +1,7 @@
 import { ArcadeResultReporter } from './stats.js';
 import { isArcadeSessionPaused, registerArcadeSession } from './session-control.js';
 import { AccessibleBoard, type BoardSpot } from './board-access.js';
-import { ARCADE_TOUCH_LAYOUT_CHANGE_EVENT, loadArcadeTouchLayout, normalizeArcadeTouchLayout, type ArcadeTouchLayout } from './touch-controls.js';
+import { ARCADE_TOUCH_LAYOUT_CHANGE_EVENT, capturePointer, loadArcadeTouchLayout, normalizeArcadeTouchLayout, type ArcadeTouchLayout } from './touch-controls.js';
 
 /** Suits in order spades, hearts, diamonds, clubs; hearts and diamonds are red. */
 export type Suit = 0 | 1 | 2 | 3;
@@ -456,6 +456,26 @@ export function tableauSpots(tableau: readonly Card[][]): CardSpot[] {
   return spots;
 }
 
+/**
+ * Where a dragged card lands: the foundation or tableau column under the
+ * card's centre. Columns take a drop anywhere along their length, which is
+ * kinder to thumbs than aiming at the last card.
+ */
+export function dropTargetAt(row: TopRow, x: number, y: number): Target | null {
+  if (y >= TOP - CARD_H / 2 && y <= TOP + CARD_H + 11) {
+    const index = row.foundationX.findIndex(fx => x >= fx - GAP / 2 && x <= fx + CARD_W + GAP / 2);
+    return index >= 0 ? { pile: 'foundation', index } : null;
+  }
+  if (y < TABLEAU_TOP - 11) return null;
+  for (let column = 0; column < 7; column++) {
+    if (x >= columnX(column) - GAP / 2 && x <= columnX(column) + CARD_W + GAP / 2) return { pile: 'tableau', index: column };
+  }
+  return null;
+}
+
+/** A press only becomes a drag once it moves this far, so a slightly shaky tap is still a tap. */
+export const DRAG_THRESHOLD = 12;
+
 const RANK_NAMES = ['', 'Ace', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King'] as const;
 const SUIT_NAMES = ['spades', 'hearts', 'diamonds', 'clubs'] as const;
 
@@ -547,6 +567,8 @@ export function initSolitaire(): void {
   const resultReporter = new ArcadeResultReporter('solitaire');
   let selected: Source | null = null;
   let resumed = false;
+  // A press on a card that can be lifted; it turns into a drag once it moves far enough.
+  let press: { id: number; source: Source; startX: number; startY: number; grabX: number; grabY: number; x: number; y: number; dragging: boolean } | null = null;
   const mobileQuery = window.matchMedia('(max-width: 760px), (pointer: coarse)');
   let touchLayout = loadArcadeTouchLayout();
   let row = topRowLayout(mobileQuery.matches, touchLayout);
@@ -723,6 +745,11 @@ export function initSolitaire(): void {
     ctx.fillStyle = '#0e3b2c';
     ctx.fillRect(0, 0, table.width, table.height);
     const isSelected = (source: Source): boolean => sameSource(selected, source);
+    const dragged = press?.dragging ? press.source : null;
+    const hidden = (source: Source): boolean => Boolean(dragged && (
+      dragged.pile === 'tableau'
+        ? source.pile === 'tableau' && source.index === dragged.index && source.card >= dragged.card
+        : sameSource(dragged, source)));
 
     drawCard(game.stock.length ? { suit: 0, rank: 1, up: false } : null, row.stockX, TOP);
     if (!game.stock.length && game.waste.length) {
@@ -732,11 +759,12 @@ export function initSolitaire(): void {
       ctx.fillText('↻', row.stockX + CARD_W / 2, TOP + CARD_H / 2);
     }
     // Draw-three shows the last three waste cards fanned, only the top one playable.
-    const fan = game.waste.slice(-(game.drawCount === 3 ? 3 : 1));
+    const wasteHidden = hidden({ pile: 'waste' });
+    const fan = game.waste.slice(-(game.drawCount === 3 ? 3 : 1) - (wasteHidden ? 1 : 0), wasteHidden ? -1 : undefined);
     if (!fan.length) drawCard(null, row.wasteX, TOP);
     fan.forEach((card, i) => drawCard(card, wasteFanX(row, i, fan.length), TOP, i === fan.length - 1 && isSelected({ pile: 'waste' })));
     game.foundations.forEach((pile, index) => {
-      const top = pile[pile.length - 1] ?? null;
+      const top = pile[pile.length - (hidden({ pile: 'foundation', index }) ? 2 : 1)] ?? null;
       drawCard(top, row.foundationX[index], TOP, isSelected({ pile: 'foundation', index }));
       if (!top) {
         ctx.fillStyle = 'rgba(255,255,255,.18)';
@@ -748,15 +776,68 @@ export function initSolitaire(): void {
     for (let column = 0; column < 7; column++) if (!game.tableau[column].length) drawCard(null, columnX(column), TABLEAU_TOP);
     const held = selected?.pile === 'tableau' ? selected : null;
     for (const spot of tableauSpots(game.tableau)) {
+      if (hidden(spot.source)) continue;
       const source = spot.source as { index: number; card: number };
       const lifted = Boolean(held && held.index === source.index && source.card >= held.card);
       drawCard(spot.card, spot.x, spot.y, lifted);
     }
+    // The dragged cards ride on top of everything, under the finger where they were grabbed.
+    if (dragged && press) {
+      game.lift(dragged).forEach((card, i) => drawCard(card, press!.x - press!.grabX, press!.y - press!.grabY + i * UP_STEP, true));
+    }
   }
 
-  table.addEventListener('pointerup', event => {
+  /** Where a dragged card is drawn, and which card spot it was grabbed from. */
+  function cardOrigin(source: Source): { x: number; y: number } {
+    if (source.pile === 'waste') {
+      const count = Math.min(game.waste.length, game.drawCount === 3 ? 3 : 1);
+      return { x: wasteFanX(row, count - 1, count), y: TOP };
+    }
+    if (source.pile === 'foundation') return { x: row.foundationX[source.index], y: TOP };
+    const spot = tableauSpots(game.tableau).find(item => sameSource(item.source, source));
+    return spot ? { x: spot.x, y: spot.y } : { x: columnX(source.index), y: TABLEAU_TOP };
+  }
+
+  const tablePoint = (event: PointerEvent): { x: number; y: number } => {
     const bounds = table.getBoundingClientRect();
-    tap(((event.clientX - bounds.left) / bounds.width) * TABLE_WIDTH, ((event.clientY - bounds.top) / bounds.height) * TABLE_HEIGHT);
+    return { x: ((event.clientX - bounds.left) / bounds.width) * TABLE_WIDTH, y: ((event.clientY - bounds.top) / bounds.height) * TABLE_HEIGHT };
+  };
+
+  // Tap to pick up and tap to drop still works; dragging a card is the shortcut.
+  table.addEventListener('pointerdown', event => {
+    press = null;
+    if (isArcadeSessionPaused('solitaire') || game.phase !== 'playing' || !event.isPrimary) return;
+    const { x, y } = tablePoint(event);
+    const source = hitTest(x, y)?.source;
+    if (!source || !game.lift(source).length) return;
+    const origin = cardOrigin(source);
+    press = { id: event.pointerId, source, startX: x, startY: y, grabX: x - origin.x, grabY: y - origin.y, x, y, dragging: false };
+  });
+  table.addEventListener('pointermove', event => {
+    if (!press || event.pointerId !== press.id) return;
+    const { x, y } = tablePoint(event);
+    press.x = x;
+    press.y = y;
+    const scale = TABLE_WIDTH / (table.getBoundingClientRect().width || TABLE_WIDTH);
+    if (!press.dragging && Math.hypot(x - press.startX, y - press.startY) >= DRAG_THRESHOLD * scale) {
+      press.dragging = true;
+      selected = null;
+      capturePointer(table, event.pointerId);
+    }
+  });
+  // While a card is pressed the finger moves the card, not the page.
+  table.addEventListener('touchmove', event => { if (press) event.preventDefault(); }, { passive: false });
+  table.addEventListener('pointercancel', () => { press = null; });
+  table.addEventListener('pointerup', event => {
+    const held = press?.id === event.pointerId ? press : null;
+    press = null;
+    const { x, y } = tablePoint(event);
+    if (!held?.dragging) { tap(x, y); return; }
+    // Aim with the centre of the dragged card, not the fingertip, which sits wherever the card was grabbed.
+    const target = dropTargetAt(row, x - held.grabX + CARD_W / 2, y - held.grabY + CARD_H / 2);
+    selected = null;
+    if (target && game.move(held.source, target)) after();
+    else syncUi();
   });
   window.addEventListener('keydown', event => {
     if (solitaireView.classList.contains('view-hidden') || event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement) return;
@@ -789,7 +870,7 @@ export function initSolitaire(): void {
     view: solitaireView,
     mode: () => 'solo',
     isActive: () => game.phase === 'playing' && game.moves > 0,
-    clearHeldInputs: () => { selected = null; },
+    clearHeldInputs: () => { selected = null; press = null; },
     resumeCountdown: false,
   });
 

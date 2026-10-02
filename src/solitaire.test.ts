@@ -4,6 +4,8 @@ import {
   CARD_H,
   CARD_W,
   SolitaireGame,
+  columnX,
+  dropTargetAt,
   TABLE_HEIGHT,
   isDealStuck,
   normalizeSolitaireSession,
@@ -261,4 +263,14 @@ test('a draw-three fan never runs into the stock or the foundations', () => {
     const others = [row.stockX, ...row.foundationX];
     for (const x of others) assert.ok(right <= x || left >= x + CARD_W, `fan ${left}-${right} overlaps a pile at ${x}`);
   }
+});
+
+test('a dragged card drops on the pile under its centre, wherever along a column', () => {
+  const row = topRowLayout(false, 'joystick-right');
+  const middle = (column: number): number => columnX(column) + CARD_W / 2;
+  assert.deepEqual(dropTargetAt(row, middle(4), 70), { pile: 'foundation', index: 1 });
+  assert.deepEqual(dropTargetAt(row, middle(2), 230), { pile: 'tableau', index: 2 });
+  assert.deepEqual(dropTargetAt(row, middle(2), TABLE_HEIGHT - 20), { pile: 'tableau', index: 2 }, 'the bottom of a long column still counts');
+  assert.equal(dropTargetAt(row, middle(1), 70), null, 'the waste is not somewhere to drop');
+  assert.equal(dropTargetAt(row, middle(0), 70), null, 'nor is the stock');
 });
