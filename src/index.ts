@@ -141,13 +141,32 @@ export interface BombermanLevel extends LevelInfo {
   crateDensity: number;
   /** Clears the pillars and crates along the centre row and column. */
   openCross: boolean;
+  /** Leaves out the classic pillar grid entirely. */
+  noPillars?: boolean;
+  /** Extra steel as [col, row]; each block is mirrored through the centre so both spawns face the same map. */
+  steel?: readonly (readonly [number, number])[];
 }
+
+/** Rows 4 and 8 walled off except for two doors each (mirroring fills row 8), so fights funnel through them. */
+const CORRIDOR_STEEL = [[1, 4], [3, 4], [7, 4], [9, 4]] as const;
 
 export const BOMBERMAN_LEVELS: readonly BombermanLevel[] = [
   { name: 'Classic', blurb: 'The original pillar grid with a steady spread of crates.', crateDensity: 6, openCross: false },
   { name: 'Open Field', blurb: 'Few crates - fast, exposed fights from the first second.', crateDensity: 3, openCross: false },
   { name: 'Crate Maze', blurb: 'Packed with crates; blast your own path to the rival.', crateDensity: 8, openCross: false },
   { name: 'Crossroads', blurb: 'Two open lanes cross the centre - control them or get caught in them.', crateDensity: 6, openCross: true },
+  { name: 'Bare Floor', blurb: 'No pillars to hide behind - only crates stand between you.', crateDensity: 5, openCross: false, noPillars: true },
+  {
+    name: 'Citadel',
+    blurb: 'A steel ring guards the centre, with a gate on every side.',
+    crateDensity: 6,
+    openCross: false,
+    steel: [[3, 3], [4, 3], [5, 3], [7, 3], [8, 3], [9, 3], [3, 4], [3, 5], [3, 7], [3, 8]],
+  },
+  { name: 'Corridors', blurb: 'Long steel walls with a few doors - every route is a choke point.', crateDensity: 5, openCross: false, steel: CORRIDOR_STEEL },
+  { name: 'Packed Crates', blurb: 'Crates wall to wall; every step has to be blasted open.', crateDensity: 9, openCross: false },
+  { name: 'Hot Cross', blurb: 'Open lanes through a packed field - the centre is a shooting gallery.', crateDensity: 9, openCross: true },
+  { name: 'Gauntlet', blurb: 'Choke-point corridors stuffed with crates. The final test.', crateDensity: 8, openCross: false, steel: CORRIDOR_STEEL },
 ];
 
 export function createMapGrid(width: number = 13, height: number = 13, level: number = 1): MapGrid {
@@ -163,11 +182,17 @@ export function createMapGrid(width: number = 13, height: number = 13, level: nu
   for (let row = 0; row < height; row++) {
     for (let col = 0; col < width; col++) {
       const isEdge = row === 0 || row === height - 1 || col === 0 || col === width - 1;
-      const isPillar = row % 2 === 0 && col % 2 === 0 && row > 0 && row < height - 1 && !onOpenCross(row, col);
+      const isPillar = !layout.noPillars && row % 2 === 0 && col % 2 === 0 && row > 0 && row < height - 1 && !onOpenCross(row, col);
 
       if (isEdge || isPillar) {
         tiles[row][col] = TileType.WALL_INDESTRUCTIBLE;
       }
+    }
+  }
+
+  for (const [col, row] of layout.steel ?? []) {
+    for (const [x, y] of [[col, row], [width - 1 - col, height - 1 - row]]) {
+      if (tiles[y]?.[x] !== undefined) tiles[y][x] = TileType.WALL_INDESTRUCTIBLE;
     }
   }
 

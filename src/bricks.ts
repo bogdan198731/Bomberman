@@ -91,6 +91,11 @@ export const BRICK_LEVELS: readonly BrickLevel[] = [
   { name: 'Pyramid', blurb: 'A three-hit peak on a wide base.', rows: ['....33....', '...2222...', '..222222..', '.11111111.', '1111111111'] },
   { name: 'Fortress', blurb: 'Steel towers guard a tough core.', rows: ['#22222222#', '#23333332#', '#2......2#', '#11111111#', '..........', '1111..1111'] },
   { name: 'Vault', blurb: 'Crack the steel-lined vault.', rows: ['3333333333', '#........#', '#.333333.#', '#.2####2.#', '#.222222.#', '#11111111#'] },
+  { name: 'Diamond', blurb: 'A three-hit gem wrapped in a tough shell.', rows: ['....22....', '...2332...', '..233332..', '.23333332.', '..233332..', '...2332...', '....22....', '1111111111'] },
+  { name: 'Stripes', blurb: 'Tough rows behind staggered steel shutters.', rows: ['3333333333', '#..#..#..#', '2222222222', '2222222222', '.#..##..#.', '1111111111', '1111111111'] },
+  { name: 'Castle', blurb: 'Battlements on top, steel walls and arrow slits below.', rows: ['3.3.33.3.3', '3333333333', '#22222222#', '#2#2##2#2#', '#22222222#', '#33333333#', '1111..1111'] },
+  { name: 'Hive', blurb: 'Eight packed rows of tough cells.', rows: ['2323232323', '3232323232', '3333333333', '#.##..##.#', '2222222222', '2222222222', '1111111111', '1111111111'] },
+  { name: 'The Core', blurb: 'A steel-cased core of three-hit bricks. The final wall.', rows: ['3333333333', '#33333333#', '#3######3#', '#22222222#', '#2......2#', '#11111111#', '1111..1111'] },
 ];
 
 export function buildBricks(level: number): Brick[] {
