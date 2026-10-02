@@ -130,6 +130,8 @@ export class BrickBreakerGame {
   private speed = BALL_START_SPEED;
   private notice = '';
   private noticeLeft = 0;
+  /** False until the first launch of a run, so the start level can still be picked. */
+  private runStarted = false;
 
   constructor(private readonly random: () => number = Math.random) {}
 
@@ -150,6 +152,12 @@ export class BrickBreakerGame {
     this.clearBonuses();
     this.resetBall();
     this.phase = 'ready';
+    this.runStarted = false;
+  }
+
+  /** The start level is a choice for a new game, not for every wall or ball of a run. */
+  canPickStartLevel(): boolean {
+    return !this.runStarted || this.phase === 'won' || this.phase === 'lost';
   }
 
   /** Moves on from a cleared wall to the next one, keeping score and lives. */
@@ -171,6 +179,7 @@ export class BrickBreakerGame {
     this.ball.vx = Math.sin(angle) * this.speed;
     this.ball.vy = -Math.cos(angle) * this.speed;
     this.phase = 'playing';
+    this.runStarted = true;
     return true;
   }
 
@@ -391,8 +400,10 @@ export function initBrickBreaker(): void {
   const resultReporter = new ArcadeResultReporter('bricks');
   const held = new Set<string>();
 
+  const levelSelect = document.getElementById('bricksLevel') as HTMLSelectElement | null;
+  const levelOption = levelSelect?.closest('.gameplay-option') ?? null;
   game.restart(bindLevelSelect(
-    document.getElementById('bricksLevel') as HTMLSelectElement | null,
+    levelSelect,
     'bricks',
     BRICK_LEVELS,
     level => { game.restart(level); syncUi(); },
@@ -414,6 +425,8 @@ export function initBrickBreaker(): void {
     if (scoreEl) scoreEl.textContent = String(game.score);
     if (livesEl) livesEl.textContent = String(game.lives);
     if (levelEl) levelEl.textContent = `Level ${game.level} · ${BRICK_LEVELS[game.level - 1].name}`;
+    // Mid-run the picker stays out of the way; "Game setup" in the pause menu still shows it.
+    levelOption?.classList.toggle('run-locked', !game.canPickStartLevel());
     if (launchButton) {
       launchButton.textContent = game.phase === 'playing' ? 'In play'
         : game.phase === 'cleared' ? 'Next wall' : game.phase === 'won' || game.phase === 'lost' ? 'Play again' : 'Launch';

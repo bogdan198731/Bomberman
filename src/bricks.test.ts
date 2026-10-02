@@ -154,6 +154,36 @@ test('clearing a wall banks a bonus and the next wall keeps score and lives', ()
   assert.equal(game.bricks.length, buildBricks(2).length);
 });
 
+test('the start level can be picked only when a new game begins', () => {
+  const game = new BrickBreakerGame();
+  game.restart(1);
+  assert.equal(game.canPickStartLevel(), true, 'before the first launch');
+  game.launch();
+  assert.equal(game.canPickStartLevel(), false, 'while the ball is in play');
+
+  // Losing a ball mid-run is not a new game.
+  game.ball = { x: 30, y: BRICK_ARENA_HEIGHT - 20, vx: 0, vy: 500 };
+  game.movePaddleTo(700);
+  run(game, 0.1);
+  assert.equal(game.phase, 'ready');
+  assert.equal(game.canPickStartLevel(), false, 'after losing a ball');
+
+  // Nor is the next wall.
+  game.launch();
+  game.bricks = [{ x: 360, y: 200, hits: 1, steel: false }];
+  game.ball = { x: 396, y: 260, vx: 0, vy: -400 };
+  run(game, 0.1);
+  assert.equal(game.phase, 'cleared');
+  assert.equal(game.canPickStartLevel(), false, 'between walls');
+  game.advance();
+  assert.equal(game.canPickStartLevel(), false, 'at the start of the next wall');
+
+  game.phase = 'lost';
+  assert.equal(game.canPickStartLevel(), true, 'once the run is over');
+  game.restart(3);
+  assert.equal(game.canPickStartLevel(), true, 'on a fresh run');
+});
+
 test('clearing the last wall wins the run', () => {
   const game = new BrickBreakerGame();
   game.restart(BRICK_LEVELS.length);
