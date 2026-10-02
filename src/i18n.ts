@@ -294,8 +294,8 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Finish a match to claim the first spot.': 'Termină un meci pentru a ocupa primul loc.',
   'Game library': 'Bibliotecă de jocuri',
   'Choose your next round': 'Alege următoarea rundă',
-  'Twenty instant games, from explosive duels and Romanian classics to Sudoku, Minesweeper, Hangman and number puzzles, neon racing, air hockey, co-op survival, and star-fighter missions.':
-    'Douăzeci de jocuri instant, de la dueluri explozive și clasice românești la Sudoku, Minesweeper, Spânzurătoarea și puzzle-uri cu numere, curse neon, air hockey, supraviețuire cooperativă și misiuni stelare.',
+  'Twenty-one instant games, from explosive duels and Romanian classics to Sudoku, Minesweeper, Hangman and number puzzles like Math Crossword, neon racing, air hockey, co-op survival, and star-fighter missions.':
+    'Douăzeci și unu de jocuri instant, de la dueluri explozive și clasice românești la Sudoku, Minesweeper, Spânzurătoarea și puzzle-uri cu numere precum integramele matematice, curse neon, air hockey, supraviețuire cooperativă și misiuni stelare.',
   'Search games': 'Caută jocuri',
   'Clear game search': 'Șterge căutarea',
   'Filter games by play mode': 'Filtrează jocurile după modul de joc',
@@ -382,7 +382,7 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Try another search or show the complete arcade.': 'Încearcă altă căutare sau afișează întreaga arcadă.',
   'Show all games': 'Arată toate jocurile',
   'Blast Arcade · Play instantly in your browser': 'Blast Arcade · Joacă instant în browser',
-  'Twenty live games · Keyboard, touch, bots, and online rooms': 'Douăzeci de jocuri active · Tastatură, atingere, boți și camere online',
+  'Twenty-one live games · Keyboard, touch, bots, and online rooms': 'Douăzeci și unu de jocuri active · Tastatură, atingere, boți și camere online',
   'Blast Arcade heroes surrounded by twelve game arenas': 'Eroii Blast Arcade înconjurați de douăsprezece arene de joc',
   'Bot · Local · Online PvP': 'Bot · Local · PvP online',
   'Bot · Local · Online': 'Bot · Local · Online',
@@ -792,6 +792,13 @@ function translateRomanianPattern(value: string): string | null {
   if (reversiDraw) return `Remiză la ${reversiDraw[1]}-${reversiDraw[2]}.`;
   const reversiSeries = value.match(/^Series (\d+)-(\d+)$/);
   if (reversiSeries) return `Serie ${reversiSeries[1]}-${reversiSeries[2]}`;
+  // Math Crossword
+  const circles = value.match(/^(\d+) circles left to fill\.$/);
+  if (circles) return `${circles[1]} cercuri rămase de completat.`;
+  const solvedSums = value.match(/^Solved in (\d+:\d{2})! (\d+) points\.$/);
+  if (solvedSums) return `Rezolvat în ${solvedSums[1]}! ${solvedSums[2]} puncte.`;
+  const circle = value.match(/^Row (\d+), column (\d+): (empty|\d+)$/);
+  if (circle) return `Rândul ${circle[1]}, coloana ${circle[2]}: ${circle[3] === 'empty' ? 'gol' : circle[3]}`;
   // Minesweeper
   const mines = value.match(/^(\d+) mines left to find\.$/);
   if (mines) return `${mines[1]} mine rămase de găsit.`;
@@ -954,6 +961,24 @@ function translateRomanianPattern(value: string): string | null {
 }
 
 const UX_TRANSLATIONS: Record<string, string> = {
+  // Math Crossword
+  'Fill the empty circles so every sum across and down adds up, on three difficulty levels.': 'Completează cercurile goale astfel încât fiecare calcul, pe orizontală și pe verticală, să fie corect, pe trei niveluri de dificultate.',
+  'Solo · Number puzzle': 'Solo · Puzzle cu numere',
+  'Play Math Crossword': 'Joacă Math Crossword',
+  'Fill in the sums · Solo number puzzle': 'Completează calculele · Puzzle solo cu numere',
+  'Math Crossword game': 'Joc Math Crossword',
+  'Math crossword grid': 'Grila de integramă matematică',
+  'Number keypad': 'Tastatură numerică',
+  'Math Crossword difficulty': 'Dificultatea Math Crossword',
+  'To fill': 'De completat',
+  'Easy · up to 20': 'Ușor · până la 20',
+  'Normal · up to 50': 'Normal · până la 50',
+  'Hard · up to 99': 'Greu · până la 99',
+  'Type': 'Scrie',
+  'Tap an empty circle, then pick its number.': 'Apasă un cerc gol, apoi alege numărul lui.',
+  'Not quite - the red circles break an equation.': 'Nu chiar - cercurile roșii strică o ecuație.',
+  'Saved puzzle restored - keep going.': 'Puzzle salvat restaurat - continuă.',
+  '1 circle left to fill.': 'Un cerc rămas de completat.',
   'games': 'jocuri',
   'You': 'Tu', 'Local P1': 'Jucător 1', 'Local P2': 'Jucător 2',
   'easy bot': 'Bot ușor', 'normal bot': 'Bot normal', 'hard bot': 'Bot greu',

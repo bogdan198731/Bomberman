@@ -25,11 +25,16 @@ export interface PageSeo {
 }
 
 const COUNT_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven',
-  'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
+  'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty', 'twenty-one'];
 
 /** "seventeen", or the digits once the arcade outgrows the words. */
 export function gameCountWord(count: number = ARCADE_GAME_IDS.length): string {
   return COUNT_WORDS[count] ?? String(count);
+}
+
+/** "21 de jocuri": Romanian puts "de" after numbers from twenty on. */
+export function romanianGameCount(count: number = ARCADE_GAME_IDS.length): string {
+  return `${count}${count >= 20 ? ' de' : ''} jocuri`;
 }
 
 // Counted from the game list, so adding a game can never leave the copy stale.
@@ -40,9 +45,9 @@ export const HUB_SEO: PageSeo = {
 };
 
 export const HUB_SEO_RO: PageSeo = {
-  title: `Blast Arcade — ${ARCADE_GAME_IDS.length} jocuri online gratuite, fără descărcare`,
+  title: `Blast Arcade — ${romanianGameCount()} online gratuite, fără descărcare`,
   description:
-    `Joacă ${ARCADE_GAME_IDS.length} jocuri gratuite direct în browser — Șeptică, Țintar, Bomberman, Snake, 2048 și altele. Singur cu boți, doi pe același dispozitiv sau online cu prietenii.`,
+    `Joacă ${romanianGameCount()} gratuite direct în browser — Șeptică, Țintar, Bomberman, Snake, 2048 și altele. Singur cu boți, doi pe același dispozitiv sau online cu prietenii.`,
 };
 
 export const GAME_SEO: Record<ArcadeGameId, PageSeo> = {
@@ -145,6 +150,11 @@ export const GAME_SEO: Record<ArcadeGameId, PageSeo> = {
     title: 'Hangman — Free Online Word Guessing Game',
     description:
       'Play Hangman free in your browser. Guess the hidden word one letter at a time across six categories, in English or Romanian, before the figure is drawn.',
+  },
+  mathcross: {
+    title: 'Math Crossword — Free Online Number Puzzle',
+    description:
+      'Play Math Crossword free in your browser. Fill the empty circles so every sum across and down adds up, with a fresh puzzle each time and three difficulty levels.',
   },
 };
 
@@ -249,6 +259,11 @@ export const GAME_SEO_RO: Record<ArcadeGameId, PageSeo> = {
     description:
       'Joacă Spânzurătoarea (Hangman) gratuit în browser. Ghicește cuvântul ascuns literă cu literă, în română sau engleză, înainte să fie desenat omulețul.',
   },
+  mathcross: {
+    title: 'Integrame matematice online — Puzzle cu numere gratuit',
+    description:
+      'Joacă integrame matematice gratuit în browser. Completează cercurile goale ca toate calculele, pe rânduri și coloane, să fie corecte. Trei niveluri.',
+  },
 };
 
 /** Every route the crawler should know about: the hub plus one page per game, in each language. */
@@ -305,7 +320,7 @@ export function shareImagePath(view: SeoView): string {
 
 export function shareImageAlt(view: SeoView, language: ArcadeLanguage = 'en'): string {
   if (view !== 'hub') return `${GAME_META[view].name} — ${SITE_NAME}`;
-  return language === 'ro' ? `${SITE_NAME} — ${ARCADE_GAME_IDS.length} jocuri într-un singur loc` : `${SITE_NAME} — ${gameCountWord()} browser games in one hub`;
+  return language === 'ro' ? `${SITE_NAME} — ${romanianGameCount()} într-un singur loc` : `${SITE_NAME} — ${gameCountWord()} browser games in one hub`;
 }
 
 export function escapeHtml(value: string): string {

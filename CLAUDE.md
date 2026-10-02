@@ -1,6 +1,6 @@
 # Blast Arcade
 
-A mobile-friendly browser game hub: 20 games plus online rooms, in TypeScript with no framework. `index.html` is the single page shell (all markup and most CSS, in `<style>` blocks); `src/*.ts` compiles to `dist/`, which the Node server (`src/server.ts`) serves along with `public/`. Production runs on Render from `main`.
+A mobile-friendly browser game hub: 21 games plus online rooms, in TypeScript with no framework. `index.html` is the single page shell (all markup and most CSS, in `<style>` blocks); `src/*.ts` compiles to `dist/`, which the Node server (`src/server.ts`) serves along with `public/`. Production runs on Render from `main`.
 
 ## Commands
 

@@ -62,6 +62,13 @@ export function gamePreview(game: ArcadeGameId): string {
       board = '<path d="M34 86h44M44 86V14h40v10M44 30l14-16" fill="none" stroke="#8a97ab" stroke-width="4" stroke-linecap="round"/><g fill="none" stroke="#f4f6f8" stroke-width="3" stroke-linecap="round"><circle cx="84" cy="32" r="8"/><path d="M84 40v20M84 46l-9 9M84 46l9 9"/></g>';
       for (let i = 0; i < 5; i++) board += rect(100 + i * 10, 80, 8, 2, '#8a97ab', 1);
       board += text(105, 76, 'A', mint, 10) + text(135, 76, 'E', mint, 10); break;
+    case 'mathcross': {
+      // 12 + _ = 36 across, _ ÷ 6 = 4 down, 4 × _ = 12 across: the board in miniature.
+      const node = (x: number, y: number, value: string): string => `<circle cx="${x}" cy="${y}" r="10" fill="#172b3c" stroke="${value ? '#8a97ab' : mint}" stroke-width="1.5"/>` + (value ? text(x, y + 4, value, '#e7f4ff', 9) : '');
+      board = '<path d="M30 20h60M60 20v60M60 80h60" stroke="#8a97ab" stroke-width="1.5"/>';
+      board += text(45, 24, '+', gold, 10) + text(75, 24, '=', gold, 10) + text(60, 39, '÷', gold, 10) + text(60, 69, '=', gold, 10) + text(75, 84, '×', gold, 10) + text(105, 84, '=', gold, 10);
+      board += node(30, 20, '12') + node(60, 20, '') + node(90, 20, '36') + node(60, 50, '6') + node(60, 80, '4') + node(90, 80, '') + node(120, 80, '12'); break;
+    }
     case 'solitaire':
       board = rect(20,8,120,84,'#0e3b2c',6) + rect(24,12,13,18,'#1f7a52',2) + rect(40,12,13,18,'#f7f4ec',2); for (let i=0;i<7;i++) board += rect(24+i*16,34+i*4,13,18,'#1f7a52',2) + rect(24+i*16,42+i*4,13,18,'#f7f4ec',2) + text(30.5+i*16,54+i*4,['A','7','K','3','9','Q','5'][i], i%2?'#d45059':'#18212b',7); break;
   }

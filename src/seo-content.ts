@@ -262,6 +262,18 @@ export const GAME_CONTENT: Record<ArcadeGameId, GameContent> = {
     ],
     related: ['sudoku', 'mines', 'twenty48'],
   },
+  mathcross: {
+    intro: copy(
+      'Math Crossword is a crossword made of sums: circles linked by +, −, × and ÷ form equations across and down, and the empty circles are yours to fill so every equation adds up. Each puzzle is new, has exactly one answer, and can be solved one step at a time without guessing.',
+      'Math Crossword este un rebus din calcule: cercurile legate prin +, −, × și ÷ formează ecuații pe orizontală și pe verticală, iar tu completezi cercurile goale astfel încât fiecare ecuație să fie corectă. Fiecare puzzle este nou, are un singur răspuns și se rezolvă pas cu pas, fără ghicit.',
+    ),
+    faq: [
+      copy('What changes between the difficulty levels?', 'Ce se schimbă între nivelurile de dificultate?'),
+      copy('Easy uses numbers up to 20 on a smaller grid, Normal goes up to 50, and Hard goes up to 99 with more equations and more empty circles.',
+        'Ușor folosește numere până la 20 pe o grilă mai mică, Normal merge până la 50, iar Greu până la 99, cu mai multe ecuații și mai multe cercuri goale.'),
+    ],
+    related: ['sudoku', 'twenty48', 'hangman'],
+  },
 };
 
 const pick = (text: Copy, language: ArcadeLanguage): string => text[language === 'ro' ? 1 : 0];

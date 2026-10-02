@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blast-arcade-game-bonuses-2026-10-01';
+const CACHE_NAME = 'blast-arcade-mathcross-2026-10-02';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -56,6 +56,7 @@ const APP_SHELL = [
   '/dist/reversi.js',
   '/dist/solitaire.js',
   '/dist/hangman.js',
+  '/dist/mathcross.js',
   '/dist/board-access.js',
   '/dist/bug-report.js',
   '/dist/report-capture.js',

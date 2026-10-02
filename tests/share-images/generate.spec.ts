@@ -69,6 +69,7 @@ const RECIPES: Record<string, Recipe> = {
   reversi: { board: '#reversiCanvas' },
   solitaire: { board: '#solitaireCanvas' },
   hangman: { board: '#hangmanCanvas', prepare: keys(['KeyE', 'KeyA', 'KeyZ', 'KeyQ']) },
+  mathcross: { board: '#mathcrossBoard' },
 };
 
 function card(name: string, board: Buffer): string {
