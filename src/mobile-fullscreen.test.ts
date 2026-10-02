@@ -66,16 +66,16 @@ test('the hub is never immersive, every game is', () => {
 
 /** Minimal DOM/window doubles so the controller can be exercised headlessly. */
 function immersiveHarness(
-  options: { coarse?: boolean; fullscreenApi?: boolean; reject?: boolean; announce?: string[] } = {},
+  options: { coarse?: boolean; fullscreenApi?: boolean; reject?: boolean; announce?: string[]; startFullscreen?: boolean } = {},
 ) {
-  const { coarse = true, fullscreenApi = true, reject = false, announce } = options;
+  const { coarse = true, fullscreenApi = true, reject = false, announce, startFullscreen = false } = options;
   const classes = new Set<string>();
   const listeners = new Map<string, ((event: Event) => void)[]>();
   const store = new Map<string, string>();
-  let fullscreenElement: unknown = null;
   const exitCalls: number[] = [];
 
   const root: Record<string, unknown> = {};
+  let fullscreenElement: unknown = startFullscreen ? root : null;
   if (fullscreenApi) {
     root.requestFullscreen = async () => {
       announce?.push('request');
@@ -155,6 +155,27 @@ test('opening a game on a phone takes the screen, returning to the hub gives it 
     assert.equal(harness.exitCalls.length, 1, 'and fullscreen is released');
   } finally {
     harness.restore();
+  }
+});
+
+test('fullscreen the player turned on from Settings survives hub tabs and games', async () => {
+  for (const coarse of [true, false]) {
+    const harness = immersiveHarness({ coarse, startFullscreen: true });
+    try {
+      const controller = initMobileImmersiveMode();
+      assert.ok(controller);
+      // The Games / Challenges / Profile tabs re-announce the hub view.
+      controller.update('hub');
+      controller.update('hub');
+      controller.update('snake');
+      await Promise.resolve();
+      await Promise.resolve();
+      controller.update('hub');
+      assert.equal(harness.exitCalls.length, 0, 'only fullscreen that immersive play asked for is given back');
+      assert.equal(harness.isFullscreen(), true);
+    } finally {
+      harness.restore();
+    }
   }
 });
 

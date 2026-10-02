@@ -81,6 +81,9 @@ export function initMobileImmersiveMode(): ImmersiveController | undefined {
   let enabled = loadImmersivePreference();
   let currentView = 'hub';
   let requesting = false;
+  // Only fullscreen this module asked for is ours to give back; fullscreen the
+  // player chose in Settings must survive hub tabs and leaving a game.
+  let ownsFullscreen = false;
 
   const mobile = (): boolean =>
     shouldGoImmersive(query => {
@@ -97,7 +100,9 @@ export function initMobileImmersiveMode(): ImmersiveController | undefined {
 
   const release = (): void => {
     applyClasses(false, false);
-    if (inNativeFullscreen() && typeof document.exitFullscreen === 'function') {
+    const owned = ownsFullscreen;
+    ownsFullscreen = false;
+    if (owned && inNativeFullscreen() && typeof document.exitFullscreen === 'function') {
       announceTransition();
       void document.exitFullscreen().catch(() => undefined);
     }
@@ -117,6 +122,7 @@ export function initMobileImmersiveMode(): ImmersiveController | undefined {
       announceTransition();
       try {
         await root.requestFullscreen({ navigationUI: 'hide' } as FullscreenOptions);
+        ownsFullscreen = true;
         applyClasses(true, false);
       } catch {
         // Kept on the CSS fallback: iPhone Safari and embedded webviews refuse.
@@ -140,6 +146,7 @@ export function initMobileImmersiveMode(): ImmersiveController | undefined {
   };
   const onFullscreenChange = (): void => {
     // Leaving fullscreen with the system gesture should not strand the layout.
+    if (!inNativeFullscreen()) ownsFullscreen = false;
     if (!inNativeFullscreen() && document.body.classList.contains(IMMERSIVE_BODY_CLASS)) {
       applyClasses(true, true);
     }
