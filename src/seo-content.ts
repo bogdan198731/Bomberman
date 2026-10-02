@@ -192,8 +192,8 @@ export const GAME_CONTENT: Record<ArcadeGameId, GameContent> = {
   },
   bricks: {
     intro: copy(
-      'Brick Breaker is the bat-and-ball wall-smashing game. Keep the ball in play with your paddle, aim with the edges for sharper angles, and break every brick across five hand-built walls with tough bricks and steel that never breaks.',
-      'Brick Breaker este jocul în care spargi un zid de cărămizi cu o minge și o paletă. Ține mingea în joc, lovește cu marginile paletei pentru unghiuri mai ascuțite și sparge toate cărămizile din cinci ziduri construite manual, cu cărămizi dure și de oțel care nu se sparg.',
+      'Brick Breaker is the bat-and-ball wall-smashing game. Keep the ball in play with your paddle, aim with the edges for sharper angles, and break every brick across ten hand-built walls with tough bricks and steel that never breaks.',
+      'Brick Breaker este jocul în care spargi un zid de cărămizi cu o minge și o paletă. Ține mingea în joc, lovește cu marginile paletei pentru unghiuri mai ascuțite și sparge toate cărămizile din zece ziduri construite manual, cu cărămizi dure și de oțel care nu se sparg.',
     ),
     faq: [
       copy('How many lives do you get in Brick Breaker?', 'Câte vieți ai la Brick Breaker?'),

@@ -160,6 +160,68 @@ export const TANK_LEVELS: readonly TankLevel[] = [
       crate(425, 275, 50, 50),
     ],
   },
+  {
+    name: 'Pillboxes',
+    blurb: 'Four steel pillboxes ring a crate at the centre.',
+    obstacles: [
+      steel(330, 180, 50, 50), steel(520, 180, 50, 50),
+      steel(330, 370, 50, 50), steel(520, 370, 50, 50),
+      crate(425, 275, 50, 50), crate(150, 140, 50, 50), crate(700, 410, 50, 50),
+    ],
+  },
+  {
+    name: 'Trenches',
+    blurb: 'Four long steel trenches; the open lane between them is a firing range.',
+    obstacles: [
+      steel(150, 190, 250, 30), steel(500, 190, 250, 30),
+      steel(150, 380, 250, 30), steel(500, 380, 250, 30),
+      crate(430, 270, 40, 60), crate(425, 80, 50, 50), crate(425, 470, 50, 50),
+    ],
+  },
+  {
+    name: 'Maze Run',
+    blurb: 'Staggered steel walls - weave through the gaps to find your rival.',
+    obstacles: [
+      steel(200, 0, 40, 230), steel(200, 370, 40, 230),
+      steel(430, 130, 40, 340),
+      steel(660, 0, 40, 230), steel(660, 370, 40, 230),
+      crate(300, 60, 50, 50), crate(550, 490, 50, 50),
+      crate(300, 490, 50, 50), crate(550, 60, 50, 50),
+    ],
+  },
+  {
+    name: 'Grid Lock',
+    blurb: 'A grid of steel posts with crates plugging the lanes.',
+    obstacles: [
+      ...[250, 430, 610].flatMap(x => [100, 280, 460].map(y => steel(x, y, 40, 40))),
+      crate(340, 180, 40, 40), crate(520, 180, 40, 40),
+      crate(340, 380, 40, 40), crate(520, 380, 40, 40),
+      crate(160, 190, 40, 40), crate(700, 370, 40, 40),
+    ],
+  },
+  {
+    name: 'Fort Knox',
+    blurb: 'Each tank starts in a steel fort with crates across the door.',
+    obstacles: [
+      steel(50, 200, 140, 24), steel(50, 376, 140, 24),
+      steel(710, 200, 140, 24), steel(710, 376, 140, 24),
+      crate(180, 250, 36, 100), crate(684, 250, 36, 100),
+      steel(429, 200, 42, 200),
+      crate(300, 80, 50, 50), crate(550, 470, 50, 50),
+    ],
+  },
+  {
+    name: 'Warzone',
+    blurb: 'Steel and crates everywhere. The final battlefield.',
+    obstacles: [
+      steel(200, 100, 40, 160), steel(660, 340, 40, 160),
+      steel(400, 0, 100, 90), steel(400, 510, 100, 90),
+      steel(429, 240, 42, 120),
+      crate(300, 280, 40, 40), crate(560, 280, 40, 40),
+      crate(200, 400, 60, 40), crate(640, 160, 60, 40),
+      crate(330, 140, 50, 50), crate(520, 410, 50, 50),
+    ],
+  },
 ];
 
 /** A fresh copy per round, because crates are destroyed as they are shot. */

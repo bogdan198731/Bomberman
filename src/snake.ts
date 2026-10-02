@@ -113,6 +113,47 @@ export const SNAKE_LEVELS: readonly SnakeLevel[] = [
       ...wallRect(21, 4, 1, 3), ...wallRect(21, 9, 1, 3),
     ],
   },
+  {
+    name: 'Divider',
+    blurb: 'A wall cuts the arena in two, open only through the middle.',
+    walls: [...wallRect(11, 0, 2, 6), ...wallRect(11, 10, 2, 6)],
+  },
+  {
+    name: 'Blocks',
+    blurb: 'Sixteen blocks in a grid - plan every turn.',
+    walls: [3, 8, 14, 19].flatMap(x => [2, 5, 10, 13].flatMap(y => wallRect(x, y, 2, 2))),
+  },
+  {
+    name: 'Switchback',
+    blurb: 'Long walls from either side force wide detours.',
+    walls: [...wallRect(0, 4, 16, 1), ...wallRect(8, 11, 16, 1), ...wallRect(5, 1, 1, 3), ...wallRect(18, 12, 1, 3)],
+  },
+  {
+    name: 'Crossbars',
+    blurb: 'Bars from every edge leave four corner rooms to slip in and out of.',
+    walls: [
+      ...wallRect(0, 4, 9, 1), ...wallRect(15, 4, 9, 1),
+      ...wallRect(0, 11, 9, 1), ...wallRect(15, 11, 9, 1),
+      ...wallRect(11, 0, 2, 4), ...wallRect(11, 12, 2, 4),
+    ],
+  },
+  {
+    name: 'Comb',
+    blurb: 'Teeth from the top and bottom - one wrong turn and you are boxed in.',
+    walls: [
+      ...[2, 7, 12, 17, 21].flatMap(x => wallRect(x, 0, 1, 6)),
+      ...[4, 9, 14, 19].flatMap(x => wallRect(x, 10, 1, 6)),
+    ],
+  },
+  {
+    name: 'Labyrinth',
+    blurb: 'Dense walls everywhere. The ultimate test of steering.',
+    walls: [
+      ...[2, 5, 8, 11, 14, 17, 20].flatMap(x => wallRect(x, 0, 1, 7)),
+      ...[3, 6, 9, 12, 15, 18, 21].flatMap(x => wallRect(x, 10, 1, 6)),
+      ...wallRect(0, 9, 2, 1), ...wallRect(22, 7, 2, 1),
+    ],
+  },
 ];
 
 export function snakeWallKeys(level: number): Set<string> {

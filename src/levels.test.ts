@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { LEVEL_STORAGE_KEY, loadLevel, normalizeLevel, saveLevel } from './levels.js';
+import { BRICK_LEVELS } from './bricks.js';
 import { BOMBERMAN_LEVELS, EXPLOSION_RADIUS, TileType, createMapGrid } from './index.js';
 import { OnlineRoom } from './multiplayer.js';
 import { NeonSnakeGame, SNAKE_COLUMNS, SNAKE_LEVELS, SNAKE_ROWS, snakeWallKeys } from './snake.js';
@@ -59,8 +60,18 @@ test('every level has a picker and Romanian names', () => {
     ...BOMBERMAN_LEVELS.map((level, index) => `${index + 1} · ${level.name}`),
     ...SNAKE_LEVELS.map((level, index) => `${index + 1} · ${level.name}`),
     ...TANK_LEVELS.map((level, index) => `${index + 1} · ${level.name}`),
+    ...BRICK_LEVELS.map((level, index) => `${index + 1} · ${level.name}`),
   ];
   for (const label of labels) assert.ok(i18n.includes(`'${label}':`), `missing translation for "${label}"`);
+  const blurbs = [BOMBERMAN_LEVELS, SNAKE_LEVELS, TANK_LEVELS, BRICK_LEVELS].flatMap(levels => levels.map(level => level.blurb));
+  for (const blurb of blurbs) assert.ok(i18n.includes(`'${blurb}':`), `missing translation for "${blurb}"`);
+});
+
+test('every game with levels offers ten, each with its own name', () => {
+  for (const [game, levels] of Object.entries({ bomberman: BOMBERMAN_LEVELS, snake: SNAKE_LEVELS, tanks: TANK_LEVELS, bricks: BRICK_LEVELS })) {
+    assert.equal(levels.length, 10, `${game} has ten levels`);
+    assert.equal(new Set(levels.map(level => level.name)).size, 10, `${game} level names are unique`);
+  }
 });
 
 // ------------------------------------------------------------- Blast Buddies
@@ -137,6 +148,22 @@ test('the maps actually differ in the way their names promise', () => {
     assert.equal(crossroads.tiles[6][i], TileType.EMPTY, `Crossroads centre row is open at ${i}`);
     assert.equal(crossroads.tiles[i][6], TileType.EMPTY, `Crossroads centre column is open at ${i}`);
   }
+});
+
+test('the later maps add the steel their names promise, the same for both players', () => {
+  const steel = (level: number): number =>
+    createMapGrid(13, 13, level).tiles.flat().filter(tile => tile === TileType.WALL_INDESTRUCTIBLE).length;
+  assert.ok(steel(5) < steel(1), 'Bare Floor drops the pillar grid');
+  for (const level of [6, 7, 10]) assert.ok(steel(level) > steel(1), `${BOMBERMAN_LEVELS[level - 1].name} adds steel`);
+  BOMBERMAN_LEVELS.forEach((level, index) => {
+    const tiles = createMapGrid(13, 13, index + 1).tiles;
+    for (let row = 0; row < 13; row++) {
+      for (let col = 0; col < 13; col++) {
+        assert.equal(tiles[row][col] === TileType.WALL_INDESTRUCTIBLE, tiles[12 - row][12 - col] === TileType.WALL_INDESTRUCTIBLE,
+          `${level.name}: steel at ${col},${row} is mirrored`);
+      }
+    }
+  });
 });
 
 test('a room plays the map it was created with, defaulting to Classic', () => {

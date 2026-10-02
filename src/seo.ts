@@ -119,7 +119,7 @@ export const GAME_SEO: Record<ArcadeGameId, PageSeo> = {
   bricks: {
     title: 'Brick Breaker — Free Online Brick-Breaking Arcade Game',
     description:
-      'Play Brick Breaker free in your browser. Steer the paddle, keep the ball alive, and smash through five hand-built walls of tough and steel bricks. No download.',
+      'Play Brick Breaker free in your browser. Steer the paddle, keep the ball alive, and smash through ten hand-built walls of tough and steel bricks. No download.',
   },
   mines: {
     title: 'Minesweeper — Free Online Puzzle With a Safe First Click',
@@ -222,7 +222,7 @@ export const GAME_SEO_RO: Record<ArcadeGameId, PageSeo> = {
   bricks: {
     title: 'Brick Breaker — Joc de spart cărămizi online gratuit',
     description:
-      'Joacă Brick Breaker gratuit în browser. Condu paleta, ține mingea în joc și sparge cinci ziduri construite manual, cu cărămizi dure și de oțel.',
+      'Joacă Brick Breaker gratuit în browser. Condu paleta, ține mingea în joc și sparge zece ziduri construite manual, cu cărămizi dure și de oțel.',
   },
   mines: {
     title: 'Minesweeper online — Jocul cu mine, gratuit',
