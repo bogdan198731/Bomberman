@@ -119,3 +119,28 @@ test('the scores API refuses anything that is not a real result', async ({ reque
   expect(board.status()).toBe(200);
   expect(Array.isArray((await board.json()).entries)).toBe(true);
 });
+
+test('a named player is not told "New high score" for a score below their own best', async ({ page, request }, info) => {
+  const alias = `Mara ${info.project.name}`;
+  // Their best is already on the board; the round below scores 800.
+  expect((await request.post('/api/scores', { data: { game: 'hangman', score: 900, outcome: 'win', alias } })).status()).toBe(201);
+  await page.addInitScript(name => {
+    try { localStorage.setItem('blast-arcade-scoreboard-alias-v1', name); } catch { /* storage blocked */ }
+  }, alias);
+  await openHub(page);
+  const posts: unknown[] = [];
+  page.on('request', sent => {
+    if (sent.url().endsWith('/api/scores') && sent.method() === 'POST') posts.push(sent.postDataJSON());
+  });
+  await page.addInitScript(saved => {
+    try { localStorage.setItem('blast-arcade-hangman-session-v1', saved); } catch { /* storage blocked */ }
+  }, JSON.stringify({ difficulty: 'normal', word: 'CANADA', category: 'Countries', guesses: 'Z', streak: 0 }));
+  await openGame(page, 'hangman');
+  const checked = page.waitForResponse(response => response.url().includes('/api/scores?game=hangman'));
+  for (const letter of 'cand') await page.keyboard.press(letter);
+  await checked;
+  await expect(page.locator('.arcade-result-card')).toBeVisible();
+  await page.waitForTimeout(300);
+  await expect(page.locator('.arcade-result-highscore')).toBeHidden();
+  expect(posts).toEqual([]);
+});

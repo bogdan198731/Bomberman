@@ -60,6 +60,20 @@ test('the place a score would take is known before it is sent, so the player can
   assert.equal(placeForScore(board, MAX_SCORE + 1), null);
 });
 
+test('a named player is only promised a place for a score that beats their own best', () => {
+  const board = [entry('Ana', 60, 1), entry('Bogdan', 50, 2)];
+  // The reported bug: every lower score was told "#3" and then never kept.
+  assert.equal(placeForScore(board, 30, 'Bogdan'), null);
+  assert.equal(placeForScore(board, 50, 'bogdan'), null, 'tying your own best is not new');
+  assert.equal(placeForScore(board, 55, 'Bogdan'), 2, 'your old score leaves the board, Ana stays ahead');
+  assert.equal(placeForScore(board, 30), 3, 'Unknown results each stand on their own');
+  assert.equal(placeForScore(board, 30, 'Mihai'), 3);
+  for (const alias of ['Bogdan', 'Mihai', '']) {
+    const place = placeForScore(board, 45, alias);
+    assert.equal(addScore(board, entry(alias || UNKNOWN_ALIAS, 45, 3)).rank, place, `prediction matches what posting does for "${alias}"`);
+  }
+});
+
 test('stored boards are read defensively', () => {
   assert.deepEqual(normalizeScoreEntries('nope'), []);
   const rows = normalizeScoreEntries([entry('A', 5), { alias: '<x>', score: 9, outcome: 'win', playedAt: 2 }, { score: -1 }, null]);
