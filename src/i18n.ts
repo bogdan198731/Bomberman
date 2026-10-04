@@ -271,6 +271,8 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Each player name keeps its best result. Switch the profile name above when friends take a turn.':
     'Fiecare nume de jucător își păstrează cel mai bun rezultat. Schimbă numele profilului când joacă un prieten.',
   'Choose a game leaderboard': 'Alege clasamentul unui joc',
+  'Show earlier games': 'Arată jocurile anterioare',
+  'Show more games': 'Arată mai multe jocuri',
   'Local top five': 'Top cinci local',
   'Waiting for the first result · saved on this device': 'Se așteaptă primul rezultat · salvat pe acest dispozitiv',
   'This device': 'Acest dispozitiv',
