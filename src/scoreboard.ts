@@ -88,10 +88,12 @@ export function addScore(entries: readonly ScoreEntry[], entry: ScoreEntry): { e
 
 /**
  * The place a new result would take, worked out before it is sent so the
- * player can be asked for a name first. Counted as Unknown, and after any
- * equal score already there. Null when it would not make the board.
+ * player can be asked for a name first. Counted under the alias it will be
+ * posted as, so a named player is not promised a place for a score that does
+ * not beat their own best, and after any equal score already there. Null when
+ * it would not make the board.
  */
-export function placeForScore(entries: readonly ScoreEntry[], score: number): number | null {
+export function placeForScore(entries: readonly ScoreEntry[], score: number, alias: unknown = UNKNOWN_ALIAS): number | null {
   if (!Number.isInteger(score) || score <= 0 || score > MAX_SCORE) return null;
-  return addScore(entries, { alias: UNKNOWN_ALIAS, score, outcome: 'complete', playedAt: Number.MAX_SAFE_INTEGER }).rank;
+  return addScore(entries, { alias: sanitizeAlias(alias), score, outcome: 'complete', playedAt: Number.MAX_SAFE_INTEGER }).rank;
 }

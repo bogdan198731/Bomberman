@@ -415,7 +415,7 @@ export function initArcadeLeaderboard(): void {
     } catch { /* fall back to the board as last seen */ }
     if (id !== offerId) return;
     pending = { gameId, result };
-    const place = entries ? placeForScore(entries, score) : null;
+    const place = entries ? placeForScore(entries, score, loadScoreboardAlias()) : null;
     const resultCard = document.querySelector<HTMLElement>('.arcade-result-overlay');
     const asking = place !== null && form && isDialogOpen('result') && resultCard?.dataset.game === gameId;
     if (!asking) {
