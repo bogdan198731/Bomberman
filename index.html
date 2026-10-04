@@ -1601,11 +1601,45 @@
       text-align: right;
     }
 
+    /* The tabs scroll sideways; arrows on each side do it with a mouse, where there is no swipe. */
+    .leaderboard-tabs-wrap {
+      position: relative;
+      margin: 18px -22px 14px;
+    }
+
+    .leaderboard-tabs-arrow {
+      position: absolute;
+      top: 50%;
+      z-index: 1;
+      display: grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      padding: 0 0 3px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 50%;
+      color: var(--ink);
+      background: #1a2536;
+      box-shadow: 0 0 0 10px rgba(16, 24, 36, 0.72);
+      font-family: inherit;
+      font-size: 1.6rem;
+      font-weight: 900;
+      line-height: 1;
+      transform: translateY(-50%);
+      cursor: pointer;
+    }
+    .leaderboard-tabs-arrow[data-leaderboard-scroll="-1"] { left: 6px; }
+    .leaderboard-tabs-arrow[data-leaderboard-scroll="1"] { right: 6px; }
+    .leaderboard-tabs-arrow[hidden] { display: none; }
+    .leaderboard-tabs-arrow:hover { border-color: rgba(255, 200, 87, 0.5); color: var(--gold); }
+    .leaderboard-tabs-arrow:focus-visible { outline: 3px solid rgba(73, 226, 255, 0.55); outline-offset: 2px; }
+
     .leaderboard-tabs {
       display: flex;
       gap: 7px;
-      margin: 18px -22px 14px;
       padding: 0 22px 3px;
+      /* Snapping keeps the side padding, so the first tab starts at scroll 0. */
+      scroll-padding-inline: 22px;
       overflow-x: auto;
       scrollbar-width: none;
       scroll-snap-type: x proximity;
@@ -5058,9 +5092,13 @@
         text-align: left;
       }
 
-      .leaderboard-tabs {
+      .leaderboard-tabs-wrap {
         margin-inline: -18px;
+      }
+
+      .leaderboard-tabs {
         padding-inline: 18px;
+        scroll-padding-inline: 18px;
       }
 
       .leaderboard-board {
@@ -8508,7 +8546,11 @@
         <input id="leaderboardAlias" type="text" maxlength="20" placeholder="Unknown" autocomplete="off" spellcheck="false">
         <span>Leave it empty to stay Unknown.</span>
       </div>
-      <div id="leaderboardGameTabs" class="leaderboard-tabs" role="tablist" aria-label="Choose a game leaderboard"></div>
+      <div class="leaderboard-tabs-wrap">
+        <button type="button" class="leaderboard-tabs-arrow" data-leaderboard-scroll="-1" aria-label="Show earlier games" hidden>‹</button>
+        <div id="leaderboardGameTabs" class="leaderboard-tabs" role="tablist" aria-label="Choose a game leaderboard"></div>
+        <button type="button" class="leaderboard-tabs-arrow" data-leaderboard-scroll="1" aria-label="Show more games" hidden>›</button>
+      </div>
       <div class="leaderboard-board">
         <div id="leaderboardBoardGame" class="leaderboard-board-game"></div>
         <div class="leaderboard-board-heading"><span id="leaderboardBoardTitle">Local top five</span><span id="leaderboardCaption">Waiting for the first result · saved on this device</span></div>

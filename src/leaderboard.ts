@@ -481,5 +481,22 @@ export function initArcadeLeaderboard(): void {
     if (event.key === LEADERBOARD_STORAGE_KEY) render();
   });
   focusButton?.addEventListener('click', () => panel?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+  // Arrows scroll the game tabs where there is no swipe; each shows only while there is more that way.
+  const scrollArrows = document.querySelectorAll<HTMLButtonElement>('[data-leaderboard-scroll]');
+  function updateScrollArrows(): void {
+    const room = activeTabs.scrollWidth - activeTabs.clientWidth;
+    scrollArrows.forEach(arrow => {
+      arrow.hidden = arrow.dataset.leaderboardScroll === '1' ? activeTabs.scrollLeft >= room - 2 : activeTabs.scrollLeft <= 2;
+    });
+  }
+  scrollArrows.forEach(arrow => arrow.addEventListener('click', () => {
+    const direction = Number(arrow.dataset.leaderboardScroll);
+    activeTabs.scrollBy({ left: direction * activeTabs.clientWidth * 0.75, behavior: 'smooth' });
+  }));
+  activeTabs.addEventListener('scroll', updateScrollArrows, { passive: true });
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(updateScrollArrows).observe(activeTabs);
+  else window.addEventListener('resize', updateScrollArrows);
+
   render(initialBoards);
+  updateScrollArrows();
 }
