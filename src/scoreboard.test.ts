@@ -39,14 +39,15 @@ test('the board keeps the top ten, best first, earlier result ahead on a tie', (
   assert.equal(tie.rank, 4, 'a tie goes behind whoever scored it first');
 });
 
-test('a named alias keeps only its best score; Unknown results each stand alone', () => {
+test('every result stands on its own, so one player can hold several places in the top ten', () => {
   let board = addScore([], entry('Mia', 50)).entries;
-  assert.equal(addScore(board, entry('mia', 40)).rank, null, 'a lower score for the same name is ignored');
-  board = addScore(board, entry('MIA', 70)).entries;
-  assert.deepEqual(board.map(row => [row.alias, row.score]), [['MIA', 70]]);
-  board = addScore(board, entry(UNKNOWN_ALIAS, 30)).entries;
-  board = addScore(board, entry(UNKNOWN_ALIAS, 20)).entries;
-  assert.equal(board.filter(row => row.alias === UNKNOWN_ALIAS).length, 2);
+  const lower = addScore(board, entry('mia', 40));
+  assert.equal(lower.rank, 2, 'a lower score for the same name still makes the board');
+  board = addScore(lower.entries, entry('MIA', 70)).entries;
+  assert.deepEqual(board.map(row => [row.alias, row.score]), [['MIA', 70], ['Mia', 50], ['mia', 40]]);
+  for (let i = 0; i < 12; i++) board = addScore(board, entry('Bogdan', 100 - i, i)).entries;
+  assert.equal(board.length, SCOREBOARD_SIZE, 'the board fills up to ten and no further');
+  assert.deepEqual(board.map(row => row.score), [100, 99, 98, 97, 96, 95, 94, 93, 92, 91]);
 });
 
 test('the place a score would take is known before it is sent, so the player can be asked for a name', () => {
@@ -60,19 +61,6 @@ test('the place a score would take is known before it is sent, so the player can
   assert.equal(placeForScore(board, MAX_SCORE + 1), null);
 });
 
-test('a named player is only promised a place for a score that beats their own best', () => {
-  const board = [entry('Ana', 60, 1), entry('Bogdan', 50, 2)];
-  // The reported bug: every lower score was told "#3" and then never kept.
-  assert.equal(placeForScore(board, 30, 'Bogdan'), null);
-  assert.equal(placeForScore(board, 50, 'bogdan'), null, 'tying your own best is not new');
-  assert.equal(placeForScore(board, 55, 'Bogdan'), 2, 'your old score leaves the board, Ana stays ahead');
-  assert.equal(placeForScore(board, 30), 3, 'Unknown results each stand on their own');
-  assert.equal(placeForScore(board, 30, 'Mihai'), 3);
-  for (const alias of ['Bogdan', 'Mihai', '']) {
-    const place = placeForScore(board, 45, alias);
-    assert.equal(addScore(board, entry(alias || UNKNOWN_ALIAS, 45, 3)).rank, place, `prediction matches what posting does for "${alias}"`);
-  }
-});
 
 test('stored boards are read defensively', () => {
   assert.deepEqual(normalizeScoreEntries('nope'), []);
@@ -127,8 +115,9 @@ test('scores arriving together are all kept, and storage is only touched when ne
   await Promise.all([1, 2, 3].map(i => board.submit('reversi', entry(`P${i}`, i * 10))));
   assert.deepEqual((await board.top('reversi')).map(row => row.score), [30, 20, 10]);
   assert.equal(reads, 1, 'the board is read once, then served from memory');
+  for (let i = 4; i <= SCOREBOARD_SIZE; i++) await board.submit('reversi', entry(`P${i}`, i * 10));
   await board.submit('reversi', entry('P3', 5));
-  assert.equal(writes, 3, 'a result that changes nothing is not written');
+  assert.equal(writes, SCOREBOARD_SIZE, 'a result below a full board changes nothing and is not written');
 });
 
 test('a failed save leaves the board as it was', async () => {
