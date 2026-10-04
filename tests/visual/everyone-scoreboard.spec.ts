@@ -120,27 +120,24 @@ test('the scores API refuses anything that is not a real result', async ({ reque
   expect(Array.isArray((await board.json()).entries)).toBe(true);
 });
 
-test('a named player is not told "New high score" for a score below their own best', async ({ page, request }, info) => {
+test('a named player keeps several places: a lower score still joins the top ten', async ({ page, request }, info) => {
   const alias = `Mara ${info.project.name}`;
-  // Their best is already on the board; the round below scores 800.
+  // Their best is already on the board; the round below scores 800 and is kept too.
   expect((await request.post('/api/scores', { data: { game: 'hangman', score: 900, outcome: 'win', alias } })).status()).toBe(201);
   await page.addInitScript(name => {
     try { localStorage.setItem('blast-arcade-scoreboard-alias-v1', name); } catch { /* storage blocked */ }
   }, alias);
   await openHub(page);
-  const posts: unknown[] = [];
-  page.on('request', sent => {
-    if (sent.url().endsWith('/api/scores') && sent.method() === 'POST') posts.push(sent.postDataJSON());
-  });
   await page.addInitScript(saved => {
     try { localStorage.setItem('blast-arcade-hangman-session-v1', saved); } catch { /* storage blocked */ }
   }, JSON.stringify({ difficulty: 'normal', word: 'CANADA', category: 'Countries', guesses: 'Z', streak: 0 }));
   await openGame(page, 'hangman');
-  const checked = page.waitForResponse(response => response.url().includes('/api/scores?game=hangman'));
   for (const letter of 'cand') await page.keyboard.press(letter);
-  await checked;
-  await expect(page.locator('.arcade-result-card')).toBeVisible();
-  await page.waitForTimeout(300);
-  await expect(page.locator('.arcade-result-highscore')).toBeHidden();
-  expect(posts).toEqual([]);
+  const claim = page.locator('.arcade-result-highscore');
+  await expect(claim.locator('[data-highscore-title]')).toContainText('New high score! #');
+  await claim.getByRole('button', { name: 'Post my name' }).click();
+  await expect(claim.locator('[data-highscore-note]')).toContainText(`Posted as ${alias} · #`);
+
+  const board = (await (await request.get('/api/scores?game=hangman')).json()).entries as { alias: string; score: number }[];
+  expect(board.filter(row => row.alias === alias).map(row => row.score)).toEqual([900, 800]);
 });

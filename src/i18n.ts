@@ -290,6 +290,7 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Post anonymously': 'Publică anonim',
   'Keep private': 'Păstrează privat',
   'Kept private · saved on this device only.': 'Păstrat privat · salvat doar pe acest dispozitiv.',
+  'Not in the top ten this time.': 'Nu a intrat în primii zece de data asta.',
   'The Everyone board is offline right now. Your score still counts on this device.': 'Clasamentul tuturor nu e disponibil acum. Scorul tău contează în continuare pe acest dispozitiv.',
   'Finish a match to claim the first spot.': 'Termină un meci pentru a ocupa primul loc.',
   'Game library': 'Bibliotecă de jocuri',
@@ -877,8 +878,6 @@ function translateRomanianPattern(value: string): string | null {
   if (match) return `Scor record! Locul #${match[1]} în clasamentul public al tuturor la ${match[2]}.`;
   match = value.match(/^Posted as (.+) · #(\d+) on the Everyone board\.$/);
   if (match) return `Publicat ca ${match[1] === 'Unknown' ? 'Necunoscut' : match[1]} · locul #${match[2]} în clasamentul tuturor.`;
-  match = value.match(/^Your earlier score as (.+) is still your best\.$/);
-  if (match) return `Scorul tău de dinainte ca ${match[1]} rămâne cel mai bun.`;
   match = value.match(/^No scores yet\. Finish a (.+) game to take first place\.$/);
   if (match) return `Încă niciun scor. Termină un joc de ${match[1]} ca să iei primul loc.`;
   // Online rooms for three or four

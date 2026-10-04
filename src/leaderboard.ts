@@ -397,7 +397,7 @@ export function initArcadeLeaderboard(): void {
       if (!note) return;
       note.textContent = !posted ? 'The Everyone board is offline right now. Your score still counts on this device.'
         : posted.rank ? `Posted as ${name} · #${posted.rank} on the Everyone board.`
-          : `Your earlier score as ${name} is still your best.`;
+          : 'Not in the top ten this time.';
     });
   }
 
@@ -415,7 +415,7 @@ export function initArcadeLeaderboard(): void {
     } catch { /* fall back to the board as last seen */ }
     if (id !== offerId) return;
     pending = { gameId, result };
-    const place = entries ? placeForScore(entries, score, loadScoreboardAlias()) : null;
+    const place = entries ? placeForScore(entries, score) : null;
     const resultCard = document.querySelector<HTMLElement>('.arcade-result-overlay');
     const asking = place !== null && form && isDialogOpen('result') && resultCard?.dataset.game === gameId;
     if (!asking) {

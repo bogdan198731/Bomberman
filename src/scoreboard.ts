@@ -65,35 +65,22 @@ export function normalizeScoreEntries(value: unknown): ScoreEntry[] {
 }
 
 /**
- * Adds a result to a game's board. A named alias keeps only its best score,
- * so one player cannot fill the board; "Unknown" is many different people,
- * so each of their results stands on its own. Returns the 1-based place, or
- * null when the score did not make the board.
+ * Adds a result to a game's board. Every result stands on its own, so the
+ * board is the ten best games, even if one player played several of them.
+ * Returns the 1-based place, or null when the score did not make the board.
  */
 export function addScore(entries: readonly ScoreEntry[], entry: ScoreEntry): { entries: ScoreEntry[]; rank: number | null } {
-  const board = [...entries];
-  if (entry.alias !== UNKNOWN_ALIAS) {
-    const key = entry.alias.toLowerCase();
-    const previous = board.findIndex(row => row.alias.toLowerCase() === key);
-    if (previous >= 0) {
-      if (compareEntries(entry, board[previous]) >= 0) return { entries: board, rank: null };
-      board.splice(previous, 1);
-    }
-  }
-  board.push(entry);
-  const sorted = board.sort(compareEntries).slice(0, SCOREBOARD_SIZE);
+  const sorted = [...entries, entry].sort(compareEntries).slice(0, SCOREBOARD_SIZE);
   const index = sorted.indexOf(entry);
   return { entries: sorted, rank: index >= 0 ? index + 1 : null };
 }
 
 /**
  * The place a new result would take, worked out before it is sent so the
- * player can be asked for a name first. Counted under the alias it will be
- * posted as, so a named player is not promised a place for a score that does
- * not beat their own best, and after any equal score already there. Null when
- * it would not make the board.
+ * player can be asked for a name first. Counted after any equal score already
+ * there. Null when it would not make the board.
  */
-export function placeForScore(entries: readonly ScoreEntry[], score: number, alias: unknown = UNKNOWN_ALIAS): number | null {
+export function placeForScore(entries: readonly ScoreEntry[], score: number): number | null {
   if (!Number.isInteger(score) || score <= 0 || score > MAX_SCORE) return null;
-  return addScore(entries, { alias: sanitizeAlias(alias), score, outcome: 'complete', playedAt: Number.MAX_SAFE_INTEGER }).rank;
+  return addScore(entries, { alias: UNKNOWN_ALIAS, score, outcome: 'complete', playedAt: Number.MAX_SAFE_INTEGER }).rank;
 }
