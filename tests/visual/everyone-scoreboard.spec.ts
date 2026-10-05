@@ -106,7 +106,7 @@ test('a high score can be kept private: nothing is sent', async ({ page }) => {
   await expect(claim.locator('[data-highscore-note]')).toHaveText('Kept private · saved on this device only.');
   expect(await textContrast(claim.locator('[data-highscore-note]'))).toBeGreaterThanOrEqual(READABLE_TEXT);
   // Leaving the card afterwards does not send it either.
-  await page.locator('[data-result-close]').click();
+  await page.locator('[data-result-exit]').click();
   await page.waitForTimeout(300);
   expect(posts).toEqual([]);
 });

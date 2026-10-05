@@ -281,7 +281,7 @@ export function initGameExperience(): void {
   const resultOverlay = document.createElement('div');
   resultOverlay.className = 'arcade-result-overlay';
   resultOverlay.hidden = true;
-  resultOverlay.innerHTML = '<section class="arcade-result-card" role="dialog" aria-modal="true" aria-labelledby="arcadeResultTitle"><span class="arcade-result-kicker"></span><h2 id="arcadeResultTitle"></h2><p class="arcade-result-explanation"></p><form class="arcade-result-highscore" hidden><strong data-highscore-title></strong><span data-highscore-note></span><div class="arcade-result-highscore-row"><input type="text" maxlength="20" placeholder="Unknown" aria-label="Your name on the Everyone board" autocomplete="off" spellcheck="false"><button type="submit">Post my name</button><button type="submit" data-highscore-unknown>Post anonymously</button><button type="submit" data-highscore-private>Keep private</button></div></form><div class="arcade-result-actions"><button type="button" data-result-replay></button><button type="button" data-result-continue hidden>Continue playing</button><button type="button" data-result-next hidden></button><button type="button" data-result-close></button></div></section>';
+  resultOverlay.innerHTML = '<section class="arcade-result-card" role="dialog" aria-modal="true" aria-labelledby="arcadeResultTitle"><span class="arcade-result-kicker"></span><h2 id="arcadeResultTitle"></h2><p class="arcade-result-explanation"></p><form class="arcade-result-highscore" hidden><strong data-highscore-title></strong><span data-highscore-note></span><div class="arcade-result-highscore-row"><input type="text" maxlength="20" placeholder="Unknown" aria-label="Your name on the Everyone board" autocomplete="off" spellcheck="false"><button type="submit">Post my name</button><button type="submit" data-highscore-unknown>Post anonymously</button><button type="submit" data-highscore-private>Keep private</button></div></form><div class="arcade-result-actions"><button type="button" data-result-replay></button><button type="button" data-result-continue hidden>Continue playing</button><button type="button" data-result-next hidden></button><button type="button" data-result-exit></button></div></section>';
   document.body.append(resultOverlay);
   let resultGame: ArcadeGameId = 'bomberman';
   window.addEventListener('arcade-restart-active', () => {
@@ -311,7 +311,12 @@ export function initGameExperience(): void {
   const closeResult = (): void => { closeArcadeDialog('result'); };
   registerArcadeDialog({ id: 'result', overlay: resultOverlay, priority: 100, dismiss: closeResult });
   document.body.classList.add('arcade-managed-results');
-  resultOverlay.querySelector('[data-result-close]')?.addEventListener('click', closeResult);
+  resultOverlay.querySelector('[data-result-exit]')?.addEventListener('click', () => {
+    closeResult();
+    clearArcadePause();
+    // The game's own back button, so per-game cleanup (fullscreen, effects) still runs.
+    document.querySelector<HTMLElement>('main:not(.view-hidden) [data-back-to-hub]')?.click();
+  });
   resultOverlay.querySelector('[data-result-replay]')?.addEventListener('click', () => {
     closeResult();
     clearArcadePause();
@@ -371,7 +376,7 @@ export function initGameExperience(): void {
     const explanation = statusText ? translateArcadeText(statusText, currentArcadeLanguage()) : fallback;
     resultOverlay.querySelector<HTMLElement>('.arcade-result-explanation')!.textContent = `${explanation} ${ro ? 'Scor' : 'Score'}: ${Math.max(0, Math.floor(detail.result.score ?? 0)).toLocaleString()}.`;
     resultOverlay.querySelector<HTMLButtonElement>('[data-result-replay]')!.textContent = ro ? 'Joacă din nou' : 'Play again';
-    resultOverlay.querySelector<HTMLButtonElement>('[data-result-close]')!.textContent = ro ? 'Închide' : 'Close';
+    resultOverlay.querySelector<HTMLButtonElement>('[data-result-exit]')!.textContent = ro ? 'Ieșire' : 'Exit';
     const circuit = loadCircuitProgress().current;
     const nextButton = resultOverlay.querySelector<HTMLButtonElement>('[data-result-next]')!;
     const next = circuit && !circuitIsComplete(circuit) ? circuitCurrentGame(circuit) : null;

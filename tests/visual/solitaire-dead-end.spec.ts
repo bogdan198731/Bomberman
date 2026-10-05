@@ -33,7 +33,9 @@ test('a solitaire deal that can no longer be won ends, tells the player, and sta
   expect(await textContrast(page.locator('.arcade-result-explanation'))).toBeGreaterThanOrEqual(READABLE_TEXT);
 
   // The game is over: the cards stay where they are, whatever the player tries.
-  await page.locator('[data-result-close]').click();
+  // Esc hides the card and stays on the table; Exit would leave for the menu.
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.arcade-result-overlay')).toBeHidden();
   await expect(page.locator('#solitaireUndoButton')).toBeDisabled();
   const moves = page.locator('#solitaireMoves');
   await expect(moves).toHaveText('41');
