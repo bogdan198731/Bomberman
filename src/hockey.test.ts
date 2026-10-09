@@ -152,3 +152,107 @@ test('the puck never leaves the table outside a goal', () => {
   });
   assert.equal(escaped, false);
 });
+
+/** A repeatable stand-in for Math.random, so the bot's choices replay exactly. */
+function seeded(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    // mulberry32
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+test('tapping right at the face-off and then standing still does not start an endless rally', () => {
+  for (const level of ['easy', 'normal', 'hard'] as const) {
+    for (const [seed, hold] of [[1, 0.2], [2, 0.3], [3, 0.4], [4, 0.5], [5, 0.8]]) {
+      const game = live('bot');
+      game.botLevel = level;
+      game.random = seeded(seed);
+      let seconds = 0;
+      // The bug: the bot fired straight back at the parked mallet and the puck went to and fro on one line forever.
+      const lines = new Set<number>();
+      while (seconds < 40 && game.scores[2] === 0) {
+        if (seconds < hold) game.nudge(1, 1, 0, 1 / 60);
+        game.update(1 / 60);
+        seconds += 1 / 60;
+        lines.add(Math.round(game.puck.y));
+      }
+      assert.ok(lines.size > 20, `${level} (seed ${seed}): the puck never left the y=270 line`);
+      const atRest = Math.hypot(game.puck.vx, game.puck.vy) < 20 && game.puck.x < RINK_WIDTH / 2;
+      assert.ok(game.scores[2] > 0 || atRest, `${level} (seed ${seed}): still rallying after 40s without a goal`);
+    }
+  }
+});
+
+test('the bot shoots around a mallet parked in front of the goal', () => {
+  for (const level of ['normal', 'hard'] as const) {
+    let goals = 0;
+    for (let seed = 1; seed <= 20; seed++) {
+      const game = live('bot');
+      game.botLevel = level;
+      game.random = seeded(seed);
+      game.puck = { x: 650, y: 150 + seed * 12, vx: 0, vy: 0 };
+      let seconds = 0;
+      while (seconds < 4 && game.scores[2] === 0) {
+        game.aim(1, 120, RINK_HEIGHT / 2);
+        game.update(1 / 60);
+        seconds += 1 / 60;
+      }
+      if (game.scores[2] > 0) goals += 1;
+    }
+    assert.ok(goals >= 12, `${level} bot scored only ${goals}/20 past a parked mallet`);
+  }
+});
+
+test('the bot varies its shots from the same spot', () => {
+  const angles = new Set<number>();
+  for (let seed = 1; seed <= 12; seed++) {
+    const game = live('bot');
+    game.botLevel = 'normal';
+    game.random = seeded(seed);
+    game.puck = { x: 650, y: RINK_HEIGHT / 2, vx: 0, vy: 0 };
+    game.mallets[1] = { x: MALLET_R, y: MALLET_R, vx: 0, vy: 0 };
+    let seconds = 0;
+    while (seconds < 2 && game.puck.vx > -300) {
+      game.aim(1, MALLET_R, MALLET_R);
+      game.update(1 / 60);
+      seconds += 1 / 60;
+    }
+    // Bucket the launch direction to 5 degrees.
+    angles.add(Math.round((Math.atan2(game.puck.vy, -game.puck.vx) * 180) / Math.PI / 5));
+  }
+  assert.ok(angles.size >= 4, `only ${angles.size} distinct shot directions`);
+});
+
+test('the bot digs a dead puck out of its corner', () => {
+  for (const level of ['easy', 'normal', 'hard'] as const) {
+    for (const corner of [{ x: RINK_WIDTH - PUCK_R, y: PUCK_R }, { x: RINK_WIDTH - PUCK_R, y: RINK_HEIGHT - PUCK_R }]) {
+      const game = live('bot');
+      game.botLevel = level;
+      game.random = seeded(7);
+      game.puck = { ...corner, vx: 0, vy: 0 };
+      let seconds = 0;
+      while (seconds < 6 && game.puck.x > RINK_WIDTH - 150 && game.scores[1] === 0) {
+        game.aim(1, MALLET_R, MALLET_R);
+        game.update(1 / 60);
+        seconds += 1 / 60;
+      }
+      assert.ok(game.puck.x <= RINK_WIDTH - 150, `${level} bot left the puck in its corner`);
+      assert.equal(game.scores[1], 0, `${level} bot knocked it into its own goal`);
+    }
+  }
+});
+
+test('a mallet shoving the puck into the boards cannot push it off the table', () => {
+  const game = live();
+  clearMallets(game);
+  game.puck = { x: 200, y: PUCK_R + 2, vx: 0, vy: 0 };
+  game.mallets[1] = { x: 200, y: 120, vx: 0, vy: 0 };
+  game.aim(1, 200, -200); // drive straight up through the puck into the top wall
+  run(game, 0.3);
+  assert.ok(game.puck.y >= PUCK_R, `the puck ended at y=${game.puck.y.toFixed(1)}`);
+});

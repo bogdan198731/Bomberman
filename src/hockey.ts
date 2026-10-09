@@ -47,6 +47,18 @@ export class AirHockeyGame {
   lastScorer: HockeyPlayer | null = null;
   winner: HockeyPlayer | null = null;
   botLevel: HockeyBotLevel = 'normal';
+  /** Swappable so tests can replay the bot's choices. */
+  random: () => number = Math.random;
+  /** Where the bot's current shot is headed; picked afresh for every strike. */
+  private botShot: { x: number; y: number } | null = null;
+  /** Lined up behind the puck and swinging through it. */
+  private botStriking = 0;
+  /** How long the bot has been pinning a dead puck, and how long it backs off after. */
+  private botStall = 0;
+  private botStallAt = { x: 0, y: 0 };
+  private botBackoff = 0;
+  /** Time left to let a shot go before chasing the puck again. */
+  private botRecover = 0;
   private pause = 0;
 
   restart(mode: HockeyMode = this.mode): void {
@@ -89,7 +101,7 @@ export class AirHockeyGame {
       return;
     }
     if (this.phase !== 'playing') return;
-    if (this.mode === 'bot') this.steerBot();
+    if (this.mode === 'bot') this.steerBot(dt);
 
     const travel = Math.max(Math.hypot(this.puck.vx, this.puck.vy), MALLET_MAX_SPEED) * dt;
     const steps = Math.max(1, Math.ceil(travel / MAX_STEP));
@@ -126,7 +138,21 @@ export class AirHockeyGame {
       else { puck.x = RINK_WIDTH - PUCK_R; puck.vx = -Math.abs(puck.vx) * WALL_BOUNCE; }
     }
 
-    ([1, 2] as HockeyPlayer[]).forEach(player => this.collide(this.mallets[player]));
+    ([1, 2] as HockeyPlayer[]).forEach(player => {
+      // Once the bot has struck, its next touch gets a new shot rather than the same line again.
+      if (this.collide(this.mallets[player]) && player === 2) {
+        this.botShot = null;
+        this.botStriking = 0;
+        this.botRecover = 0.35;
+      }
+    });
+    // A mallet can shove the puck into a wall; keep it on the table and let it bounce off.
+    if (puck.y < PUCK_R) { puck.y = PUCK_R; puck.vy = Math.abs(puck.vy); }
+    if (puck.y > RINK_HEIGHT - PUCK_R) { puck.y = RINK_HEIGHT - PUCK_R; puck.vy = -Math.abs(puck.vy); }
+    if (!(puck.y > GOAL_TOP && puck.y < GOAL_BOTTOM)) {
+      if (puck.x < PUCK_R) { puck.x = PUCK_R; puck.vx = Math.abs(puck.vx); }
+      if (puck.x > RINK_WIDTH - PUCK_R) { puck.x = RINK_WIDTH - PUCK_R; puck.vx = -Math.abs(puck.vx); }
+    }
   }
 
   private moveMallet(player: HockeyPlayer, dt: number): void {
@@ -144,13 +170,13 @@ export class AirHockeyGame {
     mallet.y += dy * scale;
   }
 
-  private collide(mallet: Body): void {
+  private collide(mallet: Body): boolean {
     const puck = this.puck;
     const dx = puck.x - mallet.x;
     const dy = puck.y - mallet.y;
     const distance = Math.hypot(dx, dy);
     const reach = PUCK_R + MALLET_R;
-    if (distance >= reach || distance === 0) return;
+    if (distance >= reach || distance === 0) return false;
     const nx = dx / distance;
     const ny = dy / distance;
     // Push the puck clear, then bounce it off the moving mallet.
@@ -166,6 +192,7 @@ export class AirHockeyGame {
       puck.vx *= PUCK_MAX_SPEED / speed;
       puck.vy *= PUCK_MAX_SPEED / speed;
     }
+    return true;
   }
 
   private goal(scorer: HockeyPlayer): void {
@@ -185,30 +212,169 @@ export class AirHockeyGame {
     this.targets = { 1: { x: 120, y: RINK_HEIGHT / 2 }, 2: { x: RINK_WIDTH - 120, y: RINK_HEIGHT / 2 } };
     const offset = receiver === 1 ? -120 : receiver === 2 ? 120 : 0;
     this.puck = { x: RINK_WIDTH / 2 + offset, y: RINK_HEIGHT / 2, vx: 0, vy: 0 };
+    this.botShot = null;
+    this.botStriking = this.botStall = this.botBackoff = this.botRecover = 0;
   }
 
   /**
    * Defends when the puck is heading away, and attacks when it is on the
-   * bot's half: it lines up behind the puck on the line from Mint's goal and
-   * drives through it, so the shot travels at the goal rather than just away
-   * from its own end.
+   * bot's half: it lines up behind the puck on the line to its chosen shot
+   * and drives through it. Each strike picks a fresh shot (a corner of the
+   * goal or a bank off a side wall) that the Mint mallet is not standing on,
+   * so a player who just parks in front of their goal cannot trap the bot in
+   * an endless straight rally.
    */
-  private steerBot(): void {
+  private steerBot(dt: number): void {
     const puck = this.puck;
+    const bot = this.mallets[2];
+    const reach = PUCK_R + MALLET_R;
     const onBotSide = puck.x > RINK_WIDTH / 2 - PUCK_R;
-    if (onBotSide || puck.vx > 60) {
-      const targetX = -40;
-      const targetY = RINK_HEIGHT / 2;
-      const gx = puck.x - targetX;
-      const gy = puck.y - targetY;
-      const length = Math.hypot(gx, gy) || 1;
-      // Stand on the far side of the puck from Mint's goal, overlapping it slightly to strike.
-      const behind = onBotSide ? PUCK_R + MALLET_R - 12 : PUCK_R + MALLET_R + 30;
-      this.aim(2, puck.x + (gx / length) * behind + puck.vx * 0.05, puck.y + (gy / length) * behind + puck.vy * 0.05);
+    if (!onBotSide) {
+      this.botShot = null;
+      this.botStriking = 0;
+      this.botStall = 0;
+      this.botBackoff = 0;
+      if (puck.vx > 60) {
+        // Incoming: meet it on the line to Mint's goal, a little way back.
+        const gx = puck.x + 40;
+        const gy = puck.y - RINK_HEIGHT / 2;
+        const length = Math.hypot(gx, gy) || 1;
+        const behind = reach + 30;
+        this.aim(2, puck.x + (gx / length) * behind + puck.vx * 0.05, puck.y + (gy / length) * behind + puck.vy * 0.05);
+      } else {
+        this.aim(2, RINK_WIDTH - 110, Math.max(GOAL_TOP, Math.min(GOAL_BOTTOM, puck.y)));
+      }
+      return;
+    }
+
+    // A fast puck heading for the bot's goal: block first, attack after.
+    const guardX = RINK_WIDTH - 110;
+    const arrivesAt = puck.vx > 0 ? puck.y + (puck.vy * (guardX - puck.x)) / puck.vx : 0;
+    const onTarget = arrivesAt > GOAL_TOP - 60 && arrivesAt < GOAL_BOTTOM + 60;
+    if (puck.x < guardX && (puck.vx > 250 || (puck.vx > 60 && onTarget))) {
+      const y = arrivesAt;
+      this.botStriking = 0;
+      this.aim(2, guardX, Math.max(GOAL_TOP - 20, Math.min(GOAL_BOTTOM + 20, y)));
+      return;
+    }
+
+    // Just struck: let the shot go and fall back instead of chasing it down.
+    if (this.botRecover > 0) this.botRecover -= dt;
+    if (this.botRecover > 0 && puck.vx < -250 && puck.x < bot.x) {
+      this.botShot = null;
+      this.aim(2, guardX, Math.max(GOAL_TOP, Math.min(GOAL_BOTTOM, puck.y)));
+      return;
+    }
+
+    // A dead puck pinned in a corner: back off towards the open table, then come again.
+    // Judged by where the puck is, not its speed: jammed against the boards it can rattle fast and go nowhere.
+    const stuck = Math.hypot(puck.x - this.botStallAt.x, puck.y - this.botStallAt.y) < 12;
+    if (stuck && Math.hypot(puck.x - bot.x, puck.y - bot.y) < reach + 6) this.botStall += dt;
+    else { this.botStall = 0; this.botStallAt = { x: puck.x, y: puck.y }; }
+    if (this.botStall > 0.5) {
+      this.botStall = 0;
+      this.botBackoff = 0.3;
+      this.botShot = null;
+      this.botStriking = 0;
+    }
+    if (this.botBackoff > 0) {
+      this.botBackoff -= dt;
+      const ox = RINK_WIDTH * 0.75 - puck.x;
+      const oy = RINK_HEIGHT / 2 - puck.y;
+      const length = Math.hypot(ox, oy) || 1;
+      this.aim(2, puck.x + (ox / length) * (reach + 70), puck.y + (oy / length) * (reach + 70));
+      return;
+    }
+
+    const px = puck.x + puck.vx * 0.08;
+    const py = puck.y + puck.vy * 0.08;
+    const shot = (this.botShot ??= this.chooseShot());
+    const sx = shot.x - px;
+    const sy = shot.y - py;
+    const length = Math.hypot(sx, sy) || 1;
+    const ux = sx / length;
+    const uy = sy / length;
+    // Wind up on the shot line behind the puck, then swing straight through it,
+    // so the mallet's own motion sends the puck where it was aimed.
+    const ideal = { x: px - ux * (reach + 35), y: py - uy * (reach + 35) };
+    this.aim(2, ideal.x, ideal.y);
+    const windup = { ...this.targets[2] };
+    if (Math.hypot(windup.x - ideal.x, windup.y - ideal.y) > 10) {
+      // No room to wind up against the boards: lean into the puck from behind and dig it out.
+      this.botStriking = 0;
+      this.aim(2, px - ux * (reach - 12), py - uy * (reach - 12));
+      return;
+    }
+    if (this.botStriking > 0) this.botStriking -= dt;
+    else if (Math.hypot(windup.x - bot.x, windup.y - bot.y) < 8) this.botStriking = 0.45;
+    if (this.botStriking > 0) {
+      // Drive through the puck's centre from where the mallet actually is.
+      const dx = px - bot.x;
+      const dy = py - bot.y;
+      const span = Math.hypot(dx, dy) || 1;
+      this.aim(2, px + (dx / span) * 60, py + (dy / span) * 60);
+    } else if (segmentDistance(puck, bot, windup) < reach + 4) {
+      // The puck is in the way of the windup: go round it on the bot's side.
+      const side = Math.sign((bot.x - px) * -uy + (bot.y - py) * ux) || 1;
+      this.aim(2, px - uy * side * (reach + 28) - ux * 20, py + ux * side * (reach + 28) - uy * 20);
     } else {
-      this.aim(2, RINK_WIDTH - 110, Math.max(GOAL_TOP, Math.min(GOAL_BOTTOM, puck.y)));
+      this.aim(2, windup.x, windup.y);
     }
   }
+
+  /**
+   * Scores every candidate shot by how far its path stays from the Mint
+   * mallet, then picks at random among the open ones. Easy also takes blocked
+   * shots now and then; Hard sticks to lines with room to spare.
+   */
+  private chooseShot(): { x: number; y: number } {
+    const puck = this.puck;
+    const guard = this.mallets[1];
+    const reach = PUCK_R + MALLET_R;
+    // The puck must still be inside the mouth when it reaches the end wall, so aim there, not beyond it.
+    const mouth = [GOAL_TOP + 35, RINK_HEIGHT / 2, GOAL_BOTTOM - 35];
+    const top = PUCK_R;
+    const bottom = RINK_HEIGHT - PUCK_R;
+    const shots: { x: number; y: number; clear: number }[] = [];
+    for (const y of mouth) {
+      // Straight at the goal, and off each side wall: aiming at the goal's mirror image banks it in.
+      // A wall bounce takes some of the puck's sideways speed, so a bank aims a little further out.
+      for (const aimY of [y, top - (y - top) / WALL_BOUNCE, bottom + (bottom - y) / WALL_BOUNCE]) {
+        const aim = { x: PUCK_R, y: aimY };
+        const path = foldedPath(puck, aim, top, bottom);
+        const clear = Math.min(...path.slice(1).map((point, i) => segmentDistance(guard, path[i], point))) - reach;
+        // The bot must be able to stand behind the puck on this line, inside its own half.
+        const length = Math.hypot(aim.x - puck.x, aim.y - puck.y) || 1;
+        const backX = puck.x - ((aim.x - puck.x) / length) * (reach + 35);
+        const backY = puck.y - ((aim.y - puck.y) / length) * (reach + 35);
+        const reachable = backX <= RINK_WIDTH - MALLET_R + 10 && backY >= MALLET_R - 10 && backY <= RINK_HEIGHT - MALLET_R + 10;
+        shots.push({ ...aim, clear: reachable ? clear : Math.min(clear, 0) - 1000 });
+      }
+    }
+    shots.sort((a, b) => b.clear - a.clear);
+    const open = shots.filter(shot => shot.clear > 0);
+    const wide = shots.filter(shot => shot.clear > 30);
+    const pool = this.botLevel === 'easy' ? (this.random() < 0.35 ? shots : open)
+      : this.botLevel === 'hard' && wide.length ? wide : open;
+    const pick = pool.length ? pool[Math.floor(this.random() * pool.length)] : shots[0];
+    return { x: pick.x, y: pick.y };
+  }
+}
+
+/** The puck's path to an aim point, folded back at whichever side wall it banks off. */
+function foldedPath(from: { x: number; y: number }, aim: { x: number; y: number }, top: number, bottom: number): { x: number; y: number }[] {
+  const wall = aim.y < top ? top : aim.y > bottom ? bottom : null;
+  if (wall === null) return [from, aim];
+  const t = (wall - from.y) / (aim.y - from.y);
+  const bounce = { x: from.x + (aim.x - from.x) * t, y: wall };
+  return [from, bounce, { x: aim.x, y: 2 * wall - aim.y }];
+}
+
+function segmentDistance(point: { x: number; y: number }, a: { x: number; y: number }, b: { x: number; y: number }): number {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const t = Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / (dx * dx + dy * dy || 1)));
+  return Math.hypot(point.x - a.x - dx * t, point.y - a.y - dy * t);
 }
 
 export function initAirHockey(): void {
