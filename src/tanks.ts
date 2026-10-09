@@ -11,6 +11,9 @@ export type TankMode = 'bot' | 'duel';
 export type TankDirection = 'up' | 'down' | 'left' | 'right';
 export type TankPhase = 'ready' | 'playing' | 'round-over' | 'finished';
 export type TankBotPace = 'rookie' | 'normal' | 'ace';
+/** hold: wait behind its spawn cover; high / low: swing out along the top or bottom lane first. */
+export type TankBotOpening = 'hold' | 'high' | 'low' | 'rush';
+const TANK_BOT_OPENINGS: readonly TankBotOpening[] = ['hold', 'high', 'low'];
 
 export const TANK_ARENA_WIDTH = 900;
 export const TANK_ARENA_HEIGHT = 600;
@@ -117,13 +120,23 @@ const crate = (x: number, y: number, width: number, height: number): TankObstacl
 
 export interface TankLevel extends LevelInfo {
   obstacles: readonly TankObstacle[];
+  /** Steel that shields the spawns from a shot down the middle row; TANK_SPAWN_COVER unless the arena needs its own. */
+  cover?: readonly TankObstacle[];
 }
+
+/**
+/**
+ * A short steel wall in front of each spawn, in every arena: without it the tank
+ * that fires first down the open middle row wins before anyone has moved.
+ * Tall enough to cover a tank on the spawn row, short enough to drive round.
+ */
+export const TANK_SPAWN_COVER: readonly TankObstacle[] = [steel(120, 270, 24, 60), steel(756, 270, 24, 60)];
 
 /**
  * Tanks spawn at (80, 300) and (820, 300). Every arena keeps both spawns
  * clear and leaves a drivable route between them without shooting anything.
  */
-export const TANK_LEVELS: readonly TankLevel[] = [
+export const TANK_LEVELS: readonly TankLevel[] = ([
   {
     name: 'Classic',
     blurb: 'Two steel walls and a crate cluster in the middle.',
@@ -209,6 +222,8 @@ export const TANK_LEVELS: readonly TankLevel[] = [
       steel(429, 200, 42, 200),
       crate(300, 80, 50, 50), crate(550, 470, 50, 50),
     ],
+    // Inside the forts there is no room for the usual wall, so steel stiffens the middle of each door.
+    cover: [steel(180, 276, 36, 48), steel(684, 276, 36, 48)],
   },
   {
     name: 'Warzone',
@@ -222,7 +237,7 @@ export const TANK_LEVELS: readonly TankLevel[] = [
       crate(330, 140, 50, 50), crate(520, 410, 50, 50),
     ],
   },
-];
+] as TankLevel[]).map(level => ({ ...level, obstacles: [...(level.cover ?? TANK_SPAWN_COVER), ...level.obstacles] }));
 
 /** A fresh copy per round, because crates are destroyed as they are shot. */
 export function tankLevelObstacles(level: number): TankObstacle[] {
@@ -262,6 +277,12 @@ export class MiniTanksGame {
   private botGoal: { x: number; y: number } | null = null;
   /** A dodge lasts long enough to clear the line, so the bot does not jitter on its edge. */
   private botDodging: { direction: TankDirection; until: number } | null = null;
+  /** How the bot starts a round, so it does not open every round with the same rush. */
+  botOpening: TankBotOpening = 'rush';
+  private botOpeningGoal: { x: number; y: number } | null = null;
+  private botOpeningUntil = 0;
+  /** Where the bot last made real progress, to notice it going nowhere. */
+  private botAnchor = { x: 0, y: 0, at: 0 };
   private botDetour: { phase: 'sidestep' | 'push'; direction: TankDirection; resume: TankDirection; until: number } | null = null;
 
   constructor(private readonly random: () => number = Math.random) {}
@@ -297,6 +318,9 @@ export class MiniTanksGame {
     if (this.phase !== 'ready' && this.phase !== 'round-over') return false;
     if (this.phase === 'round-over') this.resetRound();
     this.phase = 'playing';
+    this.elapsed = 0;
+    this.botAnchor = { x: this.tanks[2].x, y: this.tanks[2].y, at: 0 };
+    if (this.mode === 'bot') this.chooseBotOpening(this.random());
     return true;
   }
 
@@ -512,16 +536,16 @@ export class MiniTanksGame {
   private flankSpot(): { x: number; y: number } {
     const bot = this.tanks[2];
     const player = this.tanks[1];
-    const range = 190;
     const half = TANK_SIZE / 2 + 4;
     const facingSideways = player.direction === 'left' || player.direction === 'right';
     const near = facingSideways ? bot.y <= player.y : bot.x <= player.x;
-    const spots = [near ? -range : range, near ? range : -range].map(shift => facingSideways
+    // Far spots first; the close ones reach a player tucked in behind cover.
+    const spots = [190, 130, 56].flatMap(range => [near ? -range : range, near ? range : -range]).map(shift => facingSideways
       ? { x: player.x, y: player.y + shift }
       : { x: player.x + shift, y: player.y });
     const usable = spots.find(spot =>
       spot.x >= half && spot.x <= TANK_ARENA_WIDTH - half && spot.y >= half && spot.y <= TANK_ARENA_HEIGHT - half &&
-      !this.obstacles.some(obstacle => overlapsRect(spot.x, spot.y, TANK_SIZE + 8, obstacle)) &&
+      !this.obstacles.some(obstacle => overlapsRect(spot.x, spot.y, TANK_SIZE + 2, obstacle)) &&
       this.clearLine(spot.x, spot.y, player.x, player.y, false));
     return usable ?? { x: player.x, y: player.y };
   }
@@ -545,6 +569,16 @@ export class MiniTanksGame {
     if ((input.left || input.right) && Math.abs(goal.x - bot.x) < 4) input.left = input.right = false;
   }
 
+  /** Whether the first thing a shell fired `direction` would hit, close by, is a crate. */
+  private crateInLine(tank: MiniTank, direction: TankDirection): boolean {
+    const [dx, dy] = VECTORS[direction];
+    for (let distance = 25; distance < 320; distance += 8) {
+      const hit = this.obstacles.find(obstacle => overlapsRect(tank.x + dx * distance, tank.y + dy * distance, 8, obstacle));
+      if (hit) return hit.destructible;
+    }
+    return false;
+  }
+
   private blockedOnlyByCrate(tank: MiniTank, direction: TankDirection): boolean {
     const [dx, dy] = VECTORS[direction];
     const x = tank.x + dx * TANK_SIZE * .7;
@@ -562,11 +596,12 @@ export class MiniTanksGame {
     let distance = 0;
     for (const obstacle of this.obstacles) {
       if (!overlapsRect(probeX, probeY, TANK_SIZE, obstacle)) continue;
-      // A wall that runs into the arena edge has no way round on that side.
-      const sealed = side === 'up' ? obstacle.y <= 0
-        : side === 'down' ? obstacle.y + obstacle.height >= TANK_ARENA_HEIGHT
-        : side === 'left' ? obstacle.x <= 0
-        : obstacle.x + obstacle.width >= TANK_ARENA_WIDTH;
+      // A wall that runs into the arena edge, or leaves too thin a gap there, has no way round on that side.
+      const gap = TANK_SIZE * 1.5;
+      const sealed = side === 'up' ? obstacle.y < gap
+        : side === 'down' ? obstacle.y + obstacle.height > TANK_ARENA_HEIGHT - gap
+        : side === 'left' ? obstacle.x < gap
+        : obstacle.x + obstacle.width > TANK_ARENA_WIDTH - gap;
       if (sealed) return Infinity;
       const need = side === 'up' ? probeY + half - obstacle.y
         : side === 'down' ? obstacle.y + obstacle.height - (probeY - half)
@@ -575,6 +610,25 @@ export class MiniTanksGame {
       distance = Math.max(distance, need);
     }
     return distance;
+  }
+
+  /** Picks this round's opening from `roll` in [0, 1). A lane the arena blocks falls back to holding. */
+  chooseBotOpening(roll: number): void {
+    const opening = TANK_BOT_OPENINGS[Math.min(TANK_BOT_OPENINGS.length - 1, Math.floor(roll * TANK_BOT_OPENINGS.length))];
+    this.botOpening = opening;
+    this.botOpeningGoal = null;
+    this.botOpeningUntil = opening === 'hold' ? 1 + roll * 1.5 : 4;
+    if (opening === 'hold') return;
+    // The first free spot on that lane, working in from the bot's own side.
+    for (const x of [700, 640, 760, 580]) {
+      for (const y of opening === 'high' ? [110, 150, 70] : [490, 450, 530]) {
+        if (!this.obstacles.some(obstacle => overlapsRect(x, y, TANK_SIZE + 8, obstacle))) {
+          this.botOpeningGoal = { x, y };
+          return;
+        }
+      }
+    }
+    this.botOpening = 'hold';
   }
 
   private updateBot(): void {
@@ -602,8 +656,28 @@ export class MiniTanksGame {
       this.botDodging = null;
     }
 
-    // A rookie still charges straight at the player.
-    const goal = this.botPace === 'rookie' ? target : this.flankSpot();
+    // Going nowhere usually means crates penned it in: blast the nearest one in sight.
+    if (Math.hypot(bot.x - this.botAnchor.x, bot.y - this.botAnchor.y) > 64) this.botAnchor = { x: bot.x, y: bot.y, at: this.elapsed };
+    const holding = this.botOpening === 'hold' && this.elapsed < this.botOpeningUntil;
+    if (!holding && this.elapsed - this.botAnchor.at > 1.5 && bot.cooldown === 0) {
+      const way = (['left', 'up', 'down', 'right'] as TankDirection[]).find(direction => this.crateInLine(bot, direction));
+      if (way) {
+        this.botDetour = null;
+        bot.direction = way;
+        this.inputs[2].fire = true;
+        this.botAnchor = { x: bot.x, y: bot.y, at: this.elapsed };
+        return;
+      }
+    }
+
+    // While its opening lasts the bot holds cover or swings out to a lane; then it flanks.
+    let goal = this.flankSpot();
+    if (this.elapsed < this.botOpeningUntil) {
+      const lane = this.botOpeningGoal;
+      if (this.botOpening === 'hold') goal = { x: bot.x, y: bot.y };
+      else if (lane && Math.hypot(lane.x - bot.x, lane.y - bot.y) > 12) goal = lane;
+      else this.botOpeningUntil = 0;
+    }
     const gx = goal.x - bot.x;
     const gy = goal.y - bot.y;
     let move: TankDirection | null = null;
@@ -650,6 +724,15 @@ export class MiniTanksGame {
         : (gx < 0 ? ['left', 'right'] : ['right', 'left']);
       // A smarter bot goes round the nearer end of the wall instead of the far one.
       if (this.botPace !== 'rookie') sideways.sort((a, b) => this.clearance(bot, move!, a) - this.clearance(bot, move!, b));
+      // A crate on the better side is worth blasting rather than heading the long way round.
+      if (this.botPace !== 'rookie' && this.blockedOnlyByCrate(bot, sideways[0]) &&
+        this.clearance(bot, move, sideways[0]) < this.clearance(bot, move, sideways[1])) {
+        if (bot.cooldown === 0) {
+          bot.direction = sideways[0];
+          this.inputs[2].fire = true;
+        }
+        return;
+      }
       const escape = sideways.find(direction => !this.blocked(bot, direction));
       if (escape) {
         this.botDetour = { phase: 'sidestep', direction: escape, resume: move, until: this.elapsed + 2.5 };
@@ -657,7 +740,7 @@ export class MiniTanksGame {
       }
     }
     if (move) this.inputs[2][move] = true;
-    if (this.botPace !== 'rookie' && !this.botDetour) this.botGoal = goal;
+    if (!this.botDetour) this.botGoal = goal;
 
     if (shot) {
       // Moving would turn the barrel away again before the shell leaves; a rookie is that sloppy.

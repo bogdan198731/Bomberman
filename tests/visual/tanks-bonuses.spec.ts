@@ -12,7 +12,14 @@ test('a smashed crate leaves a bonus that Mint picks up by driving over it', asy
   await page.locator('[data-tanks-mode="duel"]').evaluate((button: HTMLButtonElement) => button.click());
   await page.locator('#tanksLaunchButton').click();
 
-  // Mint starts facing the middle crates: shoot the nearest, then drive into what it leaves.
+  // Steel shields the spawn, so Mint drives down to the bottom crate's row, turns to face it,
+  // shoots it, then drives into what it leaves.
+  await page.keyboard.down('KeyS');
+  await page.waitForTimeout(1_050);
+  await page.keyboard.up('KeyS');
+  await page.keyboard.down('KeyD');
+  await page.waitForTimeout(60);
+  await page.keyboard.up('KeyD');
   await page.keyboard.down('KeyF');
   await page.waitForTimeout(150);
   await page.keyboard.up('KeyF');
