@@ -129,6 +129,7 @@ test('the bot puts the puck away against an idle player', () => {
   for (const level of ['easy', 'normal', 'hard'] as const) {
     const game = live('bot');
     game.botLevel = level;
+    game.random = seeded(3);
     game.puck = { x: RINK_WIDTH / 2 + 120, y: RINK_HEIGHT / 2 + 40, vx: 0, vy: 0 };
     let seconds = 0;
     while (seconds < 40 && game.scores[2] === 0) {

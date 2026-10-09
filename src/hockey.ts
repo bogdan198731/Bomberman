@@ -325,7 +325,8 @@ export class AirHockeyGame {
   /**
    * Scores every candidate shot by how far its path stays from the Mint
    * mallet, then picks at random among the open ones. Easy also takes blocked
-   * shots now and then; Hard sticks to lines with room to spare.
+   * shots now and then; Hard sticks to lines with room to spare, straight
+   * ones when it can.
    */
   private chooseShot(): { x: number; y: number } {
     const puck = this.puck;
@@ -335,7 +336,7 @@ export class AirHockeyGame {
     const mouth = [GOAL_TOP + 35, RINK_HEIGHT / 2, GOAL_BOTTOM - 35];
     const top = PUCK_R;
     const bottom = RINK_HEIGHT - PUCK_R;
-    const shots: { x: number; y: number; clear: number }[] = [];
+    const shots: { x: number; y: number; clear: number; bank: boolean }[] = [];
     for (const y of mouth) {
       // Straight at the goal, and off each side wall: aiming at the goal's mirror image banks it in.
       // A wall bounce takes some of the puck's sideways speed, so a bank aims a little further out.
@@ -348,14 +349,16 @@ export class AirHockeyGame {
         const backX = puck.x - ((aim.x - puck.x) / length) * (reach + 35);
         const backY = puck.y - ((aim.y - puck.y) / length) * (reach + 35);
         const reachable = backX <= RINK_WIDTH - MALLET_R + 10 && backY >= MALLET_R - 10 && backY <= RINK_HEIGHT - MALLET_R + 10;
-        shots.push({ ...aim, clear: reachable ? clear : Math.min(clear, 0) - 1000 });
+        shots.push({ ...aim, clear: reachable ? clear : Math.min(clear, 0) - 1000, bank: aimY !== y });
       }
     }
     shots.sort((a, b) => b.clear - a.clear);
     const open = shots.filter(shot => shot.clear > 0);
     const wide = shots.filter(shot => shot.clear > 30);
+    // Straight shots are the surest, so Hard banks only when the goal is covered.
+    const straight = wide.filter(shot => !shot.bank);
     const pool = this.botLevel === 'easy' ? (this.random() < 0.35 ? shots : open)
-      : this.botLevel === 'hard' && wide.length ? wide : open;
+      : this.botLevel === 'hard' ? (straight.length ? straight : wide.length ? wide : open) : open;
     const pick = pool.length ? pool[Math.floor(this.random() * pool.length)] : shots[0];
     return { x: pick.x, y: pick.y };
   }
