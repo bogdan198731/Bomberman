@@ -135,6 +135,20 @@
       -webkit-tap-highlight-color: transparent;
     }
 
+    /* A long press on a phone should not select a button's label or open the copy/save callout.
+       Typed fields and room codes stay selectable so they can still be copied. */
+    body {
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    :where(input, textarea, select, [contenteditable="true"], .room-code, [data-room-code]) {
+      -webkit-user-select: text;
+      user-select: text;
+      -webkit-touch-callout: default;
+    }
+
     :where(button:disabled) {
       cursor: not-allowed;
     }
