@@ -258,6 +258,10 @@ export class MiniTanksGame {
   botPace: TankBotPace = 'rookie';
   private botDecisionTimer = 0;
   private elapsed = 0;
+  /** The spot the bot is driving to, so it can stop there between decisions instead of overshooting. */
+  private botGoal: { x: number; y: number } | null = null;
+  /** A dodge lasts long enough to clear the line, so the bot does not jitter on its edge. */
+  private botDodging: { direction: TankDirection; until: number } | null = null;
   private botDetour: { phase: 'sidestep' | 'push'; direction: TankDirection; resume: TankDirection; until: number } | null = null;
 
   constructor(private readonly random: () => number = Math.random) {}
@@ -346,10 +350,14 @@ export class MiniTanksGame {
     });
     this.noticeLeft = Math.max(0, this.noticeLeft - dt);
     this.botDecisionTimer -= dt;
-    if (this.mode === 'bot' && this.botDecisionTimer <= 0) {
+    // An ace reacts to a shell in flight, or a clear shot, at once instead of on its next decision.
+    const reflex = this.mode === 'bot' && this.botPace === 'ace' &&
+      ((this.tanks[2].cooldown === 0 && this.botHasShot()) || this.botDodge() !== null);
+    if (this.mode === 'bot' && (this.botDecisionTimer <= 0 || reflex)) {
       this.updateBot();
       this.botDecisionTimer = this.botPace === 'rookie' ? .85 : this.botPace === 'normal' ? .42 : .2;
     }
+    this.stopBotAtGoal();
     this.moveTank(1, dt);
     this.moveTank(2, dt);
     this.collectPickups();
@@ -378,6 +386,8 @@ export class MiniTanksGame {
     this.bullets = [];
     this.botDecisionTimer = 0;
     this.botDetour = null;
+    this.botGoal = null;
+    this.botDodging = null;
     this.obstacles = tankLevelObstacles(this.level);
     this.phase = 'ready';
     this.roundWinner = null;
@@ -428,18 +438,185 @@ export class MiniTanksGame {
     return this.obstacles.some(obstacle => overlapsRect(x, y, TANK_SIZE, obstacle));
   }
 
+  /** True when no obstacle (steel, or crates too unless `crates` is false) sits between two points. */
+  private clearLine(x1: number, y1: number, x2: number, y2: number, crates: boolean): boolean {
+    const steps = Math.ceil(Math.hypot(x2 - x1, y2 - y1) / 8);
+    for (let step = 1; step < steps; step += 1) {
+      const x = x1 + (x2 - x1) * step / steps;
+      const y = y1 + (y2 - y1) * step / steps;
+      if (this.obstacles.some(obstacle => (crates || !obstacle.destructible) && overlapsRect(x, y, 8, obstacle))) return false;
+    }
+    return true;
+  }
+
+  /** Whether the player's barrel points at the bot closely enough for a straight shot to land. */
+  private inPlayerSights(): boolean {
+    const bot = this.tanks[2];
+    const player = this.tanks[1];
+    const [fx, fy] = VECTORS[player.direction];
+    const ahead = (bot.x - player.x) * fx + (bot.y - player.y) * fy;
+    const aside = Math.abs((bot.x - player.x) * fy - (bot.y - player.y) * fx);
+    return ahead > 0 && aside < TANK_SIZE * .62 + 10 && this.clearLine(player.x, player.y, bot.x, bot.y, false);
+  }
+
+  /** Free directions that take the bot off a line running along (lx, ly), best first. */
+  private sidesteps(lx: number, ly: number, offset: number): TankDirection[] {
+    const bot = this.tanks[2];
+    const options: TankDirection[] = lx !== 0 ? ['up', 'down'] : ['left', 'right'];
+    // Keep moving away from the line; dead on it, head for the roomier half of the arena.
+    const lean = Math.abs(offset) > 2 ? offset
+      : lx !== 0 ? TANK_ARENA_HEIGHT / 2 - bot.y || 1 : TANK_ARENA_WIDTH / 2 - bot.x || 1;
+    if (lean > 0) options.reverse();
+    return options.filter(direction => !this.blocked(bot, direction));
+  }
+
+  /**
+   * Where to move to get out of harm's way: a player shell about to reach the bot or,
+   * for an ace, the player's barrel pointing at it with a shot ready.
+   */
+  private botDodge(): TankDirection | null {
+    const bot = this.tanks[2];
+    const reach = TANK_SIZE * .62 + 8;
+    // A normal bot notices a shell only once it has been flying a moment.
+    const noticeAge = this.botPace === 'ace' ? 0 : .22;
+    for (const bullet of this.bullets) {
+      if (bullet.owner !== 1 || bullet.age < noticeAge) continue;
+      const speed = Math.hypot(bullet.vx, bullet.vy) || 1;
+      const lx = bullet.vx / speed;
+      const ly = bullet.vy / speed;
+      const ahead = (bot.x - bullet.x) * lx + (bot.y - bullet.y) * ly;
+      const offset = (bot.x - bullet.x) * -ly + (bot.y - bullet.y) * lx;
+      if (ahead < -TANK_SIZE / 2 || ahead > speed * 1.1 || Math.abs(offset) > reach) continue;
+      if (!this.clearLine(bullet.x, bullet.y, bot.x, bot.y, true)) continue;
+      // Shells fly diagonally only with triple shot; dodge across the main axis.
+      const axisX = Math.abs(lx) >= Math.abs(ly) ? Math.sign(lx) : 0;
+      const axisY = axisX === 0 ? Math.sign(ly) : 0;
+      const side = axisX !== 0 ? bot.y - bullet.y : bot.x - bullet.x;
+      const escape = this.sidesteps(axisX, axisY, side)[0];
+      if (escape) return escape;
+    }
+    // With its own gun ready the ace pushes on to trade shots instead of backing off.
+    if (this.botPace === 'ace' && bot.cooldown > 0 && this.tanks[1].cooldown < .2 && this.inPlayerSights()) {
+      const player = this.tanks[1];
+      const [fx, fy] = VECTORS[player.direction];
+      const side = fx !== 0 ? bot.y - player.y : bot.x - player.x;
+      return this.sidesteps(fx, fy, side)[0] ?? null;
+    }
+    return null;
+  }
+
+  /**
+   * A smarter bot does not drive into the player's barrel: it lines up from the side
+   * the player is not facing, at a distance, where it has a clear shot.
+   */
+  private flankSpot(): { x: number; y: number } {
+    const bot = this.tanks[2];
+    const player = this.tanks[1];
+    const range = 190;
+    const half = TANK_SIZE / 2 + 4;
+    const facingSideways = player.direction === 'left' || player.direction === 'right';
+    const near = facingSideways ? bot.y <= player.y : bot.x <= player.x;
+    const spots = [near ? -range : range, near ? range : -range].map(shift => facingSideways
+      ? { x: player.x, y: player.y + shift }
+      : { x: player.x + shift, y: player.y });
+    const usable = spots.find(spot =>
+      spot.x >= half && spot.x <= TANK_ARENA_WIDTH - half && spot.y >= half && spot.y <= TANK_ARENA_HEIGHT - half &&
+      !this.obstacles.some(obstacle => overlapsRect(spot.x, spot.y, TANK_SIZE + 8, obstacle)) &&
+      this.clearLine(spot.x, spot.y, player.x, player.y, false));
+    return usable ?? { x: player.x, y: player.y };
+  }
+
+  private botHasShot(): boolean {
+    const bot = this.tanks[2];
+    const target = this.tanks[1];
+    // A smarter bot waits until the shell would actually connect.
+    const slack = this.botPace === 'rookie' ? 28 : 16;
+    const aligned = Math.abs(target.x - bot.x) < slack || Math.abs(target.y - bot.y) < slack;
+    // Shooting into steel only wastes the cooldown; crates are worth blasting.
+    return aligned && (this.botPace === 'rookie' || this.clearLine(bot.x, bot.y, target.x, target.y, false));
+  }
+
+  private stopBotAtGoal(): void {
+    const goal = this.botGoal;
+    if (this.mode !== 'bot' || !goal) return;
+    const bot = this.tanks[2];
+    const input = this.inputs[2];
+    if ((input.up || input.down) && Math.abs(goal.y - bot.y) < 4) input.up = input.down = false;
+    if ((input.left || input.right) && Math.abs(goal.x - bot.x) < 4) input.left = input.right = false;
+  }
+
+  private blockedOnlyByCrate(tank: MiniTank, direction: TankDirection): boolean {
+    const [dx, dy] = VECTORS[direction];
+    const x = tank.x + dx * TANK_SIZE * .7;
+    const y = tank.y + dy * TANK_SIZE * .7;
+    const hits = this.obstacles.filter(obstacle => overlapsRect(x, y, TANK_SIZE, obstacle));
+    return hits.length > 0 && hits.every(obstacle => obstacle.destructible);
+  }
+
+  /** How far the bot must slide `side` before nothing blocks it going `ahead`. */
+  private clearance(tank: MiniTank, ahead: TankDirection, side: TankDirection): number {
+    const [ax, ay] = VECTORS[ahead];
+    const probeX = tank.x + ax * TANK_SIZE * .7;
+    const probeY = tank.y + ay * TANK_SIZE * .7;
+    const half = TANK_SIZE / 2;
+    let distance = 0;
+    for (const obstacle of this.obstacles) {
+      if (!overlapsRect(probeX, probeY, TANK_SIZE, obstacle)) continue;
+      // A wall that runs into the arena edge has no way round on that side.
+      const sealed = side === 'up' ? obstacle.y <= 0
+        : side === 'down' ? obstacle.y + obstacle.height >= TANK_ARENA_HEIGHT
+        : side === 'left' ? obstacle.x <= 0
+        : obstacle.x + obstacle.width >= TANK_ARENA_WIDTH;
+      if (sealed) return Infinity;
+      const need = side === 'up' ? probeY + half - obstacle.y
+        : side === 'down' ? obstacle.y + obstacle.height - (probeY - half)
+        : side === 'left' ? probeX + half - obstacle.x
+        : obstacle.x + obstacle.width - (probeX - half);
+      distance = Math.max(distance, need);
+    }
+    return distance;
+  }
+
   private updateBot(): void {
     const bot = this.tanks[2];
     const target = this.tanks[1];
     this.inputs[2] = emptyInput();
+    this.botGoal = null;
     const dx = target.x - bot.x;
     const dy = target.y - bot.y;
+    const facing: TankDirection = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down');
+    const shot = this.botHasShot();
+
+    if (this.botPace !== 'rookie') {
+      // Trade first if the bot can fire now; otherwise get out of the way.
+      const canTrade = shot && bot.cooldown === 0 && this.botPace === 'ace';
+      const held = this.botDodging;
+      const keep = held && this.elapsed < held.until && !this.blocked(bot, held.direction) ? held.direction : null;
+      const dodge = canTrade ? null : keep ?? this.botDodge();
+      if (dodge) {
+        if (dodge !== keep) this.botDodging = { direction: dodge, until: this.elapsed + .25 };
+        this.botDetour = null;
+        this.inputs[2][dodge] = true;
+        return;
+      }
+      this.botDodging = null;
+    }
+
+    // A rookie still charges straight at the player.
+    const goal = this.botPace === 'rookie' ? target : this.flankSpot();
+    const gx = goal.x - bot.x;
+    const gy = goal.y - bot.y;
     let move: TankDirection | null = null;
-    if (Math.abs(dy) > 24) move = dy < 0 ? 'up' : 'down';
-    else if (Math.abs(dx) > 24) move = dx < 0 ? 'left' : 'right';
+    // Leave the player's line of fire across it rather than driving down it.
+    const acrossFirst = this.botPace !== 'rookie' && this.inPlayerSights() &&
+      (target.direction === 'up' || target.direction === 'down');
+    const near = this.botPace === 'rookie' ? 24 : 8;
+    if (acrossFirst && Math.abs(gx) > near) move = gx < 0 ? 'left' : 'right';
+    else if (Math.abs(gy) > near) move = gy < 0 ? 'up' : 'down';
+    else if (Math.abs(gx) > near) move = gx < 0 ? 'left' : 'right';
 
     /*
-     * Steering straight at the player leaves the bot pinned against any wall
+     * Steering straight at the goal leaves the bot pinned against any wall
      * in between. A detour has two legs: sidestep until the original way is
      * clear, then commit to pushing through it. Without the second leg the
      * bot's vertical-first steering drags it straight back behind the wall.
@@ -459,10 +636,20 @@ export class MiniTanksGame {
       else this.botDetour = null;
     }
 
+    // Blast a crate in the way rather than driving round it, when the gun is ready.
+    if (this.botPace !== 'rookie' && move && !shot && bot.cooldown === 0 && this.blockedOnlyByCrate(bot, move)) {
+      this.botDetour = null;
+      bot.direction = move;
+      this.inputs[2].fire = true;
+      return;
+    }
+
     if (!this.botDetour && move && this.blocked(bot, move)) {
       const sideways: TankDirection[] = move === 'left' || move === 'right'
-        ? (dy < 0 ? ['up', 'down'] : ['down', 'up'])
-        : (dx < 0 ? ['left', 'right'] : ['right', 'left']);
+        ? (gy < 0 ? ['up', 'down'] : ['down', 'up'])
+        : (gx < 0 ? ['left', 'right'] : ['right', 'left']);
+      // A smarter bot goes round the nearer end of the wall instead of the far one.
+      if (this.botPace !== 'rookie') sideways.sort((a, b) => this.clearance(bot, move!, a) - this.clearance(bot, move!, b));
       const escape = sideways.find(direction => !this.blocked(bot, direction));
       if (escape) {
         this.botDetour = { phase: 'sidestep', direction: escape, resume: move, until: this.elapsed + 2.5 };
@@ -470,10 +657,12 @@ export class MiniTanksGame {
       }
     }
     if (move) this.inputs[2][move] = true;
+    if (this.botPace !== 'rookie' && !this.botDetour) this.botGoal = goal;
 
-    const aligned = Math.abs(dx) < 28 || Math.abs(dy) < 28;
-    if (aligned) {
-      bot.direction = Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 'left' : 'right') : (dy < 0 ? 'up' : 'down');
+    if (shot) {
+      // Moving would turn the barrel away again before the shell leaves; a rookie is that sloppy.
+      if (this.botPace !== 'rookie' && bot.cooldown === 0) this.inputs[2] = emptyInput();
+      bot.direction = facing;
       this.inputs[2].fire = true;
     }
   }
