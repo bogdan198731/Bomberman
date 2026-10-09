@@ -7,6 +7,7 @@ import {
   TANK_DROP_CHANCE,
   TANK_TARGET_SCORE,
   TANK_LEVELS,
+  TANK_SPAWN_COVER,
   pickTankBonus,
 } from './tanks.js';
 import { translateArcadeText } from './i18n.js';
@@ -19,7 +20,8 @@ test('Mini Tanks starts ready in bot mode', () => {
 });
 
 test('tank bot offers a faster ace reaction profile', () => {
-  const game = new MiniTanksGame();
+  // A roll of 0 makes the bot open by holding its cover, facing Mint.
+  const game = new MiniTanksGame(() => 0);
   game.setBotPace('ace');
   game.startRound();
   game.update(.01);
@@ -242,4 +244,36 @@ test('a smarter bot lines up from the side the player is not facing', () => {
   for (let tick = 0; tick < 60; tick += 1) game.update(1 / 60);
   // Mint faces right along the middle row; the bot climbs out of that row instead of charging down it.
   assert.ok(Math.abs(game.tanks[2].y - game.tanks[1].y) > 60);
+});
+
+test('every arena has steel between the spawns on the middle row', () => {
+  for (const level of TANK_LEVELS) {
+    const game = new MiniTanksGame(() => 0);
+    game.setLevel(TANK_LEVELS.indexOf(level) + 1);
+    game.restart('duel');
+    game.startRound();
+    // Mint fires straight down the middle row from the spawn: steel stops it before Coral.
+    game.fire(1);
+    for (let tick = 0; tick < 60 && game.bullets.length; tick += 1) game.update(1 / 60);
+    assert.equal(game.tanks[1].score, 0, `${level.name}: the opening shot reached Coral`);
+    assert.ok(game.obstacles.some(obstacle => !obstacle.destructible && obstacle.x > 80 && obstacle.x < 820 &&
+      obstacle.y < 300 && obstacle.y + obstacle.height > 300), `${level.name}: no steel on the middle row`);
+  }
+  assert.equal(TANK_SPAWN_COVER.length, 2);
+});
+
+test('the bot opens rounds in different ways instead of always rushing', () => {
+  const firstMoves = new Set<string>();
+  for (const roll of [0, .5, .9]) {
+    const game = new MiniTanksGame(() => roll);
+    game.setBotPace('normal');
+    game.startRound();
+    const start = { ...game.tanks[2] };
+    for (let tick = 0; tick < 45; tick += 1) game.update(1 / 60);
+    const bot = game.tanks[2];
+    firstMoves.add(`${game.botOpening}:${Math.sign(Math.round(bot.y - start.y))}`);
+    if (game.botOpening === 'hold') assert.ok(Math.hypot(bot.x - start.x, bot.y - start.y) < 1, 'holding means staying behind cover');
+    else assert.ok(bot.x > 640, 'swinging out to a lane, not charging across');
+  }
+  assert.deepEqual([...firstMoves].sort(), ['high:-1', 'hold:0', 'low:1']);
 });
