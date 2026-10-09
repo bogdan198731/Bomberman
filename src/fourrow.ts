@@ -14,6 +14,8 @@ const CELLS = FOUR_COLUMNS * FOUR_ROWS;
 /** Centre-first ordering makes alpha-beta prune far more of the tree. */
 const SEARCH_ORDER = [3, 2, 4, 1, 5, 0, 6];
 const BOT_DEPTH: Record<FourBotLevel, number> = { easy: 2, normal: 4, hard: 6 };
+/** How far below the best score a move may be and still get picked. */
+const BOT_SLACK: Record<FourBotLevel, number> = { easy: 2, normal: 2, hard: 0 };
 const WIN = 100_000;
 
 const other = (player: FourPlayer): FourPlayer => (player === 1 ? 2 : 1);
@@ -126,16 +128,17 @@ export function chooseFourMove(
   }
   if (level === 'easy' && random() < 0.35) return legal[Math.floor(random() * legal.length)];
 
-  let bestColumn = legal[0];
-  let bestValue = -Infinity;
-  for (const column of legal) {
+  const scored = legal.map(column => {
     const cell = landingCell(scratch, column);
     scratch[cell] = player;
     const value = -negamax(scratch, BOT_DEPTH[level] - 1, -Infinity, Infinity, other(player), filled + 1);
     scratch[cell] = 0;
-    if (value > bestValue) { bestValue = value; bestColumn = column; }
-  }
-  return bestColumn;
+    return { column, value };
+  });
+  // Pick at random among the (near-)best, so replaying the same moves does not replay the same game.
+  const best = Math.max(...scored.map(option => option.value));
+  const top = scored.filter(option => option.value >= best - BOT_SLACK[level]);
+  return top[Math.floor(random() * top.length)].column;
 }
 
 export class FourInARowGame {

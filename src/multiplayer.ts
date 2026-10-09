@@ -289,10 +289,15 @@ export class OnlineRoom {
 
     const dangerTimes = this.calculateDangerTimes(now);
     const currentDanger = dangerTimes.get(`${bot.x},${bot.y}`) ?? Infinity;
-    if (currentDanger <= profile.dangerLookahead || this.gameState.isExplosion(bot.x, bot.y)) {
+    // The bot knows where its own bombs will blow, so it clears out right away instead of
+    // drifting into a dead end beside one and waiting there for the blast.
+    const ownBlast = this.gameState.bombs.some(bomb => bomb.ownerId === 2 && bomb.explodedAt === undefined
+      && this.getBlastPositions(bomb.position.x, bomb.position.y, bomb.radius ?? EXPLOSION_RADIUS)
+        .some(position => position.x === bot.x && position.y === bot.y));
+    if (ownBlast || currentDanger <= profile.dangerLookahead || this.gameState.isExplosion(bot.x, bot.y)) {
       const escape = this.findPathStep(
         bot,
-        (x, y, arrival) => (dangerTimes.get(`${x},${y}`) ?? Infinity) > profile.dangerLookahead + arrival,
+        (x, y, arrival) => (dangerTimes.get(`${x},${y}`) ?? Infinity) > (ownBlast ? BOMB_TIMER : profile.dangerLookahead) + arrival,
         dangerTimes,
         profile.reactionMs,
         10
@@ -417,7 +422,7 @@ export class OnlineRoom {
     });
     return Boolean(this.findPathStep(
       bot,
-      (x, y) => !dangerTimes.has(`${x},${y}`),
+      (x, y, arrival) => (dangerTimes.get(`${x},${y}`) ?? Infinity) > BOMB_TIMER + arrival,
       dangerTimes,
       bot.moveDuration ?? 125,
       Math.max(6, radius + 3)
@@ -468,6 +473,21 @@ export class OnlineRoom {
       for (const position of this.getBlastPositions(bomb.x, bomb.y, bomb.radius)) {
         const key = `${position.x},${position.y}`;
         danger.set(key, Math.min(danger.get(key) ?? Infinity, bomb.timeUntilExplosion));
+      }
+    }
+
+    // The closing ring is a blast too: lethal now on the closed rings, and soon on the next one.
+    const liveFor = now - this.roundStartedAt - ROUND_INTRO_DURATION;
+    const nextRing = Math.min(4, this.pressureLevel + 1);
+    const closesIn = Math.max(0, BOMBERMAN_PRESSURE_START_MS + (nextRing - 1) * BOMBERMAN_PRESSURE_STEP_MS - liveFor);
+    const { width, height } = this.gameState;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const ring = Math.min(x, y, width - 1 - x, height - 1 - y);
+        const at = ring <= this.pressureLevel ? 0 : ring <= nextRing && nextRing > this.pressureLevel ? closesIn : Infinity;
+        if (at === Infinity) continue;
+        const key = `${x},${y}`;
+        danger.set(key, Math.min(danger.get(key) ?? Infinity, at));
       }
     }
     return danger;

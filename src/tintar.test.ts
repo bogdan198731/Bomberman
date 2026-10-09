@@ -189,3 +189,14 @@ test('bot decisions can play a complete legal match', () => {
   assert.equal(game.phase, 'finished');
   assert.ok(actions < 250);
 });
+
+test('the hard bot does not open the same way every game', () => {
+  const openings = new Set<string>();
+  for (let seed = 1; seed <= 12; seed++) {
+    let state = (seed * 48271 * 7919) % 2147483647;
+    const random = (): number => { state = (state * 16807) % 2147483647; return state / 2147483647; };
+    const game = new TintarGame();
+    openings.add(JSON.stringify(chooseTintarBotAction(game, 'hard', random)));
+  }
+  assert.ok(openings.size > 1, 'hard always opened on the same point');
+});

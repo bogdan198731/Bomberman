@@ -12,6 +12,8 @@ export const REVERSI_SIZE = 8;
 const CELLS = REVERSI_SIZE * REVERSI_SIZE;
 const DIRECTIONS: readonly [number, number][] = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
 const BOT_DEPTH: Record<ReversiBotLevel, number> = { easy: 1, normal: 3, hard: 5 };
+/** How far below the best score a move may be and still get picked. */
+const BOT_SLACK: Record<ReversiBotLevel, number> = { easy: 4, normal: 4, hard: 0 };
 
 /**
  * Classic positional weights: corners can never be flipped, and the squares
@@ -121,18 +123,19 @@ export function chooseReversiMove(
   if (corner !== undefined) return corner;
   if (level === 'easy' && random() < 0.4) return moves[Math.floor(random() * moves.length)];
   const scratch = [...board];
-  let bestMove = moves[0];
-  let bestValue = -Infinity;
-  for (const move of moves) {
+  const scored = moves.map(move => {
     const flips = flipsFor(scratch, move, player);
     scratch[move] = player;
     flips.forEach(cell => { scratch[cell] = player; });
     const value = -negamax(scratch, BOT_DEPTH[level] - 1, -Infinity, Infinity, other(player), false);
     scratch[move] = 0;
     flips.forEach(cell => { scratch[cell] = other(player); });
-    if (value > bestValue) { bestValue = value; bestMove = move; }
-  }
-  return bestMove;
+    return { move, value };
+  });
+  // Pick at random among the (near-)best, so replaying the same moves does not replay the same game.
+  const best = Math.max(...scored.map(option => option.value));
+  const top = scored.filter(option => option.value >= best - BOT_SLACK[level]);
+  return top[Math.floor(random() * top.length)].move;
 }
 
 export class ReversiGame {

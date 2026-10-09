@@ -138,8 +138,67 @@ export class LightCyclesGame {
   }
 
   /**
-   * Picks the move that keeps the most room to ride. Harder bots also lean
-   * toward the player to cut them off; easier ones sometimes just wander.
+   * Splits the free cells by who gets there first (both riders' trails are
+   * walls). Ties count for nobody.
+   */
+  territory(bx: number, by: number, rx: number, ry: number): { bot: number; rival: number; touching: boolean } {
+    const size = CYCLE_COLUMNS * CYCLE_ROWS;
+    const owner = new Int8Array(size);
+    const distance = new Int16Array(size).fill(-1);
+    const queue: number[] = [];
+    const seed = (x: number, y: number, who: 1 | 2): void => {
+      const key = y * CYCLE_COLUMNS + x;
+      if (distance[key] === 0 && owner[key] !== who) { owner[key] = 3; return; }
+      distance[key] = 0;
+      owner[key] = who;
+      queue.push(key);
+    };
+    seed(bx, by, 2);
+    seed(rx, ry, 1);
+    let touching = false;
+    for (let head = 0; head < queue.length; head++) {
+      const cell = queue[head];
+      const who = owner[cell];
+      if (who === 3) continue;
+      const cx = cell % CYCLE_COLUMNS;
+      const cy = Math.floor(cell / CYCLE_COLUMNS);
+      for (const [dx, dy] of Object.values(VECTORS)) {
+        const nx = cx + dx;
+        const ny = cy + dy;
+        if (this.occupant(nx, ny) !== 0) continue;
+        const key = ny * CYCLE_COLUMNS + nx;
+        if (distance[key] === -1) {
+          distance[key] = distance[cell] + 1;
+          owner[key] = who;
+          queue.push(key);
+        } else if (owner[key] !== who) {
+          touching = true;
+          if (owner[key] !== 3 && distance[key] === distance[cell] + 1) owner[key] = 3;
+        }
+      }
+    }
+    let bot = 0;
+    let rival = 0;
+    for (let key = 0; key < size; key++) {
+      if (owner[key] === 2) bot += 1;
+      else if (owner[key] === 1) rival += 1;
+    }
+    return { bot, rival, touching };
+  }
+
+  /** The most room the player can still ride into. */
+  private rivalRoom(): number {
+    const rival = this.riders[1];
+    return Math.max(0, ...Object.values(VECTORS).map(([dx, dy]) => this.openArea(rival.x + dx, rival.y + dy)));
+  }
+
+  /**
+   * Easy keeps the most room and sometimes just wanders. Hard, and Normal
+   * most of the time, claim territory: each move is scored by how many cells
+   * the bot reaches before the player, so it cuts the player off instead of
+   * drifting into a pocket. Once the riders are walled apart it fills its own
+   * space hugging the walls. Equal moves are picked at random, so the same
+   * keys do not beat the bot the same way every round.
    */
   chooseBotDirection(): CycleDirection {
     const bot = this.riders[2];
@@ -148,21 +207,35 @@ export class LightCyclesGame {
       const [dx, dy] = VECTORS[direction];
       const x = bot.x + dx;
       const y = bot.y + dy;
-      return { direction, area: this.openArea(x, y), distance: Math.abs(x - rival.x) + Math.abs(y - rival.y) };
+      return { direction, x, y, area: this.openArea(x, y) };
     });
     const safe = options.filter(option => option.area > 0);
     if (!safe.length) return bot.direction;
-    if (this.botLevel === 'easy' && this.random() < 0.25) {
-      return safe[Math.floor(this.random() * safe.length)].direction;
+    // Easy always, and Normal now and then, just keeps the most room in sight.
+    if (this.botLevel === 'easy' || (this.botLevel === 'normal' && this.random() < 0.3)) {
+      if (this.botLevel === 'easy' && this.random() < 0.25) return safe[Math.floor(this.random() * safe.length)].direction;
+      const best = Math.max(...safe.map(option => option.area));
+      // The options list starts with "straight", so ties keep going.
+      return safe.find(option => option.area === best)!.direction;
     }
-    const best = Math.max(...safe.map(option => option.area));
-    if (this.botLevel === 'hard') {
-      const roomy = safe.filter(option => option.area >= best * 0.9);
-      roomy.sort((left, right) => left.distance - right.distance);
-      return roomy[0].direction;
-    }
-    // Normal: most room; the options list starts with "straight", so ties keep going.
-    return safe.find(option => option.area === best)!.direction;
+
+    const scored = safe.map(option => {
+      // A cell the player can also reach next tick risks a head-on draw.
+      const contested = Object.values(VECTORS).some(([dx, dy]) => rival.x + dx === option.x && rival.y + dy === option.y);
+      const split = this.territory(option.x, option.y, rival.x, rival.y);
+      let score: number;
+      if (split.touching) score = split.bot - split.rival;
+      else {
+        // Walled apart: whoever has more room wins, so keep the most, hugging walls to waste none.
+        const walls = Object.values(VECTORS).filter(([dx, dy]) => this.occupant(option.x + dx, option.y + dy) !== 0).length;
+        score = option.area - this.rivalRoom() + walls * 2;
+      }
+      if (contested) score -= 30;
+      return { direction: option.direction, score };
+    });
+    const best = Math.max(...scored.map(option => option.score));
+    const top = scored.filter(option => option.score >= best - 1);
+    return top[Math.floor(this.random() * top.length)].direction;
   }
 
   private mark(x: number, y: number, player: CyclePlayer): void {

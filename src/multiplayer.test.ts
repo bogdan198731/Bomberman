@@ -239,3 +239,20 @@ test('easy bot has a substantially slower reaction cadence than hard bot', () =>
   assert.deepStrictEqual({ x: easy.players[1].x, y: easy.players[1].y }, easyPosition);
   assert.notDeepStrictEqual({ x: hard.players[1].x, y: hard.players[1].y }, hardPosition);
 });
+
+test('a player who never moves cannot beat any bot', () => {
+  // Before, Easy and Normal walked into dead ends beside their own bombs and
+  // got caught by the closing ring, so standing still won most rounds.
+  for (const difficulty of ['easy', 'normal', 'hard'] as const) {
+    for (let level = 1; level <= 3; level++) {
+      for (const frame of [16, 17, 18]) {
+        const room = new OnlineRoom('IDLE', level);
+        let now = 1_000;
+        room.connectPlayer(1, now);
+        room.connectBot(difficulty, now);
+        while (room.phase !== 'finished' && now < 200_000) { now += frame; room.update(now); }
+        assert.strictEqual(room.gameStatus, 'player2-wins', `${difficulty} bot on map ${level} (${frame}ms frames): ${room.gameStatus}`);
+      }
+    }
+  }
+});
