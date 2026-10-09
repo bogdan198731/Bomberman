@@ -25,6 +25,15 @@ const BOOST_TOP_SPEED = 340;
 const ACCELERATION = 205;
 const BRAKE_FORCE = 250;
 const TURN_SPEED = 2.7;
+// A bump shoves cars apart once and fades, instead of braking them every frame they touch.
+const BUMP_MIN_PUSH = 70;
+const BUMP_MAX_PUSH = 220;
+const BUMP_DECAY = 6;
+const BUMP_SPEED_KEEP = .85;
+// The bot backs out when it has been nearly stopped this long, e.g. nose-first into the edge.
+const BOT_STUCK_SPEED = 25;
+const BOT_STUCK_SECONDS = .6;
+const BOT_REVERSE_SECONDS = .9;
 
 export interface RacingCar {
   x: number;
@@ -34,6 +43,8 @@ export interface RacingCar {
   laps: number;
   nextCheckpoint: number;
   boostTimer: number;
+  bumpX: number;
+  bumpY: number;
 }
 
 export interface RacingPickup {
@@ -74,6 +85,8 @@ function createCar(player: RacingPlayer): RacingCar {
     laps: 0,
     nextCheckpoint: 1,
     boostTimer: 0,
+    bumpX: 0,
+    bumpY: 0,
   };
 }
 
@@ -108,6 +121,8 @@ export class MicroRacersGame {
   winner: RacingPlayer | null = null;
   countdown = 3;
   trackVariant = 0;
+  private botStuckTimer = 0;
+  private botReverseTimer = 0;
 
   restart(mode: RacingMode = this.mode): void {
     this.mode = mode;
@@ -118,6 +133,8 @@ export class MicroRacersGame {
     this.phase = 'ready';
     this.winner = null;
     this.countdown = 3;
+    this.botStuckTimer = 0;
+    this.botReverseTimer = 0;
   }
 
   startRace(): boolean {
@@ -144,7 +161,7 @@ export class MicroRacersGame {
     }
     if (this.phase !== 'racing') return;
     const dt = Math.min(.05, elapsed);
-    if (this.mode === 'bot') this.updateBot();
+    if (this.mode === 'bot') this.updateBot(dt);
     this.moveCar(1, dt);
     if (this.phase === 'racing') this.moveCar(2, dt);
     if (this.phase === 'racing') {
@@ -190,15 +207,47 @@ export class MicroRacersGame {
       car.y = previousY;
       car.speed *= .48;
     }
+    this.applyBump(car, dt);
     this.updateCheckpoint(player);
   }
 
-  private updateBot(): void {
+  private applyBump(car: RacingCar, dt: number): void {
+    const bumpX = car.bumpX ?? 0;
+    const bumpY = car.bumpY ?? 0;
+    if (!bumpX && !bumpY) return;
+    const x = car.x + bumpX * dt;
+    const y = car.y + bumpY * dt;
+    if (isPointOnRacingTrack(x, y)) {
+      car.x = x;
+      car.y = y;
+      const fade = Math.exp(-BUMP_DECAY * dt);
+      car.bumpX = Math.abs(bumpX * fade) < 1 ? 0 : bumpX * fade;
+      car.bumpY = Math.abs(bumpY * fade) < 1 ? 0 : bumpY * fade;
+    } else {
+      car.bumpX = 0;
+      car.bumpY = 0;
+    }
+  }
+
+  private updateBot(dt: number): void {
     const bot = this.cars[2];
     const target = RACING_CHECKPOINTS[bot.nextCheckpoint];
     const desired = Math.atan2(target.y - bot.y, target.x - bot.x);
     const delta = normalizeAngle(desired - bot.angle);
     this.inputs[2] = blankInput();
+    if (this.botReverseTimer > 0) {
+      this.botReverseTimer = Math.max(0, this.botReverseTimer - dt);
+      this.inputs[2].brake = true;
+      // Steering flips in reverse, so turn the other way to swing the nose toward the target.
+      if (delta < -.06) this.inputs[2].right = true;
+      else if (delta > .06) this.inputs[2].left = true;
+      return;
+    }
+    this.botStuckTimer = Math.abs(bot.speed) < BOT_STUCK_SPEED ? this.botStuckTimer + dt : 0;
+    if (this.botStuckTimer >= BOT_STUCK_SECONDS) {
+      this.botStuckTimer = 0;
+      this.botReverseTimer = BOT_REVERSE_SECONDS;
+    }
     this.inputs[2].accelerate = true;
     if (delta < -.06) this.inputs[2].left = true;
     else if (delta > .06) this.inputs[2].right = true;
@@ -252,17 +301,33 @@ export class MicroRacersGame {
     const dy = coral.y - mint.y;
     const distance = Math.hypot(dx, dy);
     if (distance === 0 || distance >= CAR_RADIUS * 2) return;
-    const overlap = (CAR_RADIUS * 2 - distance) / 2;
+    const overlap = CAR_RADIUS * 2 - distance;
     const nx = dx / distance;
     const ny = dy / distance;
-    const mintX = mint.x - nx * overlap;
-    const mintY = mint.y - ny * overlap;
-    const coralX = coral.x + nx * overlap;
-    const coralY = coral.y + ny * overlap;
+    // Split the overlap; a car pinned by the edge leaves the whole push to the other one.
+    const mintFree = isPointOnRacingTrack(mint.x - nx * overlap / 2, mint.y - ny * overlap / 2);
+    const coralFree = isPointOnRacingTrack(coral.x + nx * overlap / 2, coral.y + ny * overlap / 2);
+    const mintShare = mintFree ? (coralFree ? .5 : 1) : 0;
+    const coralShare = coralFree ? (mintFree ? .5 : 1) : 0;
+    const mintX = mint.x - nx * overlap * mintShare;
+    const mintY = mint.y - ny * overlap * mintShare;
+    const coralX = coral.x + nx * overlap * coralShare;
+    const coralY = coral.y + ny * overlap * coralShare;
     if (isPointOnRacingTrack(mintX, mintY)) { mint.x = mintX; mint.y = mintY; }
     if (isPointOnRacingTrack(coralX, coralY)) { coral.x = coralX; coral.y = coralY; }
-    mint.speed *= .82;
-    coral.speed *= .82;
+
+    // Only a closing impact bumps and slows; cars already moving apart are left alone.
+    const along = (car: RacingCar): number =>
+      (Math.cos(car.angle) * car.speed + (car.bumpX ?? 0)) * nx + (Math.sin(car.angle) * car.speed + (car.bumpY ?? 0)) * ny;
+    const closing = along(mint) - along(coral);
+    if (closing <= 0) return;
+    const push = Math.min(BUMP_MAX_PUSH, BUMP_MIN_PUSH + closing * .6);
+    mint.bumpX = (mint.bumpX ?? 0) - nx * push;
+    mint.bumpY = (mint.bumpY ?? 0) - ny * push;
+    coral.bumpX = (coral.bumpX ?? 0) + nx * push;
+    coral.bumpY = (coral.bumpY ?? 0) + ny * push;
+    mint.speed *= BUMP_SPEED_KEEP;
+    coral.speed *= BUMP_SPEED_KEEP;
   }
 }
 

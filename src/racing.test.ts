@@ -106,6 +106,51 @@ test('contact separates two cars without pushing them off the track', () => {
   assert.equal(isPointOnRacingTrack(game.cars[2].x, game.cars[2].y), true);
 });
 
+test('a rear-end bump separates the cars instead of gluing them at a crawl', () => {
+  const game = new MicroRacersGame();
+  game.restart('duel');
+  beginRace(game);
+  // Both heading left along the bottom straight, Coral right behind Mint and faster.
+  game.cars[1] = { ...game.cars[1], x: 420, y: 470, angle: Math.PI, speed: 160 };
+  game.cars[2] = { ...game.cars[2], x: 452, y: 474, angle: Math.PI, speed: 240 };
+  game.setInput(1, 'accelerate', true);
+  game.setInput(2, 'accelerate', true);
+  for (let tick = 0; tick < 25; tick += 1) game.update(1 / 60);
+  assert.ok(game.cars[1].speed > 150, `Mint kept ${game.cars[1].speed}`);
+  assert.ok(game.cars[2].speed > 150, `Coral kept ${game.cars[2].speed}`);
+  assert.equal(isPointOnRacingTrack(game.cars[1].x, game.cars[1].y), true);
+  assert.equal(isPointOnRacingTrack(game.cars[2].x, game.cars[2].y), true);
+});
+
+test('a head-on bump pushes the cars apart', () => {
+  const game = new MicroRacersGame();
+  game.restart('duel');
+  beginRace(game);
+  game.cars[1] = { ...game.cars[1], x: 430, y: 470, angle: 0, speed: 200 };
+  game.cars[2] = { ...game.cars[2], x: 464, y: 470, angle: Math.PI, speed: 200 };
+  game.update(1 / 60);
+  assert.ok(game.cars[1].bumpX < 0);
+  assert.ok(game.cars[2].bumpX > 0);
+  for (let tick = 0; tick < 20; tick += 1) game.update(1 / 60);
+  assert.ok(Math.hypot(game.cars[1].x - game.cars[2].x, game.cars[1].y - game.cars[2].y) >= 36);
+});
+
+test('the Coral bot reverses out when stuck nose-first against the edge', () => {
+  const game = new MicroRacersGame();
+  beginRace(game);
+  // Parked against the outer edge of the bottom straight, facing straight into it.
+  game.cars[2] = { ...game.cars[2], x: 300, y: 535, angle: Math.PI / 2, speed: 0, nextCheckpoint: 1 };
+  const start = { x: game.cars[2].x, y: game.cars[2].y };
+  let reversed = false;
+  for (let tick = 0; tick < 100; tick += 1) {
+    game.update(.04);
+    if (game.cars[2].speed < -20) reversed = true;
+  }
+  assert.equal(reversed, true);
+  assert.ok(Math.hypot(game.cars[2].x - start.x, game.cars[2].y - start.y) > 80);
+  assert.ok(game.cars[2].speed > 100);
+});
+
 test('a full ordered checkpoint circuit awards one lap', () => {
   const game = new MicroRacersGame();
   game.restart('duel');
