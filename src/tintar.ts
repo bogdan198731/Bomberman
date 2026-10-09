@@ -338,20 +338,14 @@ export function chooseTintarBotAction(
   if (difficulty === 'normal') {
     return chooseAmongBest(actions.map(action => ({ action, score: scoreTintarAction(game, action, bot) })), random);
   }
-  let bestAction: TintarBotAction | null = null;
-  let bestScore = -Infinity;
-  let alpha = -Infinity;
+  // A full window for every move keeps the scores exact, so equal moves can be told apart and picked at random.
+  const scored: { action: TintarBotAction; score: number }[] = [];
   for (const action of actions) {
     const next = cloneTintarGame(game);
     if (!applyTintarBotAction(next, action)) continue;
-    const score = minimaxTintar(next, bot, 3, alpha, Infinity);
-    if (score > bestScore) {
-      bestScore = score;
-      bestAction = action;
-    }
-    alpha = Math.max(alpha, bestScore);
+    scored.push({ action, score: minimaxTintar(next, bot, 3, -Infinity, Infinity) });
   }
-  return bestAction;
+  return chooseAmongBest(scored, random);
 }
 
 export function initTintar(): void {

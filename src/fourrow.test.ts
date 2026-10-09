@@ -143,3 +143,24 @@ test('the hard bot answers fast enough to feel instant', () => {
   chooseFourMove(board, 1, 'hard');
   assert.ok(performance.now() - started < 1500, `two hard moves took ${Math.round(performance.now() - started)}ms`);
 });
+
+test('replaying the same columns does not replay the same game against the bot', () => {
+  for (const level of ['normal', 'hard'] as const) {
+    const games = new Set<string>();
+    for (let seed = 1; seed <= 8; seed++) {
+      const random = seeded((seed * 48271 * 7919) % 2147483647);
+      const game = new FourInARowGame();
+      game.restart('bot');
+      game.botLevel = level;
+      // Mint stubbornly stacks the left column, as a player repeating a "winning" line would.
+      for (let turn = 0; turn < 8 && game.phase === 'playing'; turn++) {
+        if (game.current === 1) {
+          const legal = [0, 1, 2, 3, 4, 5, 6].filter(column => landingCell(game.board, column) >= 0);
+          game.drop(legal[0]);
+        } else game.drop(chooseFourMove(game.board, 2, level, random));
+      }
+      games.add(game.board.join(''));
+    }
+    assert.ok(games.size > 1, `${level} bot answered the same moves the same way every time`);
+  }
+});

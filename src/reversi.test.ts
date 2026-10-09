@@ -157,3 +157,22 @@ test('the hard bot answers quickly even in a busy middlegame', () => {
   const took = performance.now() - started;
   assert.ok(took < 1500, `two hard moves took ${Math.round(took)}ms`);
 });
+
+test('replaying the same moves does not replay the same game against the bot', () => {
+  for (const level of ['normal', 'hard'] as const) {
+    const games = new Set<string>();
+    for (let seed = 1; seed <= 8; seed++) {
+      const random = seeded((seed * 48271 * 7919) % 2147483647);
+      const game = new ReversiGame();
+      game.restart('bot');
+      game.botLevel = level;
+      // Mint always takes its first legal square, like a player repeating a line that once won.
+      for (let turn = 0; turn < 12 && game.phase === 'playing'; turn++) {
+        if (game.current === 1) game.play(legalMoves(game.board, 1)[0]);
+        else game.play(chooseReversiMove(game.board, 2, level, random));
+      }
+      games.add(game.board.join(''));
+    }
+    assert.ok(games.size > 1, `${level} bot answered the same moves the same way every time`);
+  }
+});

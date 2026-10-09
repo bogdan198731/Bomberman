@@ -135,3 +135,54 @@ test('a bot outlasts a rider that just drives straight', () => {
   while (game.phase === 'playing') game.tick();
   assert.equal(game.roundWinner, 2, 'Mint rides straight into the far wall; the bot must not crash first');
 });
+
+/** A rider who only swerves when the next cell is blocked, toward the most room. */
+function dodgeWalls(game: LightCyclesGame): void {
+  const vectors = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] } as const;
+  const turns = { up: ['up', 'left', 'right'], down: ['down', 'right', 'left'], left: ['left', 'down', 'up'], right: ['right', 'up', 'down'] } as const;
+  const rider = game.riders[1];
+  const [dx, dy] = vectors[rider.queued];
+  if (game.occupant(rider.x + dx, rider.y + dy) === 0) return;
+  let best = rider.queued;
+  let room = -1;
+  for (const direction of turns[rider.direction]) {
+    const [ex, ey] = vectors[direction];
+    const area = game.openArea(rider.x + ex, rider.y + ey);
+    if (area > room) { room = area; best = direction; }
+  }
+  game.turn(1, best);
+}
+
+test('the same keys do not beat the normal and hard bots every round', () => {
+  for (const level of ['normal', 'hard'] as const) {
+    // Before, one opening (up, then right, then just dodge walls) beat these bots every single time.
+    let wins = 0;
+    for (let seed = 1; seed <= 8; seed++) {
+      const game = new LightCyclesGame(seeded((seed * 48271 * 7919) % 2147483647));
+      game.restart('bot');
+      game.botLevel = level;
+      game.startRound();
+      for (let tick = 0; game.phase === 'playing' && tick < 600; tick++) {
+        if (tick === 0) game.turn(1, 'up');
+        if (tick === 1) game.turn(1, 'right');
+        dodgeWalls(game);
+        game.tick();
+      }
+      if (game.roundWinner === 1) wins += 1;
+    }
+    assert.ok(wins <= 3, `${level}: the scripted opening won ${wins}/8 rounds`);
+  }
+});
+
+test('a rider who only dodges walls rarely beats the normal bot', () => {
+  let wins = 0;
+  for (let seed = 1; seed <= 10; seed++) {
+    const game = new LightCyclesGame(seeded((seed * 48271 * 104729) % 2147483647));
+    game.restart('bot');
+    game.botLevel = 'normal';
+    game.startRound();
+    for (let tick = 0; game.phase === 'playing' && tick < 600; tick++) { dodgeWalls(game); game.tick(); }
+    if (game.roundWinner === 1) wins += 1;
+  }
+  assert.ok(wins <= 3, `won ${wins}/10 just by dodging walls`);
+});
