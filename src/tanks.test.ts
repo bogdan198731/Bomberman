@@ -6,6 +6,7 @@ import {
   TANK_BONUS_KINDS,
   TANK_DROP_CHANCE,
   TANK_TARGET_SCORE,
+  TANK_LEVELS,
   pickTankBonus,
 } from './tanks.js';
 import { translateArcadeText } from './i18n.js';
@@ -187,4 +188,58 @@ test('every bonus label and notice has a Romanian translation', () => {
     assert.notEqual(translateArcadeText(TANK_BONUSES[kind].label, 'ro'), TANK_BONUSES[kind].label);
     assert.notEqual(translateArcadeText(TANK_BONUSES[kind].notice, 'ro'), TANK_BONUSES[kind].notice);
   });
+});
+
+/** Mint parks on its spawn and fires every `interval` seconds, the first shot after `offset`. */
+function campingRound(level: number, pace: 'rookie' | 'normal' | 'ace', offset: number, interval = 2): 1 | 2 | null {
+  const game = new MiniTanksGame(() => 1);
+  game.setLevel(level);
+  game.setBotPace(pace);
+  game.startRound();
+  let time = 0;
+  let nextShot = offset;
+  while (game.phase === 'playing' && time < 40) {
+    if (time >= nextShot) { game.setInput(1, 'fire', true); nextShot += interval; }
+    game.update(1 / 60);
+    time += 1 / 60;
+  }
+  return game.roundWinner;
+}
+
+const shotOffsets = Array.from({ length: 10 }, (_, index) => index * .2);
+
+test('camping on spawn and firing every two seconds no longer beats the Classic bot', () => {
+  for (const pace of ['normal', 'ace'] as const) {
+    const winners = shotOffsets.map(offset => campingRound(1, pace, offset));
+    assert.equal(winners.filter(winner => winner === 1).length, 0, `${pace} bot lost to a camper`);
+    assert.equal(winners.filter(winner => winner === 2).length, shotOffsets.length, `${pace} bot stalled instead of winning`);
+  }
+});
+
+test('the ace bot beats a camper in every arena', () => {
+  for (let level = 1; level <= TANK_LEVELS.length; level += 1) {
+    for (const offset of [0, .7, 1.4]) assert.equal(campingRound(level, 'ace', offset), 2, `arena ${level}, first shot at ${offset}s`);
+  }
+});
+
+test('the ace bot sidesteps a shell flying at it', () => {
+  const game = new MiniTanksGame(() => 1);
+  game.setBotPace('ace');
+  game.startRound();
+  game.tanks[1].direction = 'up';
+  game.obstacles = [];
+  game.bullets = [{ x: game.tanks[2].x - 300, y: game.tanks[2].y, vx: 470, vy: 0, owner: 1, bounces: 0, age: .1 }];
+  for (let tick = 0; tick < 50 && game.phase === 'playing'; tick += 1) game.update(1 / 60);
+  assert.equal(game.tanks[1].score, 0, 'the shell missed');
+  assert.equal(game.phase, 'playing');
+});
+
+test('a smarter bot lines up from the side the player is not facing', () => {
+  const game = new MiniTanksGame(() => 1);
+  game.setLevel(1);
+  game.setBotPace('normal');
+  game.startRound();
+  for (let tick = 0; tick < 60; tick += 1) game.update(1 / 60);
+  // Mint faces right along the middle row; the bot climbs out of that row instead of charging down it.
+  assert.ok(Math.abs(game.tanks[2].y - game.tanks[1].y) > 60);
 });
