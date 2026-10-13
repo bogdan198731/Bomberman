@@ -516,15 +516,18 @@ export function initAirHockey(): void {
     if (game.phase === 'ready' || game.phase === 'finished') launch();
     steer(owner, point.x, point.y);
   });
-  rink.addEventListener('pointermove', event => {
+  // Listening on the window keeps the mallet following a mouse that slips off
+  // the table; aim() clamps it to the nearest point on your half.
+  window.addEventListener('pointermove', event => {
+    if (hockeyView.classList.contains('view-hidden')) return;
     const owner = owners.get(event.pointerId) ?? (event.pointerType === 'mouse' ? localPlayer() : undefined);
     if (!owner) return;
     const point = toRink(event);
     steer(owner, point.x, point.y);
   });
   const release = (event: PointerEvent): void => { owners.delete(event.pointerId); };
-  rink.addEventListener('pointerup', release);
-  rink.addEventListener('pointercancel', release);
+  window.addEventListener('pointerup', release);
+  window.addEventListener('pointercancel', release);
 
   window.addEventListener('keydown', event => {
     if (hockeyView.classList.contains('view-hidden') || event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement) return;
