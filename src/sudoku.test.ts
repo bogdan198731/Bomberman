@@ -6,8 +6,17 @@ import {
   SUDOKU_DIFFICULTY_RULES,
   SUDOKU_PUZZLE_COLLECTION,
   SUDOKU_PUZZLES,
+  deleteSudokuTable,
+  emptySudokuSaves,
+  freeSudokuSlot,
+  loadSudokuSaves,
   loadSudokuSession,
+  normalizeSudokuSaves,
+  normalizeSudokuSession,
   saveSudokuSession,
+  saveSudokuTable,
+  SUDOKU_SAVE_SLOTS,
+  type SudokuSession,
   sudokuCompletionScore,
   shouldConfirmSudokuReset,
   SudokuGame,
@@ -177,4 +186,59 @@ test('completion score uses difficulty, time, mistakes, and hints', () => {
   assert.ok(sudokuCompletionScore('medium', 120, 1, 0) > sudokuCompletionScore('medium', 120, 2, 0));
   assert.ok(sudokuCompletionScore('hard', 120, 0, 0) > sudokuCompletionScore('hard', 120, 0, 1));
   assert.equal(sudokuCompletionScore('hard', 10_000, 20, 20), 100);
+});
+
+test('Sudoku save slots keep 3 easy, 2 medium, and 1 hard table', () => {
+  const values = new Map<string, string>();
+  const storage = { getItem: (key: string): string | null => values.get(key) ?? null, setItem: (key: string, value: string): void => { values.set(key, value); } };
+  const table = (difficulty: 'easy' | 'medium' | 'hard', variant: number): SudokuSession => {
+    const game = new SudokuGame(difficulty, variant);
+    const editable = game.puzzle.findIndex(value => value === 0);
+    game.select(editable);
+    game.input(game.solution[editable]);
+    return { version: 1, difficulty, variant, board: game.board, selected: editable, mistakes: 1, hints: 0, elapsedSeconds: 42, notes: [], relaxed: false };
+  };
+  assert.deepEqual(SUDOKU_SAVE_SLOTS, { easy: 3, medium: 2, hard: 1 });
+
+  let saves = loadSudokuSaves(storage);
+  for (let slot = 0; slot < 3; slot += 1) {
+    assert.equal(freeSudokuSlot(saves, 'easy'), slot);
+    saves = saveSudokuTable(saves, table('easy', slot), slot, 1_000 + slot, storage)!;
+  }
+  assert.equal(freeSudokuSlot(saves, 'easy'), null, 'a full difficulty asks the player to pick a slot');
+  assert.equal(saveSudokuTable(saves, table('easy', 9), 3, 0, storage), null, 'there is no fourth easy slot');
+  assert.equal(saveSudokuTable(saves, table('hard', 0), 1, 0, storage), null, 'there is no second hard slot');
+
+  saves = saveSudokuTable(saves, table('easy', 7), 1, 5_000, storage)!;
+  saves = saveSudokuTable(saves, table('hard', 4), 0, 6_000, storage)!;
+  const reloaded = loadSudokuSaves(storage);
+  assert.deepEqual(reloaded.easy.map(saved => saved?.variant), [0, 7, 2]);
+  assert.equal(reloaded.easy[1]?.savedAt, 5_000);
+  assert.equal(reloaded.easy[1]?.elapsedSeconds, 42);
+  assert.equal(reloaded.easy[1]?.mistakes, 1);
+  assert.deepEqual(reloaded.easy[1]?.board, table('easy', 7).board);
+  assert.deepEqual(reloaded.medium, [null, null]);
+  assert.equal(reloaded.hard[0]?.variant, 4);
+
+  const afterDelete = deleteSudokuTable(reloaded, 'easy', 0, storage);
+  assert.equal(freeSudokuSlot(afterDelete, 'easy'), 0);
+  assert.equal(loadSudokuSaves(storage).easy[0], null);
+});
+
+test('Sudoku saves ignore damaged or misfiled tables and survive blocked storage', () => {
+  const medium = new SudokuGame('medium', 0);
+  const misfiled = { version: 1, difficulty: 'medium', variant: 0, board: medium.board, selected: 0, mistakes: 0, hints: 0, elapsedSeconds: 0, notes: [], relaxed: false };
+  const saves = normalizeSudokuSaves({ easy: [misfiled, { board: 'broken' }, null, misfiled], hard: 'nope' });
+  assert.deepEqual(saves, emptySudokuSaves());
+  assert.deepEqual(loadSudokuSaves({ getItem: () => '{not json', setItem: () => undefined }), emptySudokuSaves());
+  const blocked = { getItem: (): string | null => null, setItem: (): void => { throw new Error('quota'); } };
+  assert.equal(saveSudokuTable(emptySudokuSaves(), misfiled as SudokuSession, 0, 0, blocked), null);
+});
+
+test('the current Sudoku session remembers which save slot it came from', () => {
+  const game = new SudokuGame('medium', 0);
+  const base = { version: 1 as const, difficulty: 'medium' as const, variant: 0, board: game.board, selected: 0, mistakes: 0, hints: 0, elapsedSeconds: 0, notes: [], relaxed: false };
+  assert.equal(normalizeSudokuSession({ ...base, savedSlot: 1 })?.savedSlot, 1);
+  assert.equal(normalizeSudokuSession({ ...base, savedSlot: 2 })?.savedSlot, undefined, 'medium only has two slots');
+  assert.equal(normalizeSudokuSession(base)?.savedSlot, undefined);
 });
