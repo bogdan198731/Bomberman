@@ -562,12 +562,14 @@ export function initBrickBreaker(): void {
   };
   let dragStart: { x: number; moved: boolean } | null = null;
   board.addEventListener('pointerdown', event => { dragStart = { x: event.clientX, moved: false }; game.movePaddleTo(toArena(event.clientX)); });
-  board.addEventListener('pointermove', event => {
+  // On the window, so a mouse that slips off the board still steers; movePaddleTo clamps to the walls.
+  window.addEventListener('pointermove', event => {
+    if (!visible()) return;
     if (event.pointerType === 'mouse' || dragStart) game.movePaddleTo(toArena(event.clientX));
     if (dragStart && Math.abs(event.clientX - dragStart.x) > 8) dragStart.moved = true;
   });
   // A tap (no drag) launches; a drag only steers.
-  board.addEventListener('pointerup', () => { if (dragStart && !dragStart.moved) launch(); dragStart = null; });
+  window.addEventListener('pointerup', () => { if (dragStart && !dragStart.moved) launch(); dragStart = null; });
 
   window.addEventListener('keydown', event => {
     if (!visible() || event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement) return;
