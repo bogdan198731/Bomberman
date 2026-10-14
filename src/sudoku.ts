@@ -564,6 +564,8 @@ export function initSudoku(): void {
     } else {
       status = 'This device could not save the position.';
     }
+    // Positions only match the puzzle they were saved in, so that puzzle must be stored too.
+    saveProgress();
     syncUi();
   }
 
