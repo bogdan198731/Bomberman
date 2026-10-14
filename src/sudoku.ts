@@ -279,8 +279,6 @@ export interface SudokuSession {
   elapsedSeconds: number;
   notes: Array<readonly [number, number[]]>;
   relaxed: boolean;
-  /** The save slot this table was opened from or last saved to, if any. */
-  savedSlot?: number;
 }
 
 export function shouldConfirmSudokuReset(game: Pick<SudokuGame, 'board' | 'puzzle' | 'phase' | 'mistakes' | 'hints'>, noteCount = 0): boolean {
@@ -323,9 +321,6 @@ export function normalizeSudokuSession(value: unknown): SudokuSession | null {
     elapsedSeconds: nonNegativeInteger(candidate.elapsedSeconds),
     notes,
     relaxed: candidate.relaxed === true,
-    ...(Number.isInteger(candidate.savedSlot) && candidate.savedSlot! >= 0 && candidate.savedSlot! < SUDOKU_SAVE_SLOTS[candidate.difficulty]
-      ? { savedSlot: candidate.savedSlot }
-      : {}),
   };
 }
 
@@ -345,80 +340,84 @@ export function saveSudokuSession(session: SudokuSession | null, storage?: Stora
   return normalized;
 }
 
-export const SUDOKU_SAVES_STORAGE_KEY = 'blast-arcade-sudoku-saves-v1';
-// Harder puzzles take longer, so fewer of them are kept at once.
+export const SUDOKU_POSITIONS_STORAGE_KEY = 'blast-arcade-sudoku-positions-v1';
+// Saved positions in the current puzzle; harder puzzles get fewer so they stay a real challenge.
 export const SUDOKU_SAVE_SLOTS: Record<SudokuDifficulty, number> = { easy: 3, medium: 2, hard: 1 };
 
-export interface SudokuSavedTable extends SudokuSession {
-  savedAt: number;
+export interface SudokuPosition {
+  board: number[];
+  notes: Array<readonly [number, number[]]>;
+  selected: number;
+  elapsedSeconds: number;
 }
 
-export type SudokuSaves = Record<SudokuDifficulty, Array<SudokuSavedTable | null>>;
+/** The positions saved in one puzzle, so a player can go back to them. */
+export interface SudokuPositions {
+  difficulty: SudokuDifficulty;
+  variant: number;
+  slots: Array<SudokuPosition | null>;
+}
 
-export function emptySudokuSaves(): SudokuSaves {
-  return {
-    easy: Array(SUDOKU_SAVE_SLOTS.easy).fill(null),
-    medium: Array(SUDOKU_SAVE_SLOTS.medium).fill(null),
-    hard: Array(SUDOKU_SAVE_SLOTS.hard).fill(null),
+export function emptySudokuPositions(difficulty: SudokuDifficulty, variant: number): SudokuPositions {
+  return { difficulty, variant, slots: Array(SUDOKU_SAVE_SLOTS[difficulty]).fill(null) };
+}
+
+function normalizeSudokuPosition(value: unknown, difficulty: SudokuDifficulty, variant: number): SudokuPosition | null {
+  if (!value || typeof value !== 'object') return null;
+  const session = normalizeSudokuSession({ ...(value as object), difficulty, variant });
+  return session && {
+    board: session.board, notes: session.notes, selected: session.selected, elapsedSeconds: session.elapsedSeconds,
   };
 }
 
-export function normalizeSudokuSaves(value: unknown): SudokuSaves {
-  const saves = emptySudokuSaves();
-  if (!value || typeof value !== 'object') return saves;
-  (Object.keys(saves) as SudokuDifficulty[]).forEach(difficulty => {
-    const slots = (value as Record<string, unknown>)[difficulty];
-    if (!Array.isArray(slots)) return;
-    saves[difficulty] = saves[difficulty].map((_, slot) => {
-      const session = normalizeSudokuSession(slots[slot]);
-      // A table saved under another difficulty would break that difficulty's slot limit.
-      if (!session || session.difficulty !== difficulty) return null;
-      return { ...session, savedAt: nonNegativeInteger((slots[slot] as Partial<SudokuSavedTable>).savedAt) };
-    });
-  });
-  return saves;
+/** Positions saved for this puzzle; positions from any other puzzle are dropped. */
+export function normalizeSudokuPositions(value: unknown, difficulty: SudokuDifficulty, variant: number): SudokuPositions {
+  const positions = emptySudokuPositions(difficulty, variant);
+  const candidate = value as Partial<SudokuPositions> | null;
+  if (!candidate || typeof candidate !== 'object' || candidate.difficulty !== difficulty || candidate.variant !== variant
+    || !Array.isArray(candidate.slots)) return positions;
+  positions.slots = positions.slots.map((_, slot) => normalizeSudokuPosition(candidate.slots![slot], difficulty, variant));
+  return positions;
 }
 
-export function loadSudokuSaves(storage?: StorageLike): SudokuSaves {
+export function loadSudokuPositions(difficulty: SudokuDifficulty, variant: number, storage?: StorageLike): SudokuPositions {
   try {
-    const value = storage?.getItem(SUDOKU_SAVES_STORAGE_KEY);
-    return normalizeSudokuSaves(value ? JSON.parse(value) : null);
+    const value = storage?.getItem(SUDOKU_POSITIONS_STORAGE_KEY);
+    return normalizeSudokuPositions(value ? JSON.parse(value) : null, difficulty, variant);
   } catch {
-    return emptySudokuSaves();
+    return emptySudokuPositions(difficulty, variant);
   }
 }
 
-/** Puts the table in its difficulty's slot, replacing whatever was there. Returns null if the slot does not exist or storage refused it. */
-export function saveSudokuTable(
-  saves: SudokuSaves,
-  session: SudokuSession,
+/** Puts the position in a slot, replacing whatever was there. Returns null if the slot does not exist or storage refused it. */
+export function saveSudokuPosition(
+  positions: SudokuPositions,
+  position: SudokuPosition,
   slot: number,
-  savedAt: number,
   storage?: StorageLike,
-): SudokuSaves | null {
-  const normalized = normalizeSudokuSession(session);
-  if (!normalized || !Number.isInteger(slot) || slot < 0 || slot >= SUDOKU_SAVE_SLOTS[normalized.difficulty]) return null;
-  const next = normalizeSudokuSaves(saves);
-  next[normalized.difficulty][slot] = { ...normalized, savedAt: nonNegativeInteger(savedAt) };
-  return writeSudokuSaves(next, storage) ? next : null;
+): SudokuPositions | null {
+  const normalized = normalizeSudokuPosition(position, positions.difficulty, positions.variant);
+  if (!normalized || !Number.isInteger(slot) || slot < 0 || slot >= positions.slots.length) return null;
+  const next = { ...positions, slots: [...positions.slots] };
+  next.slots[slot] = normalized;
+  return writeSudokuPositions(next, storage) ? next : null;
 }
 
-export function deleteSudokuTable(saves: SudokuSaves, difficulty: SudokuDifficulty, slot: number, storage?: StorageLike): SudokuSaves {
-  const next = normalizeSudokuSaves(saves);
-  if (Number.isInteger(slot) && slot >= 0 && slot < next[difficulty].length) next[difficulty][slot] = null;
-  writeSudokuSaves(next, storage);
+export function deleteSudokuPosition(positions: SudokuPositions, slot: number, storage?: StorageLike): SudokuPositions {
+  const next = { ...positions, slots: positions.slots.map((position, index) => index === slot ? null : position) };
+  writeSudokuPositions(next, storage);
   return next;
 }
 
-/** The first empty slot for a difficulty, or null when every slot is taken and the player must pick one to overwrite. */
-export function freeSudokuSlot(saves: SudokuSaves, difficulty: SudokuDifficulty): number | null {
-  const slot = saves[difficulty].findIndex(table => !table);
+/** The first empty slot, or null when every slot is taken and the player must pick one to overwrite. */
+export function freeSudokuSlot(positions: SudokuPositions): number | null {
+  const slot = positions.slots.findIndex(position => !position);
   return slot < 0 ? null : slot;
 }
 
-function writeSudokuSaves(saves: SudokuSaves, storage?: StorageLike): boolean {
+function writeSudokuPositions(positions: SudokuPositions, storage?: StorageLike): boolean {
   if (!storage) return false;
-  try { storage.setItem(SUDOKU_SAVES_STORAGE_KEY, JSON.stringify(saves)); return true; }
+  try { storage.setItem(SUDOKU_POSITIONS_STORAGE_KEY, JSON.stringify(positions)); return true; }
   catch { return false; }
 }
 
@@ -472,10 +471,8 @@ export function initSudoku(): void {
   let relaxed = restoredSession?.relaxed ?? false;
   let awaitingSavedResume = Boolean(restoredSession);
   let status = restoredSession ? 'Saved puzzle restored. Continue when you are ready.' : 'Select a cell and place a number from 1 to 9.';
-  let saves = loadSudokuSaves(storage);
-  // The slot the current table came from, so saving again updates it instead of taking another slot.
-  let openedSlot: number | null = restoredSession?.savedSlot ?? null;
-  // Set while every slot for this difficulty is full and the player is picking one to overwrite.
+  let positions = loadSudokuPositions(game.difficulty, variant, storage);
+  // Set while every slot is full and the player is picking one to overwrite.
   let choosingOverwrite = false;
 
   function visible(): boolean { return !activeView.classList.contains('view-hidden'); }
@@ -496,7 +493,6 @@ export function initSudoku(): void {
       elapsedSeconds,
       notes: [...notes].map(([index, values]) => [index, [...values].sort()] as const),
       relaxed,
-      ...(openedSlot === null ? {} : { savedSlot: openedSlot }),
     };
   }
 
@@ -511,73 +507,64 @@ export function initSudoku(): void {
     if (scoreElement) scoreElement.textContent = currentScore().toLocaleString();
   }
 
-  function difficultyLabel(difficulty: SudokuDifficulty): string {
-    return difficulty === 'easy' ? 'Easy' : difficulty === 'medium' ? 'Medium' : 'Hard';
-  }
-
-  function syncSaves(): void {
+  function syncPositions(): void {
     const complete = game.phase === 'complete';
     if (saveButton) {
-      saveButton.textContent = choosingOverwrite ? 'Cancel' : 'Save table';
+      saveButton.textContent = choosingOverwrite ? 'Cancel' : 'Save position';
       saveButton.disabled = complete && !choosingOverwrite;
     }
-    if (savesCount) {
-      savesCount.replaceChildren(...(Object.keys(SUDOKU_SAVE_SLOTS) as SudokuDifficulty[]).map(difficulty => {
-        const count = document.createElement('span');
-        count.textContent = `${difficultyLabel(difficulty)} ${saves[difficulty].filter(Boolean).length}/${SUDOKU_SAVE_SLOTS[difficulty]}`;
-        return count;
-      }));
-    }
+    if (savesCount) savesCount.textContent = `${positions.slots.filter(Boolean).length} of ${positions.slots.length} saved`;
     if (!savesList) return;
-    const rows = (Object.keys(SUDOKU_SAVE_SLOTS) as SudokuDifficulty[]).flatMap(difficulty => saves[difficulty].flatMap((table, slot) => {
-      if (!table) return [];
-      const name = `${difficultyLabel(difficulty)} slot ${slot + 1}`;
+    const empty = game.puzzle.filter(value => value === 0).length;
+    const rows = positions.slots.flatMap((position, slot) => {
+      if (!position) return [];
+      const name = `Position ${slot + 1}`;
       const row = document.createElement('li');
-      if (difficulty === game.difficulty && slot === openedSlot) row.classList.add('current');
       const label = document.createElement('span');
       const title = document.createElement('b');
       title.textContent = name;
       const detail = document.createElement('small');
-      const reference = new SudokuGame(difficulty, table.variant);
-      const filled = table.board.filter((value, index) => value !== 0 && !reference.isGiven(index)).length;
-      const empty = reference.puzzle.filter(value => value === 0).length;
-      detail.textContent = `${filled} of ${empty} filled · ${formatSudokuTime(table.elapsedSeconds)}`;
+      const filled = position.board.filter((value, index) => value !== 0 && !game.isGiven(index)).length;
+      detail.textContent = `${filled} of ${empty} filled · saved at ${formatSudokuTime(position.elapsedSeconds)}`;
       label.append(title, detail);
       const button = (text: string, action: string): HTMLButtonElement => {
         const element = document.createElement('button');
         element.type = 'button';
         element.textContent = text;
         element.dataset.sudokuSaveAction = action;
-        element.dataset.sudokuSaveDifficulty = difficulty;
         element.dataset.sudokuSaveSlot = String(slot);
-        element.setAttribute('aria-label', `${text} ${name}`);
+        element.setAttribute('aria-label', `${text}: ${name}`);
         return element;
       };
       row.append(label);
-      if (choosingOverwrite && difficulty === game.difficulty) row.append(button('Overwrite', 'overwrite'));
-      else row.append(button('Open', 'open'), button('Delete', 'delete'));
+      if (choosingOverwrite) row.append(button('Overwrite', 'overwrite'));
+      else row.append(button('Go back', 'restore'), button('Delete', 'delete'));
       return [row];
-    }));
+    });
     if (!rows.length) {
-      const empty = document.createElement('li');
-      empty.className = 'empty';
-      empty.textContent = 'No saved tables yet.';
-      rows.push(empty);
+      const hint = document.createElement('li');
+      hint.className = 'empty';
+      hint.textContent = 'Stuck? Save your position, try a guess, and come back here if it goes wrong.';
+      rows.push(hint);
     }
     savesList.replaceChildren(...rows);
   }
 
-  function saveTable(slot: number, overwrite: boolean): void {
-    const next = saveSudokuTable(saves, currentSession(), slot, Date.now(), storage);
+  function currentPosition(): SudokuPosition {
+    const session = currentSession();
+    return { board: session.board, notes: session.notes, selected: session.selected, elapsedSeconds };
+  }
+
+  function savePosition(slot: number, overwrite: boolean): void {
+    const next = saveSudokuPosition(positions, currentPosition(), slot, storage);
     choosingOverwrite = false;
-    const name = `${difficultyLabel(game.difficulty)} slot ${slot + 1}`;
     if (next) {
-      saves = next;
-      openedSlot = slot;
-      status = overwrite ? `${name} overwritten.` : `Table saved to ${name}.`;
+      positions = next;
+      status = overwrite ? `Position ${slot + 1} overwritten.` : `Position ${slot + 1} saved.`;
     } else {
-      status = 'This device could not save the table.';
+      status = 'This device could not save the position.';
     }
+    // Positions only match the puzzle they were saved in, so that puzzle must be stored too.
     saveProgress();
     syncUi();
   }
@@ -590,56 +577,47 @@ export function initSudoku(): void {
       return;
     }
     if (game.phase !== 'playing') return;
-    const slot = openedSlot ?? freeSudokuSlot(saves, game.difficulty);
-    if (slot !== null) { saveTable(slot, false); return; }
+    const slot = freeSudokuSlot(positions);
+    if (slot !== null) { savePosition(slot, false); return; }
     choosingOverwrite = true;
-    status = `All ${difficultyLabel(game.difficulty)} slots are full. Pick one to overwrite.`;
+    status = 'All position slots are full. Pick one to overwrite.';
     syncUi();
   }
 
-  function openTable(difficulty: SudokuDifficulty, slot: number): void {
-    const table = saves[difficulty][slot];
-    if (!table) return;
-    if (shouldConfirmSudokuReset(game, notes.size)
-      && !window.confirm(translateArcadeText('Open this saved table? Your current entries, notes, and score will be lost unless you save them first.'))) return;
-    clearArcadePause();
-    variant = table.variant;
-    game.reset(difficulty, table.variant);
-    game.board = [...table.board];
-    game.selected = table.selected;
-    game.mistakes = table.mistakes;
-    game.hints = table.hints;
-    elapsedSeconds = table.elapsedSeconds;
+  function restorePosition(slot: number): void {
+    const position = positions.slots[slot];
+    if (!position || game.phase !== 'playing') return;
+    const changed = position.board.some((value, index) => value !== game.board[index])
+      || JSON.stringify(position.notes) !== JSON.stringify(currentPosition().notes);
+    if (changed && !window.confirm(translateArcadeText('Go back to this position? Numbers and notes added since then will be removed.'))) return;
+    // Only the board goes back: time, mistakes and hints already used still count.
+    game.board = [...position.board];
+    game.selected = position.selected;
     notes.clear();
-    table.notes.forEach(([index, values]) => notes.set(index, new Set(values)));
+    position.notes.forEach(([index, values]) => notes.set(index, new Set(values)));
     notesMode = false;
-    awaitingSavedResume = false;
     choosingOverwrite = false;
-    openedSlot = slot;
-    status = `${difficultyLabel(difficulty)} slot ${slot + 1} opened. Keep going.`;
-    reporter.report(false);
+    status = `Back at position ${slot + 1}. Try another way.`;
     saveProgress();
     syncUi();
   }
 
-  function deleteTable(difficulty: SudokuDifficulty, slot: number): void {
-    if (!saves[difficulty][slot] || !window.confirm(translateArcadeText('Delete this saved table?'))) return;
-    saves = deleteSudokuTable(saves, difficulty, slot, storage);
-    if (difficulty === game.difficulty && slot === openedSlot) openedSlot = null;
-    status = `${difficultyLabel(difficulty)} slot ${slot + 1} deleted.`;
-    saveProgress();
+  function deletePosition(slot: number): void {
+    if (!positions.slots[slot] || !window.confirm(translateArcadeText('Delete this saved position?'))) return;
+    positions = deleteSudokuPosition(positions, slot, storage);
+    status = `Position ${slot + 1} deleted.`;
     syncUi();
   }
 
-  // A finished table has nothing left to come back to, so its slot is freed.
-  function releaseCompletedSlot(): void {
-    if (game.phase !== 'complete' || openedSlot === null) return;
-    saves = deleteSudokuTable(saves, game.difficulty, openedSlot, storage);
-    openedSlot = null;
+  // Saved positions belong to one puzzle, so a finished or replaced puzzle drops them.
+  function clearPositions(): void {
+    choosingOverwrite = false;
+    positions = emptySudokuPositions(game.difficulty, variant);
+    try { storage?.setItem(SUDOKU_POSITIONS_STORAGE_KEY, ''); } catch { /* Nothing to clean up when storage is blocked. */ }
   }
 
   function syncUi(): void {
-    releaseCompletedSlot();
+    if (game.phase === 'complete' && positions.slots.some(Boolean)) clearPositions();
     const restoreBoardFocus = activeBoard.contains(document.activeElement);
     const selectedValue = game.board[game.selected];
     const cells = game.board.map((value, index) => {
@@ -722,7 +700,7 @@ export function initSudoku(): void {
       if (overlayMessage) overlayMessage.textContent = `Completed in ${formatSudokuTime(elapsedSeconds)} · ${game.mistakes} ${mistakeLabel} · ${game.hints} ${hintLabel} · ${score.toLocaleString()} points.`;
       reporter.report(true, { outcome: 'complete', score });
     }
-    syncSaves();
+    syncPositions();
   }
 
   function enter(value: number): void {
@@ -774,8 +752,7 @@ export function initSudoku(): void {
     notesMode = false;
     notes.clear();
     awaitingSavedResume = false;
-    openedSlot = null;
-    choosingOverwrite = false;
+    clearPositions();
     status = 'Select a cell and place a number from 1 to 9.';
     reporter.report(false);
     saveProgress();
@@ -833,15 +810,15 @@ export function initSudoku(): void {
     requestSave();
   });
   savesList?.addEventListener('click', event => {
+    if (awaitingSavedResume || isArcadeSessionPaused('sudoku')) return;
     const button = event.target instanceof Element
       ? event.target.closest<HTMLElement>('[data-sudoku-save-action]')
       : null;
-    const difficulty = button?.dataset.sudokuSaveDifficulty;
-    const slot = Number(button?.dataset.sudokuSaveSlot);
-    if (!button || (difficulty !== 'easy' && difficulty !== 'medium' && difficulty !== 'hard')) return;
-    if (button.dataset.sudokuSaveAction === 'open') openTable(difficulty, slot);
-    else if (button.dataset.sudokuSaveAction === 'delete') deleteTable(difficulty, slot);
-    else if (button.dataset.sudokuSaveAction === 'overwrite' && choosingOverwrite) saveTable(slot, true);
+    if (!button) return;
+    const slot = Number(button.dataset.sudokuSaveSlot);
+    if (button.dataset.sudokuSaveAction === 'restore') restorePosition(slot);
+    else if (button.dataset.sudokuSaveAction === 'delete') deletePosition(slot);
+    else if (button.dataset.sudokuSaveAction === 'overwrite' && choosingOverwrite) savePosition(slot, true);
   });
   relaxedButton?.addEventListener('click', () => {
     relaxed = !relaxed;

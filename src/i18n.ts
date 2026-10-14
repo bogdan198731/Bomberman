@@ -951,23 +951,18 @@ function translateRomanianPattern(value: string): string | null {
   if (match) return `${match[1] === 'Given' ? 'Număr dat' : 'Număr introdus'} ${match[2]}, rândul ${match[3]}, coloana ${match[4]}`;
   match = value.match(/^Empty cell, row (\d+), column (\d+)$/);
   if (match) return `Celulă goală, rândul ${match[1]}, coloana ${match[2]}`;
-  const sudokuSlot = (difficulty: string, slot: string): string => `${difficulty === 'Easy' ? 'Ușor' : difficulty === 'Medium' ? 'Mediu' : 'Greu'} · locul ${slot}`;
-  match = value.match(/^(Easy|Medium|Hard) slot (\d+)$/);
-  if (match) return sudokuSlot(match[1], match[2]);
-  match = value.match(/^(Open|Delete|Overwrite) (Easy|Medium|Hard) slot (\d+)$/);
-  if (match) return `${match[1] === 'Open' ? 'Deschide' : match[1] === 'Delete' ? 'Elimină' : 'Suprascrie'} ${sudokuSlot(match[2], match[3])}`;
-  match = value.match(/^(Easy|Medium|Hard) (\d+)\/(\d+)$/);
-  if (match) return `${match[1] === 'Easy' ? 'Ușor' : match[1] === 'Medium' ? 'Mediu' : 'Greu'} ${match[2]}/${match[3]}`;
-  match = value.match(/^(\d+) of (\d+) filled · ([0-9:]+)$/);
-  if (match) return `${match[1]} din ${match[2]} completate · ${match[3]}`;
-  match = value.match(/^Table saved to (Easy|Medium|Hard) slot (\d+)\.$/);
-  if (match) return `Grila a fost salvată în ${sudokuSlot(match[1], match[2])}.`;
-  match = value.match(/^(Easy|Medium|Hard) slot (\d+) (overwritten|deleted)\.$/);
-  if (match) return `${sudokuSlot(match[1], match[2])}: ${match[3] === 'overwritten' ? 'grila a fost suprascrisă' : 'grila a fost ștearsă'}.`;
-  match = value.match(/^(Easy|Medium|Hard) slot (\d+) opened\. Keep going\.$/);
-  if (match) return `${sudokuSlot(match[1], match[2])} a fost deschis. Continuă.`;
-  match = value.match(/^All (Easy|Medium|Hard) slots are full\. Pick one to overwrite\.$/);
-  if (match) return `Toate locurile pentru ${match[1] === 'Easy' ? 'Ușor' : match[1] === 'Medium' ? 'Mediu' : 'Greu'} sunt ocupate. Alege unul de suprascris.`;
+  match = value.match(/^(\d+) of (\d+) saved$/);
+  if (match) return `${match[1]} din ${match[2]} salvate`;
+  match = value.match(/^Position (\d+)$/);
+  if (match) return `Poziția ${match[1]}`;
+  match = value.match(/^(Go back|Delete|Overwrite): Position (\d+)$/);
+  if (match) return `${match[1] === 'Go back' ? 'Revino la' : match[1] === 'Delete' ? 'Elimină' : 'Suprascrie'} poziția ${match[2]}`;
+  match = value.match(/^(\d+) of (\d+) filled · saved at ([0-9:]+)$/);
+  if (match) return `${match[1]} din ${match[2]} completate · salvată la ${match[3]}`;
+  match = value.match(/^Position (\d+) (saved|overwritten|deleted)\.$/);
+  if (match) return `Poziția ${match[1]} a fost ${match[2] === 'saved' ? 'salvată' : match[2] === 'overwritten' ? 'suprascrisă' : 'ștearsă'}.`;
+  match = value.match(/^Back at position (\d+)\. Try another way\.$/);
+  if (match) return `Ai revenit la poziția ${match[1]}. Încearcă altă variantă.`;
   match = value.match(/^Note (\d+) (added|removed)\.$/);
   if (match) return `Notița ${match[1]} a fost ${match[2] === 'added' ? 'adăugată' : 'ștearsă'}.`;
   match = value.match(/^Empty cell, row (\d+), column (\d+), notes (.+)$/);
@@ -1010,12 +1005,14 @@ const UX_TRANSLATIONS: Record<string, string> = {
   'easy bot': 'Bot ușor', 'normal bot': 'Bot normal', 'hard bot': 'Bot greu',
   'New round': 'Rundă nouă', 'Bomb': 'Bombă',
   'A saved puzzle with notes is ready.': 'Ai un puzzle salvat, cu notițe.',
-  // Sudoku save slots
-  'Saved tables': 'Grile salvate', 'Save table': 'Salvează grila', 'No saved tables yet.': 'Nicio grilă salvată încă.',
-  'Open': 'Deschide', 'Delete': 'Elimină', 'Overwrite': 'Suprascrie', 'Save cancelled.': 'Salvare anulată.',
-  'This device could not save the table.': 'Acest dispozitiv nu a putut salva grila.',
-  'Delete this saved table?': 'Ștergi această grilă salvată?',
-  'Open this saved table? Your current entries, notes, and score will be lost unless you save them first.': 'Deschizi această grilă salvată? Numerele, notițele și scorul curent se pierd dacă nu le salvezi mai întâi.',
+  // Sudoku saved positions
+  'Saved positions': 'Poziții salvate', 'Save position': 'Salvează poziția', 'Go back': 'Revino',
+  'Delete': 'Elimină', 'Overwrite': 'Suprascrie', 'Save cancelled.': 'Salvare anulată.',
+  'Stuck? Save your position, try a guess, and come back here if it goes wrong.': 'Te-ai blocat? Salvează poziția, încearcă o variantă și revino aici dacă nu iese.',
+  'All position slots are full. Pick one to overwrite.': 'Toate locurile pentru poziții sunt ocupate. Alege unul de suprascris.',
+  'This device could not save the position.': 'Acest dispozitiv nu a putut salva poziția.',
+  'Delete this saved position?': 'Ștergi această poziție salvată?',
+  'Go back to this position? Numbers and notes added since then will be removed.': 'Revii la această poziție? Numerele și notițele adăugate de atunci vor fi șterse.',
   'Saved puzzle restored. Continue when you are ready.': 'Puzzle restaurat. Continuă când ești pregătit.',
   'Saved puzzle continued. Only visible row, column, and box conflicts are flagged.': 'Puzzle reluat. Sunt marcate doar conflictele din rând, coloană sau careu.',
   'A saved run is ready on this device.': 'Ai un joc salvat pe acest dispozitiv.',
