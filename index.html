@@ -7031,6 +7031,38 @@
     }
     .sudoku-actions button:disabled { cursor: not-allowed; opacity: .45; }
 
+    .sudoku-saves {
+      width: min(100%, 560px);
+      margin: 12px auto 0;
+      padding: 10px 12px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 13px;
+      background: rgba(255,255,255,.03);
+    }
+    .sudoku-saves-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .sudoku-saves h3 { margin: 0; color: var(--ink); font-size: .8rem; }
+    .sudoku-saves-count { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 3px 0 0; color: #b9c6d4; font-size: .66rem; font-weight: 800; }
+    .sudoku-saves button {
+      min-height: 40px;
+      padding: 0 13px;
+      border: 1px solid rgba(73,226,255,.32);
+      border-radius: 11px;
+      color: #9ff3ff;
+      background: rgba(73,226,255,.08);
+      cursor: pointer;
+      font-size: .7rem;
+      font-weight: 900;
+    }
+    #sudokuSaveButton { flex: none; color: #06171c; background: #49e2ff; }
+    .sudoku-saves button:disabled { cursor: not-allowed; opacity: .45; }
+    .sudoku-saves-list { display: grid; gap: 6px; margin: 9px 0 0; padding: 0; list-style: none; }
+    .sudoku-saves-list li { display: flex; align-items: center; gap: 7px; padding: 6px 6px 6px 10px; border-radius: 10px; background: rgba(255,255,255,.04); }
+    .sudoku-saves-list li.current { box-shadow: inset 0 0 0 1px rgba(73,226,255,.5); }
+    .sudoku-saves-list li.empty { padding: 4px 0; color: #b9c6d4; background: none; font-size: .7rem; }
+    .sudoku-saves-list li > span { display: grid; flex: 1; min-width: 0; gap: 2px; }
+    .sudoku-saves-list b { color: var(--ink); font-size: .74rem; }
+    .sudoku-saves-list small { color: #b9c6d4; font-size: .66rem; }
+
     .sudoku-help {
       margin: 10px 0 0;
       color: var(--muted);
@@ -7052,6 +7084,7 @@
       .sudoku-number-pad button { min-height: 44px; border-radius: 9px; }
       .sudoku-actions { grid-template-columns: repeat(2, 1fr); }
       .sudoku-actions button { min-height: 44px; }
+      .sudoku-saves button { min-height: 44px; }
     }
 
     .block-team {
@@ -9899,6 +9932,16 @@
         <button id="sudokuHintButton" type="button"><span aria-hidden="true">◇</span> Hint</button>
         <button class="new-puzzle" type="button" data-sudoku-new>New puzzle</button>
       </div>
+      <section class="sudoku-saves" aria-labelledby="sudokuSavesTitle">
+        <div class="sudoku-saves-head">
+          <div>
+            <h3 id="sudokuSavesTitle">Saved tables</h3>
+            <p id="sudokuSavesCount" class="sudoku-saves-count"></p>
+          </div>
+          <button id="sudokuSaveButton" type="button">Save table</button>
+        </div>
+        <ul id="sudokuSavesList" class="sudoku-saves-list"></ul>
+      </section>
       <p class="sudoku-help">Tap a cell and number, or use your keyboard. Tougher puzzles start with a higher score; time, mistakes, and hints reduce it.</p>
     </section>
   </main>

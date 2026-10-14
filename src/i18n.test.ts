@@ -90,3 +90,13 @@ test('solitaire difficulty picker reads in Romanian', () => {
   assert.equal(translateArcadeText('Hard · draw 3', 'ro'), 'Greu · trage 3');
   assert.equal(translateArcadeText('Solitaire difficulty', 'ro'), 'Dificultate Solitaire');
 });
+
+test('Sudoku save slot text is translated to Romanian', () => {
+  [
+    'Saved tables', 'Save table', 'No saved tables yet.', 'Open', 'Delete', 'Overwrite', 'Save cancelled.',
+    'Easy slot 2', 'Open Hard slot 1', 'Medium 1/2', '12 of 45 filled · 03:10', 'Table saved to Easy slot 3.',
+    'Medium slot 1 overwritten.', 'Hard slot 1 deleted.', 'Easy slot 1 opened. Keep going.',
+    'All Medium slots are full. Pick one to overwrite.', 'Delete this saved table?',
+  ].forEach(text => assert.notEqual(translateArcadeText(text, 'ro'), text, text));
+  assert.equal(translateArcadeText('Open Easy slot 2', 'ro'), 'Deschide Ușor · locul 2');
+});
