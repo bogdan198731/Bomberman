@@ -25,7 +25,7 @@ export interface PageSeo {
 }
 
 const COUNT_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven',
-  'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty', 'twenty-one'];
+  'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty', 'twenty-one', 'twenty-two'];
 
 /** "seventeen", or the digits once the arcade outgrows the words. */
 export function gameCountWord(count: number = ARCADE_GAME_IDS.length): string {
@@ -156,6 +156,11 @@ export const GAME_SEO: Record<ArcadeGameId, PageSeo> = {
     description:
       'Play Math Crossword free in your browser. Fill the empty circles so every sum across and down adds up, with a fresh puzzle each time and three difficulty levels.',
   },
+  hexclash: {
+    title: 'Hex Clash — Free Turn-Based Fantasy Battles Online',
+    description:
+      'Play Hex Clash free in your browser. Command knights, archers, ogres and dragons in turn-based hex battles against a bot, a friend beside you, or online.',
+  },
 };
 
 export const GAME_SEO_RO: Record<ArcadeGameId, PageSeo> = {
@@ -263,6 +268,11 @@ export const GAME_SEO_RO: Record<ArcadeGameId, PageSeo> = {
     title: 'Integrame matematice online — Puzzle cu numere gratuit',
     description:
       'Joacă integrame matematice gratuit în browser. Completează cercurile goale ca toate calculele, pe rânduri și coloane, să fie corecte. Trei niveluri.',
+  },
+  hexclash: {
+    title: 'Hex Clash — Bătălii fantasy pe ture, online gratuit',
+    description:
+      'Joacă Hex Clash gratuit în browser. Condu cavaleri, arcași, căpcăuni și dragoni în bătălii pe ture pe hexagoane, cu botul, cu un prieten sau online.',
   },
 };
 

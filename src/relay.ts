@@ -1,4 +1,4 @@
-export const ONLINE_GAME_IDS = ['tintar', 'paddle', 'snake', 'tanks', 'septica', 'survival', 'racing', 'blocks', 'cycles', 'fourrow', 'hockey', 'reversi'] as const;
+export const ONLINE_GAME_IDS = ['tintar', 'paddle', 'snake', 'tanks', 'septica', 'survival', 'racing', 'blocks', 'cycles', 'fourrow', 'hockey', 'reversi', 'hexclash'] as const;
 export type OnlineGameId = typeof ONLINE_GAME_IDS[number];
 /** The seat in a two-player room, which is what almost every online game uses. */
 export type RelayPlayerId = 1 | 2;

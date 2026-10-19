@@ -32,6 +32,7 @@ import { initTwenty48 } from './twenty48.js';
 import { initSolitaire } from './solitaire.js';
 import { initHangman } from './hangman.js';
 import { initMathCross } from './mathcross.js';
+import { initHexClash } from './hexclash-ui.js';
 import { initReversi } from './reversi.js';
 import { initAirHockey } from './hockey.js';
 import { initMinesweeper } from './mines.js';
@@ -2110,6 +2111,7 @@ if (typeof window !== 'undefined') {
     initSolitaire();
     initHangman();
     initMathCross();
+    initHexClash();
     initReversi();
     initAirHockey();
     initMinesweeper();

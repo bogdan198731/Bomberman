@@ -70,6 +70,13 @@ const RECIPES: Record<string, Recipe> = {
   solitaire: { board: '#solitaireCanvas' },
   hangman: { board: '#hangmanCanvas', prepare: keys(['KeyE', 'KeyA', 'KeyZ', 'KeyQ']) },
   mathcross: { board: '#mathcrossBoard' },
+  hexclash: { board: '#hexclashCanvas', prepare: async page => {
+    // Mint holds its line while Coral closes in, so the card shows the armies meeting.
+    for (let turn = 0; turn < 9; turn++) {
+      await page.locator('#hexclashDefendButton:enabled').click({ timeout: 8_000 });
+      await page.waitForTimeout(900);
+    }
+  } },
 };
 
 function card(name: string, board: Buffer): string {

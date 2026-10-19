@@ -274,6 +274,18 @@ export const GAME_CONTENT: Record<ArcadeGameId, GameContent> = {
     ],
     related: ['sudoku', 'twenty48', 'hangman'],
   },
+  hexclash: {
+    intro: copy(
+      'Hex Clash is a turn-based battle on a hex grid, in the spirit of the classic fantasy strategy fights. Each army is five stacks of creatures, from spearmen and archers to ogres and a dragon; stacks act in order of speed, strike back once per round, and lose whole creatures as they take damage. No campaign, no map: just the battle.',
+      'Hex Clash este o bătălie pe ture pe o tablă de hexagoane, în spiritul luptelor clasice din jocurile de strategie fantasy. Fiecare armată are cinci grupuri de creaturi, de la lăncieri și arcași la căpcăuni și un dragon; grupurile acționează în ordinea vitezei, ripostează o dată pe rundă și pierd creaturi întregi pe măsură ce primesc daune. Fără campanie, fără hartă: doar bătălia.',
+    ),
+    faq: [
+      copy('Is Hex Clash like the battles in Heroes of Might and Magic?', 'Hex Clash seamănă cu bătăliile din Heroes of Might and Magic?'),
+      copy('It plays in the same spirit: stacks of creatures on a hex grid, initiative, retaliation, shooters and flyers. The units, rules, art and battlefields are its own, and there is no hero or campaign around the fight.',
+        'Se joacă în același spirit: grupuri de creaturi pe o tablă de hexagoane, inițiativă, ripostă, trăgători și zburătoare. Unitățile, regulile, grafica și câmpurile de luptă sunt proprii, iar în jurul luptei nu există erou sau campanie.'),
+    ],
+    related: ['tintar', 'reversi', 'tanks'],
+  },
 };
 
 const pick = (text: Copy, language: ArcadeLanguage): string => text[language === 'ro' ? 1 : 0];

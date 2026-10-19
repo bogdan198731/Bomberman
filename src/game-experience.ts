@@ -141,6 +141,12 @@ export const GAME_GUIDES: Record<ArcadeGameId, GuideCopy> = {
     rules: [copy('Equations read left to right and top to bottom; × and ÷ are worked out in that order too.', 'Ecuațiile se citesc de la stânga la dreapta și de sus în jos; × și ÷ se calculează tot în această ordine.'), copy('Every answer is a whole number; circles where two equations cross must fit both.', 'Fiecare rezultat este un număr întreg; cercurile unde se întâlnesc două ecuații trebuie să le respecte pe amândouă.'), copy('Easy goes up to 20, Normal to 50 and Hard to 99, with more empty circles.', 'Ușor merge până la 20, Normal până la 50, iar Greu până la 99, cu mai multe cercuri goale.')],
     tip: copy('Start with an equation that has only one empty circle; its answer opens up the next one.', 'Începe cu o ecuație care are un singur cerc gol; rezultatul ei te ajută la următoarea.'),
   },
+  hexclash: {
+    objective: copy('Destroy every enemy stack. Each stack is a group of the same creature; losses kill whole creatures.', 'Distruge toate grupurile inamice. Fiecare grup este format din aceeași creatură; pierderile ucid creaturi întregi.'),
+    controls: copy('Tap a green hex to move. Tap an enemy to see the damage, then tap it again (or a gold side of it) to attack. Wait and Defend are below the board.', 'Apasă un hexagon verde pentru a te muta. Apasă un inamic pentru a vedea daunele, apoi apasă-l din nou (sau o latură aurie) pentru a ataca. Așteaptă și Apără sunt sub tablă.'),
+    rules: [copy('Faster stacks act first. Each stack strikes back once per round; griffins twice.', 'Grupurile mai rapide acționează primele. Fiecare grup ripostează o dată pe rundă; grifonii de două ori.'), copy('Archers, mages and shamans shoot anywhere, at half damage with an enemy beside them (mages excepted).', 'Arcașii, magii și șamanii trag oriunde, cu jumătate din daune când au un inamic alături (magii sunt excepția).'), copy('Knights hit harder after a long charge, wolves bite twice, dragon fire burns the stack behind the target, and flyers ignore obstacles.', 'Cavalerii lovesc mai tare după o șarjă lungă, lupii mușcă de două ori, focul dragonului arde și grupul din spatele țintei, iar zburătoarele trec peste obstacole.')],
+    tip: copy('Shooters love cover: forests favour the Kingdom, open meadows the fast Wild packs. Attack wounded stacks first and let a stack Wait to strike after the enemy has used its retaliation.', 'Trăgătorii iubesc adăpostul: pădurile avantajează Regatul, pajiștile deschise haitele rapide ale Sălbaticilor. Atacă întâi grupurile rănite și lasă un grup să Aștepte ca să lovească după ce inamicul și-a folosit riposta.'),
+  },
 };
 
 const REPLAY_SELECTORS: Record<ArcadeGameId, string> = {
@@ -157,6 +163,7 @@ const REPLAY_SELECTORS: Record<ArcadeGameId, string> = {
   solitaire: '#solitaireNewButton',
   hangman: '#hangmanNewButton',
   mathcross: '#mathcrossNewButton',
+  hexclash: '#hexclashNextButton',
 };
 
 const RESULT_STATUS_SELECTORS: Record<ArcadeGameId, string> = {
@@ -172,6 +179,7 @@ const RESULT_STATUS_SELECTORS: Record<ArcadeGameId, string> = {
   solitaire: '#solitaireStatus',
   hangman: '#hangmanStatus',
   mathcross: '#mathcrossStatus',
+  hexclash: '#hexclashStatus',
 };
 
 
@@ -193,6 +201,7 @@ const KEYBOARD_CONTROLS: Partial<Record<ArcadeGameId, [string, string]>> = {
   solitaire: copy('Space draws, A sends cards to the foundations, U or Ctrl+Z undoes. Tab to the table: arrows move between cards, Enter picks a card up and puts it down.', 'Spațiu trage, A trimite cărțile pe fundații, U sau Ctrl+Z anulează. Tab până la masă: săgețile mută între cărți, Enter ridică o carte și o așază.'),
   hangman: copy('Type any letter A-Z to guess it.', 'Scrie orice literă A-Z pentru a o ghici.'),
   mathcross: copy('Arrow keys move between empty circles, 0-9 type a number, Backspace erases.', 'Săgețile mută între cercurile goale, 0-9 scriu un număr, Backspace șterge.'),
+  hexclash: copy('Tab to the battlefield, arrow keys move between hexes, Enter moves or targets (Enter again strikes), W waits, D defends. With a mouse, click an enemy from the side you want to hit.', 'Tab până la câmpul de luptă, săgețile mută între hexagoane, Enter mută sau țintește (încă un Enter lovește), W așteaptă, D apără. Cu mouse-ul, apasă un inamic din partea din care vrei să lovești.'),
 };
 
 function localized(pair: [string, string]): string { return pair[currentArcadeLanguage() === 'ro' ? 1 : 0]; }
@@ -300,6 +309,7 @@ export function initGameExperience(): void {
       solitaire: '#solitaireNewButton',
       hangman: '#hangmanNewButton',
       mathcross: '#mathcrossNewButton',
+      hexclash: '#hexclashRestartButton',
     };
     if (!reset[gameId]) return;
     // These reset handlers confirm progress loss and clear pause only after acceptance.
