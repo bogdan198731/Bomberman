@@ -46,3 +46,46 @@ test('typing the last letters of the word wins the round', async ({ page }) => {
   await expect(page.locator('#arcadeResultTitle')).toHaveText('VICTORY');
   expect(await textContrast(page.locator('#arcadeResultTitle'))).toBeGreaterThanOrEqual(READABLE_TEXT);
 });
+
+// Common desktop windows, from a small laptop to a full-HD monitor.
+const DESKTOPS = [[900, 700], [1280, 720], [1366, 768], [1920, 1080]] as const;
+
+for (const [width, height] of DESKTOPS) {
+  test(`on a ${width}x${height} desktop the whole game fits on one screen`, async ({ page }, info) => {
+    test.skip(info.project.name !== 'desktop', 'Desktop layout only; phones stack the game.');
+    await page.setViewportSize({ width, height });
+    await openGame(page, 'hangman');
+    const ids = ['#hangmanCanvas', '#hangmanWord', '#hangmanKeyboard', '#hangmanDifficulty', '#hangmanNewButton'];
+    for (const id of ids) {
+      const part = await box(page.locator(id));
+      expect(part.y + part.height, `${id} ends inside the window`).toBeLessThanOrEqual(height);
+    }
+    // Side by side: the gallows on the left, the word and keyboard beside it, not under it.
+    const gallows = await box(page.locator('#hangmanCanvas'));
+    const keyboard = await box(page.locator('#hangmanKeyboard'));
+    expect(keyboard.x).toBeGreaterThanOrEqual(gallows.x + gallows.width);
+    expect(keyboard.y).toBeLessThan(gallows.y + gallows.height);
+    for (const key of await page.locator('.hangman-key').all()) {
+      expect((await box(key)).height).toBeGreaterThanOrEqual(MIN_TAP_TARGET);
+    }
+    expect(await textContrast(page.locator('#hangmanNewButton'))).toBeGreaterThanOrEqual(READABLE_TEXT);
+  });
+}
+
+test('the longest word stays on one line beside the gallows, with the keyboard in view', async ({ page }, info) => {
+  test.skip(info.project.name !== 'desktop', 'Desktop layout only.');
+  await page.setViewportSize({ width: 900, height: 700 });
+  await page.addInitScript(saved => {
+    try { localStorage.setItem('blast-arcade-hangman-session-v1', saved); } catch { /* storage blocked */ }
+  }, JSON.stringify({ difficulty: 'normal', word: 'FIREFIGHTER', category: 'Jobs', guesses: 'ZQ', streak: 0 }));
+  await openGame(page, 'hangman');
+  await page.keyboard.press('e');
+  // The word redraws on every guess, so it is measured in one go inside the page.
+  const rows = await page.evaluate(() => new Set([...document.querySelectorAll('#hangmanWord .hangman-letter')]
+    .map(letter => Math.round(letter.getBoundingClientRect().y))).size);
+  expect(rows).toBe(1);
+  const word = await box(page.locator('#hangmanWord'));
+  expect(word.x).toBeGreaterThanOrEqual((await box(page.locator('#hangmanCanvas'))).x + 100);
+  const keyboard = await box(page.locator('#hangmanKeyboard'));
+  expect(keyboard.y + keyboard.height).toBeLessThanOrEqual(700);
+});

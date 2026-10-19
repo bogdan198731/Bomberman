@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blast-arcade-sudoku-positions-2026-10-14';
+const CACHE_NAME = 'blast-arcade-hangman-desktop-2026-10-19';
 const APP_SHELL = [
   '/',
   '/index.html',
