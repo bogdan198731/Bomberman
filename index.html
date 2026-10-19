@@ -2373,6 +2373,43 @@
     .hangman-key.miss { background: #6b2433; color: #ffd6da; border-color: rgba(255, 107, 120, .5); }
     .hangman-key:disabled:not(.hit):not(.miss) { opacity: .55; }
 
+    /*
+     * Desktop: side by side. The gallows takes the left, sized to the window
+     * height, and the word, keyboard, difficulty and New word stack on the
+     * right, so the whole game fits on one screen without scrolling.
+     */
+    @media (min-width: 900px) {
+      #hangmanView .paddle-shell {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(400px, 1.1fr);
+        grid-template-rows: auto 1fr auto auto auto 1fr;
+        grid-template-areas:
+          "score score"
+          "arena ."
+          "arena word"
+          "arena keys"
+          "arena status"
+          "arena footer";
+      }
+      #hangmanView .paddle-scorebar { grid-area: score; }
+      #hangmanView .arcade-arena {
+        grid-area: arena;
+        display: grid;
+        place-items: center;
+        border-right: 1px solid var(--panel-border);
+      }
+      #hangmanView .arcade-canvas {
+        /* Leaves room for the header and score bar above it. */
+        width: min(100%, max(300px, calc((100dvh - 250px) * 1.2)));
+      }
+      #hangmanView .hangman-word { grid-area: word; gap: 5px; padding-top: 16px; }
+      /* The longest word (11 letters) stays on one line in the narrower column. */
+      #hangmanView .hangman-letter { width: clamp(22px, 2.6vw, 36px); }
+      #hangmanView .hangman-keyboard { grid-area: keys; width: 100%; padding: 0 16px; }
+      #hangmanView .paddle-statusbar { grid-area: status; margin-top: 10px; }
+      #hangmanView .paddle-footer { grid-area: footer; }
+    }
+
     .mathcross-cover::before {
       background:
         radial-gradient(circle at 30% 34%, transparent 0 8%, rgba(138,151,171,.95) 8.5% 10%, transparent 10.5%),
