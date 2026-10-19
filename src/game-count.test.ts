@@ -9,11 +9,11 @@ const read = (path: string): string => readFileSync(new URL(`../${path}`, import
 
 const ENGLISH: Record<string, number> = {
   ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15,
-  sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20, 'twenty-one': 21,
+  sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20, 'twenty-one': 21, 'twenty-two': 22,
 };
 const ROMANIAN: Record<string, number> = {
   zece: 10, unsprezece: 11, douăsprezece: 12, treisprezece: 13, paisprezece: 14, cincisprezece: 15,
-  șaisprezece: 16, șaptesprezece: 17, optsprezece: 18, nouăsprezece: 19, douăzeci: 20, 'douăzeci și unu': 21,
+  șaisprezece: 16, șaptesprezece: 17, optsprezece: 18, nouăsprezece: 19, douăzeci: 20, 'douăzeci și unu': 21, 'douăzeci și două': 22,
 };
 
 /**

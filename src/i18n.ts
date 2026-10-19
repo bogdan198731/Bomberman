@@ -297,8 +297,8 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Finish a match to claim the first spot.': 'Termină un meci pentru a ocupa primul loc.',
   'Game library': 'Bibliotecă de jocuri',
   'Choose your next round': 'Alege următoarea rundă',
-  'Twenty-one instant games, from explosive duels and Romanian classics to Sudoku, Minesweeper, Hangman and number puzzles like Math Crossword, neon racing, air hockey, co-op survival, and star-fighter missions.':
-    'Douăzeci și unu de jocuri instant, de la dueluri explozive și clasice românești la Sudoku, Minesweeper, Spânzurătoarea și puzzle-uri cu numere precum integramele matematice, curse neon, air hockey, supraviețuire cooperativă și misiuni stelare.',
+  'Twenty-two instant games, from explosive duels and Romanian classics to Sudoku, Minesweeper, Hangman and number puzzles like Math Crossword, neon racing, air hockey, co-op survival, and star-fighter missions.':
+    'Douăzeci și două de jocuri instant, de la dueluri explozive și clasice românești la Sudoku, Minesweeper, Spânzurătoarea și puzzle-uri cu numere precum integramele matematice, curse neon, air hockey, supraviețuire cooperativă și misiuni stelare.',
   'Search games': 'Caută jocuri',
   'Clear game search': 'Șterge căutarea',
   'Filter games by play mode': 'Filtrează jocurile după modul de joc',
@@ -385,7 +385,7 @@ const ROMANIAN_TRANSLATIONS: Record<string, string> = {
   'Try another search or show the complete arcade.': 'Încearcă altă căutare sau afișează întreaga arcadă.',
   'Show all games': 'Arată toate jocurile',
   'Blast Arcade · Play instantly in your browser': 'Blast Arcade · Joacă instant în browser',
-  'Twenty-one live games · Keyboard, touch, bots, and online rooms': 'Douăzeci și unu de jocuri active · Tastatură, atingere, boți și camere online',
+  'Twenty-two live games · Keyboard, touch, bots, and online rooms': 'Douăzeci și două de jocuri active · Tastatură, atingere, boți și camere online',
   'Blast Arcade heroes surrounded by twelve game arenas': 'Eroii Blast Arcade înconjurați de douăsprezece arene de joc',
   'Bot · Local · Online PvP': 'Bot · Local · PvP online',
   'Bot · Local · Online': 'Bot · Local · Online',
@@ -779,7 +779,42 @@ function translateBoardText(value: string): string | null {
   return translateBoardPart(value);
 }
 
+const HEX_UNITS_RO: Record<string, string> = {
+  Spearmen: 'Lăncieri', Archers: 'Arcași', Knights: 'Cavaleri', Griffins: 'Grifoni', Mages: 'Magi',
+  Goblins: 'Goblini', Wolves: 'Lupi', Shamans: 'Șamani', Ogres: 'Căpcăuni', Dragons: 'Dragoni',
+};
+const HEX_UNIT = `(${Object.keys(HEX_UNITS_RO).join('|')})`;
+const HEX_PATTERNS: [RegExp, (match: RegExpMatchArray, unit: (name: string) => string) => string][] = [
+  [new RegExp(`^(Mint|Coral) ${HEX_UNIT} ×(\\d+) to act\\.$`), (m, u) => `${u(m[2])} ${m[1]} ×${m[3]} la mutare.`],
+  [/^(Mint|Coral) wins the battle!$/, m => `${m[1]} câștigă bătălia!`],
+  [new RegExp(`^(↩ |🔥 )?${HEX_UNIT} → ${HEX_UNIT}: (\\d+) damage, (\\d+) killed\\.$`), (m, u) => `${m[1] ?? ''}${u(m[2])} → ${u(m[3])}: ${m[4]} daune, ${m[5]} ${m[5] === '1' ? 'ucis' : 'uciși'}.`],
+  [new RegExp(`^${HEX_UNIT} defend\\.$`), (m, u) => `${u(m[1])} se apără.`],
+  [new RegExp(`^${HEX_UNIT} wait\\.$`), (m, u) => `${u(m[1])} așteaptă.`],
+  [new RegExp(`^${HEX_UNIT} are out of reach\\.$`), (m, u) => `${u(m[1])} sunt prea departe.`],
+  [new RegExp(`^(Shoot|Attack) ${HEX_UNIT} ×(\\d+): (\\d+)–(\\d+) damage( twice)?, kills ([\\d–]+)\\.( They strike back\\.)?$`),
+    (m, u) => `${m[1] === 'Shoot' ? 'Trage în' : 'Atacă'} ${u(m[2])} ×${m[3]}: ${m[4]}–${m[5]} daune${m[6] ? ' de două ori' : ''}, ucide ${m[7]}.${m[8] ? ' Vor riposta.' : ''}`],
+  [new RegExp(`^(Mint|Coral) ${HEX_UNIT} ×(\\d+) · health (\\d+) · attack (\\d+) · defense (\\d+) · damage (\\d+)–(\\d+) · speed (\\d+)(?: · shots (\\d+))?$`),
+    (m, u) => `${u(m[2])} ${m[1]} ×${m[3]} · viață ${m[4]} · atac ${m[5]} · apărare ${m[6]} · daune ${m[7]}–${m[8]} · viteză ${m[9]}${m[10] ? ` · proiectile ${m[10]}` : ''}`],
+  [new RegExp(`^(Mint|Coral) ${HEX_UNIT} ×(\\d+)$`), (m, u) => `${u(m[2])} ${m[1]} ×${m[3]}`],
+  [new RegExp(`^Row (\\d+), column (\\d+): (Mint|Coral) ${HEX_UNIT} ×(\\d+)(, acting)?$`), (m, u) => `Rândul ${m[1]}, coloana ${m[2]}: ${u(m[4])} ${m[3]} ×${m[5]}${m[6] ? ', la mutare' : ''}`],
+  // A plain empty hex is left to the shared board labels, which call it "gol".
+  [/^Row (\d+), column (\d+): (blocked|empty, in reach)$/, m => `Rândul ${m[1]}, coloana ${m[2]}: ${m[3] === 'blocked' ? 'blocat' : 'gol, la îndemână'}`],
+  [/^Round (\d+)$/, m => `Runda ${m[1]}`],
+];
+
+/** Hex Clash's battle lines, with the unit names in Romanian. */
+function translateHexClash(value: string): string | null {
+  for (const [pattern, render] of HEX_PATTERNS) {
+    const match = value.match(pattern);
+    if (match) return render(match, name => HEX_UNITS_RO[name] ?? name);
+  }
+  return null;
+}
+
 function translateRomanianPattern(value: string): string | null {
+  // Before the shared board labels, which would translate only the "Row, column" part of a hex.
+  const hex = translateHexClash(value);
+  if (hex) return hex;
   const board = translateBoardText(value);
   if (board) return board;
   // Hangman
@@ -982,6 +1017,33 @@ function translateRomanianPattern(value: string): string | null {
 }
 
 const UX_TRANSLATIONS: Record<string, string> = {
+  // Hex Clash
+  'Turn-based fantasy battles on a hex grid: knights, archers, ogres and a dragon.': 'Bătălii fantasy pe ture pe o tablă de hexagoane: cavaleri, arcași, căpcăuni și un dragon.',
+  'Turn-based battles · Bot, local, or online': 'Bătălii pe ture · Bot, local sau online',
+  'Hex Clash battle': 'Bătălie Hex Clash',
+  'Hex Clash battlefield': 'Câmpul de luptă Hex Clash',
+  'Hex Clash bot level': 'Nivelul botului Hex Clash',
+  'Play Hex Clash': 'Joacă Hex Clash',
+  'Turn order': 'Ordinea turelor',
+  'Mint to act.': 'Mint la mutare.',
+  'Wait': 'Așteaptă',
+  'Defend': 'Apără',
+  'Strike': 'Lovește',
+  'Next battle': 'Bătălia următoare',
+  'Army': 'Armata',
+  'Your army': 'Armata ta',
+  'Kingdom': 'Regatul',
+  'Wild': 'Sălbaticii',
+  'Random': 'Aleatoriu',
+  'Field': 'Câmp',
+  'Battlefield': 'Câmp de luptă',
+  'Meadow': 'Pajiște',
+  'Ruins': 'Ruine',
+  'Command Mint against the Coral bot.': 'Condu armata Mint împotriva botului Coral.',
+  'Take turns on this device.': 'Jucați pe rând pe acest dispozitiv.',
+  'The battle ends in a draw.': 'Bătălia se termină la egalitate.',
+  'Nothing can stand there.': 'Acolo nu poate sta nimeni.',
+  'That hex is out of reach.': 'Hexagonul acela este prea departe.',
   // Math Crossword
   'Fill the empty circles so every sum across and down adds up, on three difficulty levels.': 'Completează cercurile goale astfel încât fiecare calcul, pe orizontală și pe verticală, să fie corect, pe trei niveluri de dificultate.',
   'Solo · Number puzzle': 'Solo · Puzzle cu numere',

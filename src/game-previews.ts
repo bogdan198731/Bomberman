@@ -69,6 +69,12 @@ export function gamePreview(game: ArcadeGameId): string {
       board += text(45, 24, '+', gold, 10) + text(75, 24, '=', gold, 10) + text(60, 39, '÷', gold, 10) + text(60, 69, '=', gold, 10) + text(75, 84, '×', gold, 10) + text(105, 84, '=', gold, 10);
       board += node(30, 20, '12') + node(60, 20, '') + node(90, 20, '36') + node(60, 50, '6') + node(60, 80, '4') + node(90, 80, '') + node(120, 80, '12'); break;
     }
+    case 'hexclash': {
+      // A honeycomb with Mint's stacks on the left facing Coral's on the right.
+      const hex = (cx: number, cy: number, fill: string): string => `<polygon points="${[0, 1, 2, 3, 4, 5].map(i => { const a = Math.PI / 180 * (60 * i - 30); return `${(cx + 9 * Math.cos(a)).toFixed(1)},${(cy + 9 * Math.sin(a)).toFixed(1)}`; }).join(' ')}" fill="${fill}" stroke="#101d2b" stroke-width="1"/>`;
+      for (let row = 0; row < 6; row++) for (let col = 0; col < 8; col++) board += hex(22 + col * 15.6 + (row % 2) * 7.8, 14 + row * 13.5, (row + col) % 2 ? '#1f3d27' : '#24462d');
+      board += circle(30, 27, 6, mint) + circle(38, 54, 6, mint) + circle(30, 81, 6, mint) + circle(122, 27, 6, coral) + circle(114, 54, 6, coral) + circle(130, 81, 6, coral) + circle(76, 54, 5, '#6f7785'); break;
+    }
     case 'solitaire':
       board = rect(20,8,120,84,'#0e3b2c',6) + rect(24,12,13,18,'#1f7a52',2) + rect(40,12,13,18,'#f7f4ec',2); for (let i=0;i<7;i++) board += rect(24+i*16,34+i*4,13,18,'#1f7a52',2) + rect(24+i*16,42+i*4,13,18,'#f7f4ec',2) + text(30.5+i*16,54+i*4,['A','7','K','3','9','Q','5'][i], i%2?'#d45059':'#18212b',7); break;
   }

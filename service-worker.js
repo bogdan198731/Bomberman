@@ -1,4 +1,4 @@
-const CACHE_NAME = 'blast-arcade-sudoku-positions-2026-10-14';
+const CACHE_NAME = 'blast-arcade-hex-clash-2026-10-19';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -57,6 +57,8 @@ const APP_SHELL = [
   '/dist/solitaire.js',
   '/dist/hangman.js',
   '/dist/mathcross.js',
+  '/dist/hexclash.js',
+  '/dist/hexclash-ui.js',
   '/dist/board-access.js',
   '/dist/bug-report.js',
   '/dist/report-capture.js',
