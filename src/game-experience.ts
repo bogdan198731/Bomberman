@@ -149,6 +149,21 @@ export const GAME_GUIDES: Record<ArcadeGameId, GuideCopy> = {
   },
 };
 
+/**
+ * Series games carry on to the next game rather than starting over, so their
+ * result card says so, in the same words as the game's own button.
+ */
+export const REPLAY_LABELS: Partial<Record<ArcadeGameId, [string, string]>> = {
+  hexclash: copy('Next battle', 'Bătălia următoare'),
+  reversi: copy('Next game', 'Jocul următor'),
+  fourrow: copy('Next game', 'Jocul următor'),
+};
+
+export function replayLabel(gameId: ArcadeGameId, ro: boolean): string {
+  const label = REPLAY_LABELS[gameId];
+  return label ? label[ro ? 1 : 0] : ro ? 'Joacă din nou' : 'Play again';
+}
+
 const REPLAY_SELECTORS: Record<ArcadeGameId, string> = {
   bomberman: '#restartButton', tintar: '#tintarRevengeButton, #tintarRestartButton', paddle: '#paddleRestartButton',
   snake: '#snakeStartButton', tanks: '#tanksLaunchButton', septica: '#septicaRestartButton',
@@ -385,7 +400,7 @@ export function initGameExperience(): void {
         : label === 'GAME OVER' ? 'Run over.' : label === 'DRAW' ? 'Neither player found the deciding advantage.' : 'The rival completed the objective first.';
     const explanation = statusText ? translateArcadeText(statusText, currentArcadeLanguage()) : fallback;
     resultOverlay.querySelector<HTMLElement>('.arcade-result-explanation')!.textContent = `${explanation} ${ro ? 'Scor' : 'Score'}: ${Math.max(0, Math.floor(detail.result.score ?? 0)).toLocaleString()}.`;
-    resultOverlay.querySelector<HTMLButtonElement>('[data-result-replay]')!.textContent = ro ? 'Joacă din nou' : 'Play again';
+    resultOverlay.querySelector<HTMLButtonElement>('[data-result-replay]')!.textContent = replayLabel(detail.gameId, ro);
     resultOverlay.querySelector<HTMLButtonElement>('[data-result-exit]')!.textContent = ro ? 'Ieșire' : 'Exit';
     const circuit = loadCircuitProgress().current;
     const nextButton = resultOverlay.querySelector<HTMLButtonElement>('[data-result-next]')!;

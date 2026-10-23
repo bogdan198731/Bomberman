@@ -63,8 +63,10 @@ test('a battle runs to the end and offers the next one', async ({ page }, info) 
   await expect(page.locator('.arcade-result-card')).toBeVisible();
   await expect(page.locator('#hexclashStatus')).toHaveText('Coral wins the battle!');
   await expect(page.locator('#hexclashSeries')).toHaveText('Series 0-1');
-  // "Play again" starts the next battle of the series.
-  await page.locator('.arcade-result-card [data-result-replay]').click();
+  // The card carries on to the next battle of the series, and says so: not "Play again".
+  const next = page.locator('.arcade-result-card [data-result-replay]');
+  await expect(next).toHaveText('Next battle');
+  await next.click();
   await expect(page.locator('#hexclashMintStrength')).toHaveText('100%');
   await expect(page.locator('#hexclashSeries')).toHaveText('Series 0-1', { timeout: 2_000 });
 });
