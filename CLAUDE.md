@@ -48,6 +48,8 @@ Finished games post their score to `/api/scores` (`src/scoreboard.ts` holds the 
 
 - WebSocket frames over `SOCKET_LIMITS.maxPayloadBytes` close that socket (1009). The limit follows the relay's 65,536-character cap in `src/relay.ts`; raise both together.
 - Each socket may send 200 messages a second with a burst of 2,000; past that it is closed (1008). Real clients send about 30 a second per held control or state stream.
+- Each socket may also send 1 MB a second with a burst of 8 MB; past that it is closed (1008). The busiest real client measured, a Blocks host, sends about 74 KB a second. Measure again before adding a game with much larger states.
+- One client address may hold 30 open sockets; the next upgrade is refused with 429 and logged at most once a minute. This counts by the same address as the score and report limits, so it depends on `TRUST_PROXY` below: with the wrong value every player counts as the proxy and the whole site shares those 30.
 - Every 30 seconds each socket is pinged, and one that did not answer the previous ping is terminated, which frees its room and matchmaking place.
 - Every socket needs an `'error'` listener: `ws` reports bad frames as an `'error'` event, and an unhandled one stops the process. Request and socket handlers run inside `guarded(...)`, so a throw answers 500 or drops that one socket.
 

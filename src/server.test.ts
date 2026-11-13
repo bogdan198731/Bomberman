@@ -79,9 +79,10 @@ async function assertStillServing(): Promise<void> {
   assert.equal(response.status, 200);
 }
 
-function openSocket(): Promise<WebSocket> {
+/** `forwardedFor` plays the proxy: the server runs with TRUST_PROXY=1 and reads its last entry. */
+function openSocket(forwardedFor?: string): Promise<WebSocket> {
   return new Promise((resolve, reject) => {
-    const socket = new WebSocket(`ws://127.0.0.1:${port}`);
+    const socket = new WebSocket(`ws://127.0.0.1:${port}`, forwardedFor ? { headers: { 'X-Forwarded-For': forwardedFor } } : {});
     sockets.push(socket);
     socket.once('open', () => resolve(socket));
     socket.once('error', reject);
@@ -135,6 +136,41 @@ test('a flood of messages closes that socket and nothing else', patience, async 
   assert.deepEqual(await end, { code: 1008, reason: 'Too many messages.' });
   assert.equal((await createRoom(bystander)).type, 'joined');
   bystander.close();
+  await assertStillServing();
+});
+
+test('a stream of full-size frames closes that socket and nothing else', patience, async () => {
+  const bystander = await openSocket();
+  const attacker = await openSocket();
+  const end = closed(attacker);
+  // Each frame is allowed on its own, and 150 of them are far under the message limit.
+  const frame = JSON.stringify({ type: 'gameState', state: { junk: 'x'.repeat(150_000) } });
+  for (let sent = 0; sent < 150; sent++) attacker.send(frame);
+  assert.deepEqual(await end, { code: 1008, reason: 'Too much data.' });
+  assert.equal((await createRoom(bystander)).type, 'joined');
+  bystander.close();
+  await assertStillServing();
+});
+
+test('one address cannot hold more than its share of sockets', patience, async () => {
+  const held: WebSocket[] = [];
+  for (let opened = 0; opened < SOCKET_LIMITS.socketsPerAddress; opened++) held.push(await openSocket('198.51.100.20'));
+  await assert.rejects(openSocket('198.51.100.20'), /429/, 'one more from the same address');
+  await assert.rejects(openSocket('10.1.2.3, 198.51.100.20'), /429/, 'a made-up first entry does not help');
+  const neighbour = await openSocket('198.51.100.21');
+  assert.equal((await createRoom(neighbour)).type, 'joined', 'another address is not affected');
+
+  // Closing one makes room again.
+  const gone = closed(held[0]);
+  held[0].close();
+  await gone;
+  let again: WebSocket | undefined;
+  for (let attempt = 0; attempt < 20 && !again; attempt++) {
+    again = await openSocket('198.51.100.20').catch(() => undefined);
+    if (!again) await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  assert.ok(again, 'a freed place can be taken');
+  for (const socket of [...held, neighbour, again]) socket.close();
   await assertStillServing();
 });
 

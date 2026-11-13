@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { isRelayPayload } from './relay.js';
 import {
+  ConnectionCounter,
   Heartbeat,
   MessageBudget,
   SOCKET_LIMITS,
@@ -9,6 +10,7 @@ import {
   clientAddress,
   describeError,
   guarded,
+  messageBytes,
   trustedProxyHops,
 } from './server-guard.js';
 
@@ -67,6 +69,76 @@ test('a clock that steps backwards neither refills nor empties the budget', () =
   assert.equal(budget.allow(500), true);
   assert.equal(budget.allow(500), false);
   assert.equal(budget.allow(600), true, 'time counts again from the new clock');
+});
+
+test('the byte limit leaves real play alone and still means something', () => {
+  // Measured on 2026-11-13: a Blocks host, the busiest client, sends about 74 KB a second.
+  const busiestRealClient = 74_000;
+  assert.ok(SOCKET_LIMITS.bytesPerSecond >= busiestRealClient * 10);
+  // A 30-second backlog from that client, sent at once after a stall, still fits.
+  assert.ok(SOCKET_LIMITS.byteBurst >= busiestRealClient * 30);
+  // A few full-size frames are always affordable, or the frame limit would be a lie.
+  assert.ok(SOCKET_LIMITS.byteBurst >= SOCKET_LIMITS.maxPayloadBytes * 4);
+  // Far below what the message limit alone would let through.
+  assert.ok(SOCKET_LIMITS.bytesPerSecond * 10 < SOCKET_LIMITS.messagesPerSecond * SOCKET_LIMITS.maxPayloadBytes);
+});
+
+test('a budget can count bytes: each frame costs its size', () => {
+  const budget = new MessageBudget(1_000, 5_000, 0);
+  assert.equal(budget.allow(0, 3_000), true);
+  assert.equal(budget.allow(0, 2_000), true);
+  assert.equal(budget.allow(0, 1), false, 'the burst is spent');
+  // Half a second at 1,000 a second earns 500.
+  assert.equal(budget.allow(500, 501), false, 'a frame the budget cannot cover is refused whole');
+  assert.equal(budget.allow(500, 500), true);
+});
+
+test('a real host under the byte rate is never refused', () => {
+  const budget = new MessageBudget(SOCKET_LIMITS.bytesPerSecond, SOCKET_LIMITS.byteBurst, 0);
+  // Ten minutes of 2.5 KB states, 60 a second: twice the busiest client measured.
+  for (let now = 0; now < 600_000; now += 1_000 / 60) assert.equal(budget.allow(now, 2_500), true);
+});
+
+test('full-size frames in a row run out of byte budget', () => {
+  const budget = new MessageBudget(SOCKET_LIMITS.bytesPerSecond, SOCKET_LIMITS.byteBurst, 0);
+  let allowed = 0;
+  // 200 full frames within one second: what the message limit alone allowed.
+  for (let sent = 0; sent < 200; sent++) if (budget.allow(sent * 5, SOCKET_LIMITS.maxPayloadBytes)) allowed++;
+  assert.ok(allowed >= 40 && allowed <= 48, `${allowed} allowed`);
+});
+
+test('a frame is measured in bytes in every shape ws delivers it', () => {
+  assert.equal(messageBytes(Buffer.from('€€')), 6);
+  assert.equal(messageBytes(new ArrayBuffer(10)), 10);
+  assert.equal(messageBytes([Buffer.alloc(3), Buffer.alloc(4)]), 7);
+});
+
+test('an address may hold only so many sockets at once', () => {
+  const sockets = new ConnectionCounter(3);
+  for (let opened = 0; opened < 3; opened++) {
+    assert.equal(sockets.hasRoom('198.51.100.7'), true, `socket ${opened + 1}`);
+    sockets.add('198.51.100.7');
+  }
+  assert.equal(sockets.hasRoom('198.51.100.7'), false);
+  assert.equal(sockets.hasRoom('198.51.100.8'), true, 'another address is not affected');
+});
+
+test('closing a socket makes room for another, and an idle address is forgotten', () => {
+  const sockets = new ConnectionCounter(1);
+  sockets.add('198.51.100.7');
+  assert.equal(sockets.hasRoom('198.51.100.7'), false);
+  sockets.remove('198.51.100.7');
+  assert.equal(sockets.hasRoom('198.51.100.7'), true);
+  assert.equal(sockets.count('198.51.100.7'), 0);
+  // A close that was never counted must not leave a negative balance behind.
+  sockets.remove('198.51.100.7');
+  sockets.add('198.51.100.7');
+  assert.equal(sockets.hasRoom('198.51.100.7'), false);
+});
+
+test('the socket limit fits a room full of players behind one address', () => {
+  assert.ok(SOCKET_LIMITS.socketsPerAddress >= 20);
+  assert.ok(SOCKET_LIMITS.socketsPerAddress <= 100);
 });
 
 test('a socket that answers every ping is kept', () => {
