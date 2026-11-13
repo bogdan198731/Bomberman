@@ -3,7 +3,7 @@ import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { networkInterfaces } from 'node:os';
 import { extname, join, normalize } from 'node:path';
-import { WebSocketServer, type WebSocket } from 'ws';
+import { WebSocketServer, type RawData, type WebSocket } from 'ws';
 import {
   OnlineRoom,
   isPlayerAction,
@@ -25,6 +25,7 @@ import { SCOREBOARD_ENDPOINT, validateScoreSubmission } from './scoreboard.js';
 import { Scoreboard, createScoreStore } from './score-store.js';
 import { isArcadeGameId } from './game-metadata.js';
 import { DEFAULT_REPORT_SENDER, buildReportEmail, sendReportEmail } from './report-email.js';
+import { Heartbeat, MessageBudget, SOCKET_LIMITS, answerServerError, clientAddress, describeError, guarded, trustedProxyHops } from './server-guard.js';
 
 const PORT = Number(process.env.PORT || 4173);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -75,8 +76,8 @@ const REPORT_WEBHOOK_SECRET = process.env.REPORT_WEBHOOK_SECRET;
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const REPORT_EMAIL_TO = process.env.REPORT_EMAIL_TO;
 const REPORT_EMAIL_FROM = process.env.REPORT_EMAIL_FROM || DEFAULT_REPORT_SENDER;
-// Only trust X-Forwarded-For when a reverse proxy we control sets it.
-const TRUST_PROXY = process.env.TRUST_PROXY === '1';
+// How many reverse proxies we control sit in front and append to X-Forwarded-For; 0 ignores the header.
+const TRUSTED_PROXY_HOPS = trustedProxyHops(process.env.TRUST_PROXY);
 const reportsPerClient = new ReportRateLimiter(5, 10 * 60_000);
 const reportsOverall = new ReportRateLimiter(100, 60 * 60_000);
 const reportsPerTester = new ReportRateLimiter(5, 24 * 60 * 60_000);
@@ -102,10 +103,14 @@ function sendJson(response: ServerResponse, status: number, body: unknown): void
   response.end(json);
 }
 
-function clientAddress(request: IncomingMessage): string {
-  const forwarded = request.headers['x-forwarded-for'];
-  if (TRUST_PROXY && typeof forwarded === 'string') return forwarded.split(',')[0].trim();
-  return request.socket.remoteAddress ?? 'unknown';
+function requestAddress(request: IncomingMessage): string {
+  return clientAddress(request.socket.remoteAddress, request.headers['x-forwarded-for'], TRUSTED_PROXY_HOPS);
+}
+
+/** Last resort for a handler that threw: this one request fails, the server and its rooms carry on. */
+function failRequest(error: unknown, response: ServerResponse): void {
+  console.error(`Request failed: ${describeError(error)}`);
+  answerServerError(response);
 }
 
 function handleBugReport(request: IncomingMessage, response: ServerResponse): void {
@@ -132,7 +137,7 @@ function handleBugReport(request: IncomingMessage, response: ServerResponse): vo
     }
     chunks.push(chunk);
   });
-  request.on('end', () => {
+  request.on('end', guarded(() => {
     if (aborted) return;
     let body: unknown;
     try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); }
@@ -154,7 +159,7 @@ function handleBugReport(request: IncomingMessage, response: ServerResponse): vo
     // Counted after validation so a typo does not use up someone's allowance.
     const withinLimits = tester
       ? reportsPerTester.allow(tester.name, Date.now(), tester.dailyLimit)
-      : reportsPerClient.allow(clientAddress(request));
+      : reportsPerClient.allow(requestAddress(request));
     if (!withinLimits || !reportsOverall.allow('all')) {
       sendJson(response, 429, {
         error: tester ? 'You reached your daily tester report limit.' : 'Too many reports right now. Please try again later.',
@@ -191,7 +196,7 @@ function handleBugReport(request: IncomingMessage, response: ServerResponse): vo
         console.error(`Bug report ${stored.id} could not be saved: ${(error as Error).message}`);
         sendJson(response, 500, { error: 'The report could not be saved. Try again later.' });
       });
-  });
+  }, error => failRequest(error, response)));
 }
 
 /** GET /api/scores?game=snake reads one board; POST adds a finished game's score. */
@@ -230,14 +235,14 @@ function handleScores(request: IncomingMessage, response: ServerResponse): void 
     }
     chunks.push(chunk);
   });
-  request.on('end', () => {
+  request.on('end', guarded(() => {
     if (aborted) return;
     let body: unknown;
     try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); }
     catch { sendJson(response, 400, { error: 'Invalid score.' }); return; }
     const checked = validateScoreSubmission(body);
     if (!checked.ok) { sendJson(response, 400, { error: checked.error }); return; }
-    if (!scoresPerClient.allow(clientAddress(request)) || !scoresOverall.allow('all')) {
+    if (!scoresPerClient.allow(requestAddress(request)) || !scoresOverall.allow('all')) {
       sendJson(response, 429, { error: 'Too many scores right now. Please try again later.' });
       return;
     }
@@ -248,7 +253,7 @@ function handleScores(request: IncomingMessage, response: ServerResponse): void 
         console.error(`Scoreboard write failed: ${(error as Error).message}`);
         sendJson(response, 503, { error: 'The scoreboard is unavailable right now.' });
       });
-  });
+  }, error => failRequest(error, response)));
 }
 
 let sitemapDateCache: Record<SeoView, string> | undefined;
@@ -311,7 +316,7 @@ function cacheControlFor(publicPath: string): string {
   return 'no-cache';
 }
 
-const server = createServer((request, response) => {
+const server = createServer(guarded((request: IncomingMessage, response: ServerResponse) => {
   // The old Render address moves for good to blastarcade.ro, so links to it count for the real site.
   const redirect = legacyHostRedirect(request.headers.host, request.method, request.url);
   if (redirect) {
@@ -397,9 +402,11 @@ const server = createServer((request, response) => {
     ...validatorHeaders(validators),
   });
   createReadStream(filePath).pipe(response);
-});
+}, (error, _request, response) => failRequest(error, response)));
 
-const webSocketServer = new WebSocketServer({ server });
+// Without maxPayload ws accepts 100 MB frames, from anyone, before any room is joined.
+const webSocketServer = new WebSocketServer({ server, maxPayload: SOCKET_LIMITS.maxPayloadBytes });
+const heartbeat = new Heartbeat<WebSocket>();
 
 function createRoomCode(): string {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -486,8 +493,31 @@ function joinInviteRoom(socket: WebSocket, roomCode: string, game: OnlineGameId,
   broadcastInviteStatus(code);
 }
 
+/** Drops a whole Bomberman room whose game logic threw, rather than throwing again on every tick. */
+function dropRoom(roomCode: string, error: unknown): void {
+  console.error(`Room ${roomCode} failed and was closed: ${describeError(error)}`);
+  rooms.delete(roomCode);
+  matchmaking.remove(roomCode);
+  for (const [socket, client] of clients) {
+    if (client.kind === 'bomberman' && client.roomCode === roomCode) socket.close(1011, 'Room error.');
+  }
+}
+
 webSocketServer.on('connection', socket => {
-  socket.on('message', raw => {
+  const budget = new MessageBudget(SOCKET_LIMITS.messagesPerSecond, SOCKET_LIMITS.messageBurst);
+  heartbeat.add(socket);
+  socket.on('pong', () => heartbeat.heard(socket));
+  // ws reports a bad or oversized frame here and closes the socket itself; with no
+  // listener the 'error' event would be thrown and stop the server.
+  socket.on('error', () => {});
+
+  socket.on('message', guarded((raw: RawData) => {
+    // Frames can still arrive while a close is in progress.
+    if (socket.readyState !== socket.OPEN) return;
+    if (!budget.allow()) {
+      socket.close(1008, 'Too many messages.');
+      return;
+    }
     let message: unknown;
     try {
       message = JSON.parse(raw.toString());
@@ -609,9 +639,13 @@ webSocketServer.on('connection', socket => {
       rooms.get(client.roomCode)?.handleAction(client.playerId, data.action);
       broadcastRoom(client.roomCode);
     }
-  });
+  }, error => {
+    console.error(`Socket message failed: ${describeError(error)}`);
+    socket.terminate();
+  }));
 
-  socket.on('close', () => {
+  socket.on('close', guarded(() => {
+    heartbeat.remove(socket);
     const client = clients.get(socket);
     if (!client) return;
     clients.delete(socket);
@@ -633,8 +667,17 @@ webSocketServer.on('connection', socket => {
       }
       else broadcastInviteStatus(client.roomCode);
     }
-  });
+  }, error => console.error(`Socket cleanup failed: ${describeError(error)}`)));
 });
+
+setInterval(() => {
+  const { ping, silent } = heartbeat.sweep();
+  // terminate() rather than close(): nobody is there to answer a closing handshake.
+  for (const socket of silent) socket.terminate();
+  for (const socket of ping) {
+    if (socket.readyState === socket.OPEN) socket.ping();
+  }
+}, SOCKET_LIMITS.heartbeatMs).unref();
 
 setInterval(() => {
   reportsPerClient.prune();
@@ -646,12 +689,20 @@ setInterval(() => {
 
 setInterval(() => {
   for (const [code, room] of rooms) {
-    room.update();
-    broadcastRoom(code);
+    try {
+      room.update();
+      broadcastRoom(code);
+    } catch (error) {
+      dropRoom(code, error);
+    }
   }
 }, 50);
 
 server.listen(PORT, HOST, () => {
+  // Installed only once the server is up, so a failed start (port in use) still exits.
+  // Anything that slips past the guards above is logged instead of ending every live room.
+  process.on('uncaughtException', error => console.error(`Uncaught error, still serving: ${describeError(error)}`));
+  process.on('unhandledRejection', reason => console.error(`Unhandled rejection, still serving: ${describeError(reason)}`));
   console.log(`Blast Arcade online server: http://localhost:${PORT}`);
   console.log(`Scoreboard storage: ${scoreStore.kind === 'upstash' ? 'Upstash Redis' : 'files (reset on each deploy unless on a persistent disk)'}`);
   for (const addresses of Object.values(networkInterfaces())) {
