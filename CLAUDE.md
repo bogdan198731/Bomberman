@@ -42,6 +42,17 @@ Safety rules the pipeline depends on — keep them when changing it:
 
 Finished games post their score to `/api/scores` (`src/scoreboard.ts` holds the rules, `src/score-store.ts` the storage). Players show under the alias they type in Arcade Legends, or as "Unknown". Production keeps the boards in Upstash Redis via `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` on Render; without them the server writes `scores/` (or `SCORES_DIR`), which Render wipes on every deploy. Browser tests always use a throwaway folder.
 
+## Server limits
+
+`src/server-guard.ts` holds the rules that keep one client, or one bug, from taking the server down; `src/server.ts` wires them in, and `src/server.test.ts` attacks a real server on a spare port. Keep them when changing the socket code:
+
+- WebSocket frames over `SOCKET_LIMITS.maxPayloadBytes` close that socket (1009). The limit follows the relay's 65,536-character cap in `src/relay.ts`; raise both together.
+- Each socket may send 200 messages a second with a burst of 2,000; past that it is closed (1008). Real clients send about 30 a second per held control or state stream.
+- Every 30 seconds each socket is pinged, and one that did not answer the previous ping is terminated, which frees its room and matchmaking place.
+- Every socket needs an `'error'` listener: `ws` reports bad frames as an `'error'` event, and an unhandled one stops the process. Request and socket handlers run inside `guarded(...)`, so a throw answers 500 or drops that one socket.
+
+`TRUST_PROXY` is the number of reverse proxies in front of the server that append to `X-Forwarded-For`; score and bug-report limits are counted per client address. Unset or `0` ignores the header and uses the connecting address, which behind a proxy puts every player in one bucket. `1` takes the last entry, `2` the one before it. Entries further left are sent by the client and are never used. Too low a number only merges players into shared buckets; too high lets a client choose its own address, so raise it only after checking a real request's header on the host.
+
 ## Local-only files
 
 `reports/`, `testers.json` and `test-results/` are git-ignored and exist only on the owner's PC; a cloud session will not have them. Tester codes are managed with `npm run testers -- add|revoke|list <name>`.
