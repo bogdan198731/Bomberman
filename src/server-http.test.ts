@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { contentValidators, fileValidators, isNotModified, legacyHostRedirect } from './server-http.js';
+import { contentValidators, fileValidators, isNotModified, legacyHostRedirect, requestUrl } from './server-http.js';
 
 test('the old Render address moves page and file reads to blastarcade.ro, keeping the path and query', () => {
   assert.equal(legacyHostRedirect('bomberman-mixj.onrender.com', 'GET', '/play/mines?room=AB'), 'https://blastarcade.ro/play/mines?room=AB');
@@ -34,4 +34,15 @@ test('rendered pages are tagged by their content', () => {
   assert.equal(contentValidators('<p>a</p>').etag, contentValidators('<p>a</p>').etag);
   assert.notEqual(contentValidators('<p>a</p>').etag, contentValidators('<p>b</p>').etag);
   assert.equal(isNotModified({ 'if-none-match': contentValidators('x').etag }, contentValidators('x')), true);
+});
+
+test('a request line that is not a URL is refused rather than thrown on', () => {
+  // "GET //[" once took the whole server down, and every online room with it.
+  for (const url of ['//[', 'http://[/', '//a b/', 'http://']) {
+    assert.equal(requestUrl(url), undefined, url);
+  }
+  assert.equal(requestUrl('/play/mines?room=AB')?.pathname, '/play/mines');
+  assert.equal(requestUrl('/api/scores?game=snake')?.searchParams.get('game'), 'snake');
+  assert.equal(requestUrl(undefined)?.pathname, '/');
+  assert.equal(requestUrl('/dist/%2e%2e/testers.json')?.pathname.startsWith('/dist/'), false, 'encoded dot segments still collapse');
 });

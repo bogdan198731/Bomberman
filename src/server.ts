@@ -14,7 +14,7 @@ import { InviteRoom, isOnlineGameId, isRelayPayload, isRelaySeat, roomSize, type
 import { MatchmakingQueue } from './matchmaking.js';
 import { buildRobotsTxt, buildSitemapXml, gameFromPath, parseSeoPath } from './seo.js';
 import { renderPageForView } from './page-render.js';
-import { contentValidators, fileValidators, isNotModified, legacyHostRedirect, type Validators } from './server-http.js';
+import { contentValidators, fileValidators, isNotModified, legacyHostRedirect, requestUrl, type Validators } from './server-http.js';
 import { pageDates, parseGitFileDates } from './sitemap-dates.js';
 import type { ArcadeLanguage } from './i18n.js';
 import type { SeoView } from './seo.js';
@@ -202,7 +202,7 @@ function handleBugReport(request: IncomingMessage, response: ServerResponse): vo
 /** GET /api/scores?game=snake reads one board; POST adds a finished game's score. */
 function handleScores(request: IncomingMessage, response: ServerResponse): void {
   if (request.method === 'GET') {
-    const game = new URL(request.url || '/', 'http://local').searchParams.get('game');
+    const game = requestUrl(request.url)?.searchParams.get('game');
     if (!isArcadeGameId(game)) { sendJson(response, 400, { error: 'Unknown game.' }); return; }
     scoreboard.top(game)
       .then(entries => sendJson(response, 200, { game, entries }))
@@ -324,7 +324,13 @@ const server = createServer(guarded((request: IncomingMessage, response: ServerR
     response.end();
     return;
   }
-  const requestPath = new URL(request.url || '/', `http://${request.headers.host}`).pathname;
+  // Anyone can send "GET //[": answer it, because a throw here stops the server and every room on it.
+  const requestPath = requestUrl(request.url)?.pathname;
+  if (requestPath === undefined) {
+    response.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+    response.end('Bad request');
+    return;
+  }
 
   if (requestPath === SCOREBOARD_ENDPOINT) {
     handleScores(request, response);

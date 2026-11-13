@@ -15,6 +15,16 @@ export function legacyHostRedirect(host: string | undefined, method: string | un
   return `${origin}${url && url.startsWith('/') ? url : '/'}`;
 }
 
+/**
+ * The request line as a URL, or undefined when it is not one. The Host header
+ * is left out of it: only the path and query matter here, and a bad Host must
+ * not be able to make a good path unreadable.
+ */
+export function requestUrl(url: string | undefined): URL | undefined {
+  try { return new URL(url || '/', 'http://local'); }
+  catch { return undefined; }
+}
+
 export interface Validators { etag: string; lastModified?: string }
 
 /** Files change only on deploy, so size and modification time identify a version. */
