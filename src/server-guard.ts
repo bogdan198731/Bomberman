@@ -18,11 +18,28 @@ export const SOCKET_LIMITS = {
   messagesPerSecond: 200,
   /** Ten seconds' worth, so a phone that sends a backlog after a stall is not cut off. */
   messageBurst: 2_000,
+  /**
+   * The busiest real client measured, a Blocks host, sends about 74 KB a second
+   * in frames under 2.5 KB. Without this a socket at the message limit could
+   * still send 200 full-size frames, about 39 MB, every second.
+   */
+  bytesPerSecond: 1_048_576,
+  /** Eight seconds' worth: far more than a real backlog, and room for a few full-size frames. */
+  byteBurst: 8 * 1_048_576,
+  /**
+   * Open sockets from one address. A player holds one at a time, so this is a
+   * classroom or a café behind one address. Behind a proxy it only works with
+   * TRUST_PROXY set right: otherwise every player counts as the proxy.
+   */
+  socketsPerAddress: 30,
   /** A socket that does not answer one ping before the next is gone. */
   heartbeatMs: 30_000,
 } as const;
 
-/** Token bucket, one per socket: `perSecond` sustained, up to `burst` at once. */
+/**
+ * Token bucket, one per socket: `perSecond` sustained, up to `burst` at once.
+ * Counts messages by default, or bytes when each call passes a frame's size as its cost.
+ */
 export class MessageBudget {
   private tokens: number;
   private last: number;
@@ -32,15 +49,47 @@ export class MessageBudget {
     this.last = now;
   }
 
-  /** Counts one message; false once the socket has sent more than its share. */
-  allow(now: number = Date.now()): boolean {
+  /** Counts one message, or `cost` units; false once the socket has sent more than its share. */
+  allow(now: number = Date.now(), cost: number = 1): boolean {
     // A clock that steps backwards must not hand out tokens or take any away.
     const elapsed = Math.max(0, now - this.last);
     this.tokens = Math.min(this.burst, this.tokens + elapsed * this.perSecond / 1_000);
     this.last = now;
-    if (this.tokens < 1) return false;
-    this.tokens -= 1;
+    if (this.tokens < cost) return false;
+    this.tokens -= cost;
     return true;
+  }
+}
+
+/** The size of a received frame, in whichever shape ws hands it over. */
+export function messageBytes(raw: Buffer | ArrayBuffer | Buffer[]): number {
+  if (Array.isArray(raw)) return raw.reduce((total, part) => total + part.byteLength, 0);
+  return raw.byteLength;
+}
+
+/** Open sockets per client address, so one address cannot hold thousands of them. */
+export class ConnectionCounter {
+  private readonly open = new Map<string, number>();
+  constructor(private readonly limit: number) {}
+
+  /** Whether this address may open one more socket. */
+  hasRoom(address: string): boolean {
+    return (this.open.get(address) ?? 0) < this.limit;
+  }
+
+  add(address: string): void {
+    this.open.set(address, (this.open.get(address) ?? 0) + 1);
+  }
+
+  /** Forgets an address once its last socket closes, so the map cannot grow forever. */
+  remove(address: string): void {
+    const left = (this.open.get(address) ?? 0) - 1;
+    if (left > 0) this.open.set(address, left);
+    else this.open.delete(address);
+  }
+
+  count(address: string): number {
+    return this.open.get(address) ?? 0;
   }
 }
 

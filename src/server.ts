@@ -25,7 +25,7 @@ import { SCOREBOARD_ENDPOINT, validateScoreSubmission } from './scoreboard.js';
 import { Scoreboard, createScoreStore } from './score-store.js';
 import { isArcadeGameId } from './game-metadata.js';
 import { DEFAULT_REPORT_SENDER, buildReportEmail, sendReportEmail } from './report-email.js';
-import { Heartbeat, MessageBudget, SOCKET_LIMITS, answerServerError, clientAddress, describeError, guarded, trustedProxyHops } from './server-guard.js';
+import { ConnectionCounter, Heartbeat, MessageBudget, SOCKET_LIMITS, answerServerError, clientAddress, describeError, guarded, messageBytes, trustedProxyHops } from './server-guard.js';
 
 const PORT = Number(process.env.PORT || 4173);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -404,8 +404,32 @@ const server = createServer(guarded((request: IncomingMessage, response: ServerR
   createReadStream(filePath).pipe(response);
 }, (error, _request, response) => failRequest(error, response)));
 
-// Without maxPayload ws accepts 100 MB frames, from anyone, before any room is joined.
-const webSocketServer = new WebSocketServer({ server, maxPayload: SOCKET_LIMITS.maxPayloadBytes });
+const socketsPerAddress = new ConnectionCounter(SOCKET_LIMITS.socketsPerAddress);
+let connectionRefusalLoggedAt = 0;
+
+/** At most one line a minute: under attack there would be thousands of refusals. */
+function logRefusedConnection(address: string): void {
+  const now = Date.now();
+  if (now - connectionRefusalLoggedAt < 60_000) return;
+  connectionRefusalLoggedAt = now;
+  console.warn(`Refused a connection from ${address}: ${SOCKET_LIMITS.socketsPerAddress} sockets are already open from that address. If ordinary players are refused, check TRUST_PROXY.`);
+}
+
+const webSocketServer = new WebSocketServer({
+  server,
+  // Without maxPayload ws accepts 100 MB frames, from anyone, before any room is joined.
+  maxPayload: SOCKET_LIMITS.maxPayloadBytes,
+  // Refused before the upgrade, so an address over its share never gets a socket at all.
+  verifyClient: (info: { req: IncomingMessage }, done: (verified: boolean, code?: number, message?: string) => void) => {
+    const address = requestAddress(info.req);
+    if (socketsPerAddress.hasRoom(address)) {
+      done(true);
+      return;
+    }
+    logRefusedConnection(address);
+    done(false, 429, 'Too many connections');
+  },
+});
 const heartbeat = new Heartbeat<WebSocket>();
 
 function createRoomCode(): string {
@@ -503,8 +527,11 @@ function dropRoom(roomCode: string, error: unknown): void {
   }
 }
 
-webSocketServer.on('connection', socket => {
+webSocketServer.on('connection', (socket, request) => {
+  const address = requestAddress(request);
+  socketsPerAddress.add(address);
   const budget = new MessageBudget(SOCKET_LIMITS.messagesPerSecond, SOCKET_LIMITS.messageBurst);
+  const byteBudget = new MessageBudget(SOCKET_LIMITS.bytesPerSecond, SOCKET_LIMITS.byteBurst);
   heartbeat.add(socket);
   socket.on('pong', () => heartbeat.heard(socket));
   // ws reports a bad or oversized frame here and closes the socket itself; with no
@@ -516,6 +543,10 @@ webSocketServer.on('connection', socket => {
     if (socket.readyState !== socket.OPEN) return;
     if (!budget.allow()) {
       socket.close(1008, 'Too many messages.');
+      return;
+    }
+    if (!byteBudget.allow(Date.now(), messageBytes(raw))) {
+      socket.close(1008, 'Too much data.');
       return;
     }
     let message: unknown;
@@ -646,6 +677,7 @@ webSocketServer.on('connection', socket => {
 
   socket.on('close', guarded(() => {
     heartbeat.remove(socket);
+    socketsPerAddress.remove(address);
     const client = clients.get(socket);
     if (!client) return;
     clients.delete(socket);
